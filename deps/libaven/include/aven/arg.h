@@ -60,6 +60,7 @@ AVEN_FN char *aven_arg_get_str(AvenArgSlice arg_slice, char *argname);
 static void aven_arg_print_type(AvenArgType arg_type) {
     switch (arg_type) {
         case AVEN_ARG_TYPE_BOOL:
+            printf(" (false)");
             break;
         case AVEN_ARG_TYPE_INT:
             printf(" n");
@@ -75,6 +76,11 @@ static void aven_arg_print_type(AvenArgType arg_type) {
 static void aven_arg_print_value(AvenArgValue value) {
     switch (value.type) {
         case AVEN_ARG_TYPE_BOOL:
+            if (value.data.arg_bool) {
+                printf("true");
+            } else {
+                printf("false");
+            }
             break;
         case AVEN_ARG_TYPE_INT:
             printf("%d", value.data.arg_int);
@@ -97,10 +103,12 @@ static void aven_arg_print(AvenArg arg) {
         printf("  --  %s", arg.description);
     }
 
-    if (arg.type != AVEN_ARG_TYPE_BOOL and arg.type == arg.value.type) {
-        printf(" (default=");
-        aven_arg_print_value(arg.value);
-        printf(")");
+    if (arg.type == arg.value.type) {
+        if (arg.type != AVEN_ARG_TYPE_BOOL or arg.value.data.arg_bool) {
+            printf(" (default=");
+            aven_arg_print_value(arg.value);
+            printf(")");
+        }
     } else if (arg.optional) {
         printf(" (optional)");
     }
@@ -150,7 +158,12 @@ AVEN_FN int aven_arg_parse(
 
             switch (arg->type) {
                 case AVEN_ARG_TYPE_BOOL:
-                    arg->value.data.arg_bool = true;
+                    if (i + 1 < argc and strcmp(argv[i + 1], "false") == 0) {
+                        arg->value.data.arg_bool = false;
+                        i += 1;
+                    } else {
+                        arg->value.data.arg_bool = true;
+                    }
                     break;
                 case AVEN_ARG_TYPE_INT:
                     if (i + 1 >= argc) {

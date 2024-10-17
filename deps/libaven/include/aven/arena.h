@@ -102,14 +102,7 @@ AVEN_FN void *aven_arena_alloc(
 ) {
     noreturn void abort(void);
 
-    assert(
-        align == 1 ||
-        align == 2 ||
-        align == 4 ||
-        align == 8 ||
-        align == 16 ||
-        align == 32
-    );
+    assert((align & (align - 1)) == 0);
 
     ptrdiff_t padding = (ptrdiff_t)(-(uintptr_t)arena->base & (align - 1));
     ptrdiff_t available = arena->top - arena->base - padding;

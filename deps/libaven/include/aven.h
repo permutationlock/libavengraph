@@ -52,7 +52,7 @@ typedef Slice(unsigned char) ByteSlice;
 #endif
 
 #define slice_get(s, i) (s).ptr[aven_assert_lt_internal(i, (s).len)]
-#define list_get(l, i) (l).array[aven_assert_lt_internal(i, (l).len)]
+#define list_get(l, i) (l).ptr[aven_assert_lt_internal(i, (l).len)]
 #define list_push(l) (l).ptr[aven_assert_lt_internal((l).len++, (l).cap)]
 
 #define slice_array(a) { .ptr = a, .len = countof(a) }

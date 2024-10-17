@@ -4,9 +4,9 @@
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/str.h>
+#include <aven/math.h>
 
 #include "../gl.h"
-#include "../glm.h"
 
 typedef struct {
    unsigned short x0;
@@ -232,7 +232,7 @@ static inline AvenGlTextCtx aven_gl_text_ctx_init(AvenGl *gl) {
         "varying vec4 fColor;\n"
         "varying vec2 tCoord;\n"
         "void main() {\n"
-        "    gl_Position = vec4(uTrans * (vPos.xy - uPos), 0.0, 1.0);\n"
+        "    gl_Position = vec4((uTrans * vPos.xy) + uPos, 0.0, 1.0);\n"
         "    tCoord = vTex;\n"
         "    fColor = vColor;\n"
         "}\n";
@@ -376,23 +376,22 @@ static inline void aven_gl_text_buffer_deinit(
 }
 
 typedef struct {
-    float x0;
-    float y0;
-    float s0;
-    float t0;
-    float x1;
-    float y1;
-    float s1;
-    float t1;
+    Vec2 p0;
+    Vec2 t0;
+    Vec2 p1;
+    Vec2 t1;
 } AvenGlTextQuad;
 
-static inline float aven_gl_text_geometry_push(
-    AvenGlTextGeometry *geometry,
+typedef struct {
+    Slice(AvenGlTextQuad) quads;
+    Vec2 dim; 
+} AvenGlTextLine;
+
+static inline float aven_gl_text_quad(
     AvenGlTextFont *font,
-    Vec2 pos,
-    float pixel_size,
-    Vec4 color,
-    AvenStr text
+    float x,
+    char glyph,
+    AvenGlTextQuad *quad
 ) {
     void stbtt_GetPackedQuad(
         const AvenGlTextChar *chardata,
@@ -405,94 +404,123 @@ static inline float aven_gl_text_geometry_push(
         int align_to_integer
     );
 
-    float cur_x = 0.0f;
-    float cur_y = 0.0f;
+    float y = 0.0f;
 
-    for (size_t i = 0; i < text.len; i += 1) {
-        int pc_index = slice_get(text, i) - 32;
+    stbtt_GetPackedQuad(
+        font->packed_chars,
+        font->texture_width,
+        font->texture_height,
+        glyph - 32,
+        &x,
+        &y,
+        quad,
+        0
+    );
 
-        AvenGlTextQuad q;
-        stbtt_GetPackedQuad(
-            font->packed_chars,
-            font->texture_width,
-            font->texture_height,
-            pc_index,
-            &cur_x,
-            &cur_y,
-            &q,
-            0
-        );
-
-        size_t start_index = geometry->vertices.len;
-
-        list_push(geometry->vertices) = (AvenGlTextVertex){
-            .pos = { q.x0 * pixel_size + pos[0], q.y0 * pixel_size + pos[1] },
-            .tex = { q.s0, q.t0, },
-            .color = { color[0], color[1], color[2], color[3] },
-        };
-        list_push(geometry->vertices) = (AvenGlTextVertex){
-            .pos = { q.x1 * pixel_size + pos[0], q.y0 * pixel_size + pos[1] },
-            .tex = { q.s1, q.t0, },
-            .color = { color[0], color[1], color[2], color[3] },
-        };
-        list_push(geometry->vertices) = (AvenGlTextVertex){
-            .pos = { q.x1 * pixel_size + pos[0], q.y1 * pixel_size + pos[1] },
-            .tex = { q.s1, q.t1, },
-            .color = { color[0], color[1], color[2], color[3] },
-        };
-        list_push(geometry->vertices) = (AvenGlTextVertex){
-            .pos = { q.x0 * pixel_size + pos[0], q.y1 * pixel_size + pos[1] },
-            .tex = { q.s0, q.t1, },
-            .color = { color[0], color[1], color[2], color[3] },
-        };
-
-        list_push(geometry->indices) = (GLushort)start_index + 0;
-        list_push(geometry->indices) = (GLushort)start_index + 1;
-        list_push(geometry->indices) = (GLushort)start_index + 2;
-        list_push(geometry->indices) = (GLushort)start_index + 0;
-        list_push(geometry->indices) = (GLushort)start_index + 2;
-        list_push(geometry->indices) = (GLushort)start_index + 3;
-    }
-
-    return cur_x;
+    return x;
 }
 
-static inline float aven_gl_text_geometry_width(
+static inline AvenGlTextLine aven_gl_text_line(
     AvenGlTextFont *font,
-    float pixel_size,
-    AvenStr text
+    AvenStr text,
+    AvenArena *arena
 ) {
-    void stbtt_GetPackedQuad(
-        const AvenGlTextChar *chardata,
-        int pw,
-        int ph,
-        int char_index,
-        float *xpos,
-        float *ypos,
-        AvenGlTextQuad *q,
-        int align_to_integer
+    AvenGlTextLine line = {
+        .dim = { 0.0f, font-> height },
+        .quads = { .len = text.len },
+    };
+    line.quads.ptr = aven_arena_create_array(
+        AvenGlTextQuad,
+        arena,
+        line.quads.len
     );
 
-    float cur_x = 0.0f;
-    float cur_y = 0.0f;
-
     for (size_t i = 0; i < text.len; i += 1) {
-        int pc_index = slice_get(text, i) - 32;
-
-        AvenGlTextQuad q;
-        stbtt_GetPackedQuad(
-            font->packed_chars,
-            font->texture_width,
-            font->texture_height,
-            pc_index,
-            &cur_x,
-            &cur_y,
-            &q,
-            0
+        line.dim[0] = aven_gl_text_quad(
+            font,
+            line.dim[0],
+            slice_get(text, i),
+            &slice_get(line.quads, i)
         );
     }
 
-    return cur_x * pixel_size;
+    return line;
+}
+ 
+static void aven_gl_text_geometry_push_quad(
+    AvenGlTextGeometry *geometry,
+    AvenGlTextQuad *q,
+    Aff2 trans,
+    Vec4 color
+) {    
+    Vec2 vertices[4] = {
+        { q->p0[0], q->p0[1] },
+        { q->p1[0], q->p0[1] },
+        { q->p1[0], q->p1[1] },
+        { q->p0[0], q->p1[1] },
+    };
+
+    for (size_t j = 0; j < countof(vertices); j += 1) {
+        aff2_transform(vertices[j], trans, vertices[j]);
+    }
+    
+    size_t start_index = geometry->vertices.len;
+
+    list_push(geometry->vertices) = (AvenGlTextVertex){
+        .pos = { vertices[0][0], vertices[0][1]  },
+        .tex = { q->t0[0], q->t0[1] },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+    list_push(geometry->vertices) = (AvenGlTextVertex){
+         .pos = { vertices[1][0], vertices[1][1]  },
+        .tex = { q->t1[0], q->t0[1], },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+    list_push(geometry->vertices) = (AvenGlTextVertex){
+        .pos = { vertices[2][0], vertices[2][1] },
+        .tex = { q->t1[0], q->t1[1], },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+    list_push(geometry->vertices) = (AvenGlTextVertex){
+        .pos = { vertices[3][0], vertices[3][1] },
+        .tex = { q->t0[0], q->t1[1], },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+
+    list_push(geometry->indices) = (GLushort)start_index + 0;
+    list_push(geometry->indices) = (GLushort)start_index + 1;
+    list_push(geometry->indices) = (GLushort)start_index + 2;
+    list_push(geometry->indices) = (GLushort)start_index + 0;
+    list_push(geometry->indices) = (GLushort)start_index + 2;
+    list_push(geometry->indices) = (GLushort)start_index + 3;
+}
+
+static inline void aven_gl_text_geometry_push_line(
+    AvenGlTextGeometry *geometry,
+    AvenGlTextLine *line,
+    Aff2 trans,
+    float scale,
+    Vec4 color
+) {
+    Vec2 offset = {
+        -line->dim[0] / 2.0f,
+        -line->dim[1] / 2.0f
+    };    
+
+    Aff2 text_trans;
+    aff2_identity(text_trans);
+    aff2_add_vec2(text_trans, text_trans, offset);
+    aff2_stretch(text_trans, (Vec2){ scale, scale }, text_trans);
+    aff2_compose(text_trans, trans, text_trans);
+
+    for (size_t i = 0; i < line->quads.len; i += 1) {
+        aven_gl_text_geometry_push_quad(
+            geometry,
+            &slice_get(line->quads, i),
+            text_trans,
+            color
+        );
+    }
 }
 
 static inline void aven_gl_text_buffer_update(
@@ -537,8 +565,7 @@ static inline void aven_gl_text_geometry_draw(
     AvenGlTextCtx *ctx,
     AvenGlTextBuffer *buffer,
     AvenGlTextFont *font,
-    Mat2 cam_trans,
-    Vec2 cam_pos
+    Aff2 cam_trans
 ) {
     gl->BindBuffer(GL_ARRAY_BUFFER, buffer->vertex);
     assert(gl->GetError() == 0);
@@ -598,7 +625,7 @@ static inline void aven_gl_text_geometry_draw(
     gl->Uniform2fv(
         (GLint)ctx->upos_location,
         1,
-        (GLfloat*)cam_pos
+        (GLfloat*)cam_trans[2]
     );
     assert(gl->GetError() == 0);
 

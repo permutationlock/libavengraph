@@ -9,14 +9,13 @@
 #define AVEN_GRAPH_BFS_VERTEX_INVALID 0xffffffffU
 
 typedef struct {
-    uint32_t *vertices;
-    uint32_t *parents;
-    uint32_t size;
-    uint32_t target_vertex;
+    AvenGraphSubset vertices;
+    AvenGraphPropUint32 parents;
     uint32_t front;
     uint32_t back;
-    uint32_t vertex;
     uint32_t neighbor;
+    uint32_t target_vertex;
+    uint32_t vertex;
 } AvenGraphBfsCtx;
 
 static void aven_graph_bfs_push_entry_internal(
@@ -24,12 +23,11 @@ static void aven_graph_bfs_push_entry_internal(
     uint32_t v,
     uint32_t parent
 ) {
-    assert(ctx->back < ctx->size);
-    if (ctx->parents[v] != AVEN_GRAPH_BFS_VERTEX_INVALID) {
+    if (slice_get(ctx->parents, v) != AVEN_GRAPH_BFS_VERTEX_INVALID) {
         return;
     }
-    ctx->parents[v] = parent;
-    ctx->vertices[ctx->back] = v;
+    slice_get(ctx->parents, v) = parent;
+    slice_get(ctx->vertices, ctx->back) = v;
     ctx->back += 1;
 }
 
@@ -38,7 +36,7 @@ static void aven_graph_bfs_pop_entry_internal(AvenGraphBfsCtx *ctx) {
         ctx->vertex = AVEN_GRAPH_BFS_VERTEX_INVALID;
     }
 
-    ctx->vertex = ctx->vertices[ctx->front];
+    ctx->vertex = slice_get(ctx->vertices, ctx->front);
     ctx->front += 1;
     ctx->neighbor = 0;
 }
@@ -55,17 +53,22 @@ static inline AvenGraphBfsCtx aven_graph_bfs_init(
     AvenGraphBfsCtx ctx = {
         .vertex = start_vertex,
         .target_vertex = target_vertex,
-        .size = (uint32_t)g.len,
+        .vertices = { .len = g.len },
+        .parents = { .len = g.len },
     };
 
-    ctx.vertices = aven_arena_create_array(uint32_t, arena, 2 * g.len);
-    ctx.parents = ctx.vertices + g.len;
+    ctx.vertices.ptr = aven_arena_create_array(
+        uint32_t,
+        arena,
+        ctx.vertices.len
+    );
+    ctx.parents.ptr = aven_arena_create_array(uint32_t, arena, ctx.parents.len);
 
-    for (uint32_t i = 0; i < ctx.size; i += 1) {
-        ctx.parents[i] = AVEN_GRAPH_BFS_VERTEX_INVALID;
+    for (uint32_t i = 0; i < ctx.parents.len; i += 1) {
+        slice_get(ctx.parents, i) = AVEN_GRAPH_BFS_VERTEX_INVALID;
     }
 
-    ctx.parents[ctx.vertex] = ctx.vertex;
+    slice_get(ctx.parents, ctx.vertex) = ctx.vertex;
 
     return ctx;
 }
@@ -88,45 +91,47 @@ static inline bool aven_graph_bfs_step(AvenGraphBfsCtx *ctx, AvenGraph g) {
     aven_graph_bfs_push_entry_internal(ctx, u, ctx->vertex);
     ctx->neighbor += 1;
 
+    if (u == ctx->target_vertex) {
+        ctx->vertex = u;
+        return true;
+    }
+
     return false;
 }
 
-static inline AvenGraphSubset aven_graph_bfs_result(
+static inline AvenGraphSubset aven_graph_bfs_path(
     AvenGraphBfsCtx *ctx,
     AvenArena *arena
 ) {
-    if (ctx->vertex == AVEN_GRAPH_BFS_VERTEX_INVALID) {
+    if (ctx->vertex != ctx->target_vertex) {
         return (AvenGraphSubset){ 0 };
     }
 
     size_t len = 1;
     uint32_t vertex = ctx->vertex;
-    assert(vertex == ctx->target_vertex);
-
-    while (vertex != ctx->parents[vertex]) {
+    while (
+        vertex != slice_get(ctx->parents, vertex) and
+        len < ctx->vertices.len
+    ) {
         len += 1;
-        vertex = ctx->parents[vertex];
-        assert(vertex < ctx->size);
+        vertex = slice_get(ctx->parents, vertex);
     }
+    assert(vertex == slice_get(ctx->parents, vertex));
 
     AvenGraphSubset path = { .len = len };
+    path.ptr = aven_arena_create_array(uint32_t, arena, path.len);
 
     vertex = ctx->vertex;
-    while (vertex != ctx->parents[vertex]) {
+    while (
+        vertex != slice_get(ctx->parents, vertex) and
+        len != 0
+    ) {
         len -= 1;
-        ctx->vertices[len] = vertex;
-        vertex = ctx->parents[vertex];
+        slice_get(path, len) = vertex;
+        vertex = slice_get(ctx->parents, vertex);
     }
     assert(len == 1);
-    ctx->vertices[0] = vertex;
-
-    path.ptr = aven_arena_resize_array(
-        uint32_t,
-        arena,
-        ctx->vertices,
-        2 * (size_t)ctx->size,
-        path.len
-    );
+    slice_get(path, 0) = vertex;
 
     return path;
 }
@@ -135,21 +140,19 @@ static inline AvenGraphSubset aven_graph_bfs(
     AvenGraph g,
     uint32_t start_vertex,
     uint32_t target_vertex,
-    AvenArena *arena
+    AvenArena *arena,
+    AvenArena temp_arena
 ) {
     AvenGraphBfsCtx ctx = aven_graph_bfs_init(
         g,
         start_vertex,
         target_vertex,
-        arena
+        &temp_arena
     );
 
-    do {
-        // code to call at each step of BFs
-    } while (!aven_graph_bfs_step(&ctx, g));
+    while (!aven_graph_bfs_step(&ctx, g)) {};
 
-    return aven_graph_bfs_result(&ctx, arena);
+    return aven_graph_bfs_path(&ctx, arena);
 }
 
 #endif // AVEN_GRAPH_BFS_H
-

@@ -28,6 +28,32 @@ AvenArg libavengl_build_arg_data[] = {
         .optional = true,
 #endif
     },
+    {
+        .name = "-no-glfw",
+        .description = "Don't build GLFW locally",
+        .type = AVEN_ARG_TYPE_BOOL,
+    },
+    {
+        .name = "-syslibs",
+        .description = "System libraries to link",
+        .type = AVEN_ARG_TYPE_STRING,
+        .value = {
+            .type = AVEN_ARG_TYPE_STRING,
+#if defined(BUILD_DEFAULT_SYSLIBS)
+            .data = { .arg_str = BUILD_DEFAULT_SYSLIBS },
+#elif defined(_WIN32)
+    #if defined(_MSC_VER) and !defined(__clang__)
+            .data = {
+                .arg_str = "kernel32.lib user32.lib gdi32.lib shell32.lib"
+            },
+    #else
+            .data = { .arg_str = "kernel32 user32 gdi32 shell32" },
+    #endif
+#else
+            .data = { .arg_str = "m dl" },
+#endif
+        },
+    },
 };
 
 static inline AvenArgSlice libavengl_build_args(void) {
@@ -47,6 +73,8 @@ typedef struct {
 typedef struct {
     LibAvenGlBuildGLFWOpts glfw;
     LibAvenGlBuildSTBOpts stb;
+    AvenStrSlice syslibs;
+    bool no_glfw;
 } LibAvenGlBuildOpts;
 
 static inline LibAvenGlBuildOpts libavengl_build_opts(
@@ -54,6 +82,7 @@ static inline LibAvenGlBuildOpts libavengl_build_opts(
     AvenArena *arena
 ) {
     LibAvenGlBuildOpts opts = { 0 };
+
     if (aven_arg_has_arg(args, "-glfw-ccflags")) {
         opts.glfw.ccflags.valid = true;
         opts.glfw.ccflags.value = aven_str_split(
@@ -62,6 +91,7 @@ static inline LibAvenGlBuildOpts libavengl_build_opts(
             arena
         );
     }
+
     if (aven_arg_has_arg(args, "-stb-ccflags")) {
         opts.stb.ccflags.valid = true;
         opts.stb.ccflags.value = aven_str_split(
@@ -70,6 +100,14 @@ static inline LibAvenGlBuildOpts libavengl_build_opts(
             arena
         );
     }
+
+    opts.syslibs = aven_str_split(
+        aven_str_cstr(aven_arg_get_str(args, "-syslibs")),
+        ' ',
+        arena
+    );
+    opts.no_glfw = aven_arg_get_bool(args, "-no-glfw");
+
     return opts;
 }
 

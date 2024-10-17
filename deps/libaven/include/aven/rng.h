@@ -8,11 +8,11 @@ typedef struct {
     void *state;
 } AvenRng;
 
-static uint32_t aven_rng_rand(AvenRng rng) {
+static inline uint32_t aven_rng_rand(AvenRng rng) {
     return rng.rand(rng.state);
 }
 
-static uint32_t aven_rng_rand_bounded(AvenRng rng, uint32_t bound) {
+static inline uint32_t aven_rng_rand_bounded(AvenRng rng, uint32_t bound) {
     uint32_t threshold = -bound % bound;
 
     uint32_t n;
@@ -23,5 +23,8 @@ static uint32_t aven_rng_rand_bounded(AvenRng rng, uint32_t bound) {
     return n % bound;
 }
 
-#endif // RNG_H
+static inline float aven_rng_rand_scalef(AvenRng rng) {
+    return (float)aven_rng_rand(rng) / (float)0xffffffffU;
+}
 
+#endif // RNG_H

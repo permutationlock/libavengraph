@@ -31,13 +31,25 @@ int main(int argc, char **argv) {
     // Construct and parse build arguments
 
     AvenArgSlice common_args = aven_build_common_args();
-    AvenArgSlice args = { .len = common_args.len + 1 };
+    AvenArgSlice libaven_args = libaven_build_args();
+    AvenArgSlice libavengl_args = libavengl_build_args();
+
+    AvenArgSlice args = { .len = common_args.len + libavengl_args.len + 1 };
     args.ptr = aven_arena_create_array(AvenArg, &arena, args.len);
 
-    for(size_t i = 0; i < common_args.len; i += 1) {
-        slice_get(args, i) = slice_get(common_args, i);
+    size_t arg_index = 0;
+    for (size_t i = 0; i < libaven_args.len; i += 1) {
+        slice_get(args, arg_index) = slice_get(libaven_args, i);
+        arg_index += 1;
     }
-    slice_get(args, common_args.len) = libaven_build_arg_windres_manifest;
+    for (size_t i = 0; i < libavengl_args.len; i += 1) {
+        slice_get(args, arg_index) = slice_get(libavengl_args, i);
+        arg_index += 1;
+    }
+    for(size_t i = 0; i < common_args.len; i += 1) {
+        slice_get(args, arg_index) = slice_get(common_args, i);
+        arg_index += 1;
+    }
 
     int error = aven_arg_parse(
         args,
@@ -55,7 +67,8 @@ int main(int argc, char **argv) {
     }
 
     AvenBuildCommonOpts opts = aven_build_common_opts(args, &arena);
-    bool opt_winutf8 = libaven_build_opt_windres_manifest(args);
+    LibAvenBuildOpts libaven_opts = libaven_build_opts(args, &arena);
+    LibAvenGlBuildOpts libavengl_opts = libavengl_build_opts(args, &arena);
 
     // Build setup
 
@@ -74,9 +87,13 @@ int main(int argc, char **argv) {
         NULL
     );
 
+    AvenStr libaven_include_path = libaven_build_include_path(
+        libaven_path,
+        &arena
+    );
+
     AvenStr include_data[] = {
-        libaven_build_include_path(libaven_path, &arena),
-        libavengl_build_include_path(libavengl_path, &arena),
+        libaven_include_path,
         libavengraph_build_include_path(root_path, &arena),
     };
     AvenStrSlice includes = slice_array(include_data);
@@ -90,7 +107,7 @@ int main(int argc, char **argv) {
     AvenBuildStep out_dir_step = aven_build_step_mkdir(out_dir);
 
     Optional(AvenBuildStep) winutf8_obj_step = { 0 };
-    if (opt_winutf8) {
+    if (libaven_opts.winutf8) {
         winutf8_obj_step.value = libaven_build_step_windres_manifest(
             &opts,
             libaven_path,
@@ -101,25 +118,65 @@ int main(int argc, char **argv) {
     }
 
     // Build steps for examples
- 
-    AvenBuildStep bfs_obj_step = aven_build_common_step_cc_ex(
+
+    AvenStr graphics_include_data[] = {
+        libaven_include_path,
+        libavengraph_build_include_path(root_path, &arena),
+        libavengl_build_include_path(libavengl_path, &arena),
+        libavengl_build_include_glfw(libavengl_path, &arena),
+        libavengl_build_include_gles2(libavengl_path, &arena),
+    };
+    AvenStrSlice graphics_includes = slice_array(graphics_include_data);
+
+    AvenBuildStep stb_obj_step = libavengl_build_step_stb(
         &opts,
-        includes,
-        macros,
-        aven_path(&arena, root_path.ptr, "src", "bfs.c", NULL),
+        &libavengl_opts,
+        libaven_include_path,
+        libavengl_path,
         &work_dir_step,
         &arena
     );
-    AvenBuildStep *bfs_obj_data[] = { &bfs_obj_step, &winutf8_obj_step.value };
-    AvenBuildStepPtrSlice bfs_objs = slice_array(bfs_obj_data);
 
-    if (!winutf8_obj_step.valid) {
-        bfs_objs.len -= 1;
+    Optional(AvenBuildStep) glfw_obj_step = { 0 };
+    if (!libavengl_opts.no_glfw) {
+        glfw_obj_step.value = libavengl_build_step_glfw(
+            &opts,
+            &libavengl_opts,
+            libavengl_path,
+            &work_dir_step,
+            &arena
+        );
+        glfw_obj_step.valid = true;
     }
+ 
+    AvenBuildStep bfs_obj_step = aven_build_common_step_cc_ex(
+        &opts,
+        graphics_includes,
+        macros,
+        aven_path(&arena, root_path.ptr, "examples", "bfs.c", NULL),
+        &work_dir_step,
+        &arena
+    );
+
+    AvenBuildStep *bfs_obj_data[3];
+    List(AvenBuildStep *) bfs_obj_list = list_array(bfs_obj_data);
+
+    list_push(bfs_obj_list) = &bfs_obj_step;
+    list_push(bfs_obj_list) = &stb_obj_step;
+    
+    if (winutf8_obj_step.valid) {
+        list_push(bfs_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (glfw_obj_step.valid) {
+        list_push(bfs_obj_list) = &glfw_obj_step.value;
+    }
+
+    AvenBuildStepPtrSlice bfs_objs = slice_list(bfs_obj_list);
 
     AvenBuildStep bfs_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
-        syslibs,
+        libavengl_opts.syslibs,
         bfs_objs,
         &out_dir_step,
         aven_str("bfs"),
@@ -135,12 +192,14 @@ int main(int argc, char **argv) {
     AvenStr test_dir = aven_str("build_test");
     AvenBuildStep test_dir_step = aven_build_step_mkdir(test_dir);
 
-    AvenBuildStep *test_linked_obj_refs[] = { &winutf8_obj_step.value };
-    AvenBuildStepPtrSlice test_linked_objs = slice_array(test_linked_obj_refs);
+    AvenBuildStep *test_obj_data[1];
+    List(AvenBuildStep *) test_obj_list = list_array(test_obj_data);
 
-    if (!winutf8_obj_step.valid) {
-        test_linked_objs.len -= 1;
+    if (winutf8_obj_step.valid) {
+        list_push(test_obj_list) = &winutf8_obj_step.value;
     }
+
+    AvenBuildStepPtrSlice test_objs = slice_list(test_obj_list);
 
     AvenStrSlice test_args =  { 0 };
 
@@ -149,7 +208,7 @@ int main(int argc, char **argv) {
         includes,
         macros,
         syslibs,
-        test_linked_objs,
+        test_objs,
         aven_path(&arena, root_path.ptr, "test.c", NULL),
         &test_dir_step,
         false,
@@ -171,7 +230,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "TEST FAILED\n");
         }
     } else {
-        error = aven_build_step_run(&test_root_step, arena);
+        error = aven_build_step_run(&root_step, arena);
         if (error != 0) {
             fprintf(stderr, "BUILD FAILED\n");
         }
