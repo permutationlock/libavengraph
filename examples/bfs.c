@@ -141,19 +141,8 @@ static void app_update(
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx.vertex_shapes.geometry);
 
-    // uint32_t subgraph_vertices[] = {
-    //     6, 7, 8,
-    //     11, 12, 13,
-    // };
-    // AvenGraphSubset subgraph = slice_array(subgraph_vertices);
-
     Aff2 graph_transform;
     aff2_identity(graph_transform);
-    // aven_graph_plane_geometry_subgraph_transform(
-    //     graph_transform,
-    //     ctx.embedding,
-    //     subgraph
-    // );
     aff2_stretch(
         graph_transform,
         (Vec2){ norm_width, norm_height },
@@ -393,6 +382,21 @@ static void key_callback(
         glfwSetWindowShouldClose(win, GLFW_TRUE);
     }
 }
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+void main_loop(void) {
+    int width;
+    int height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    app_update(width, height);
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
+#endif
  
 #if defined(_MSC_VER)
 int WinMain(void) {
