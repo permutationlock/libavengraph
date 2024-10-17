@@ -418,7 +418,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
                 continue;
             }
 
-            uint32_t adj_start = master_adj.len;
+            uint32_t adj_start = (uint32_t)master_adj.len;
             slice_get(graph, v).ptr = &master_adj.ptr[adj_start];
 
             list_push(master_adj) = face->vertices[(j + 1) % 3];
