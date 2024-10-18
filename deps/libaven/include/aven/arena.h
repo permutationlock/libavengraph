@@ -5,7 +5,6 @@
 
 #if __STDC_VERSION__ >= 201112L
     #include <stdalign.h>
-    #include <stdnoreturn.h>
     #define aven_arena_alignof(t) alignof(t)
     #if defined(_WIN32) and defined(_MSC_VER)
         // Oh Microsoft...
@@ -19,9 +18,6 @@
     #endif
     #define aven_arena_alignof(t) __BIGGEST_ALIGNMENT__
     #define AVEN_ARENA_BIGGEST_ALIGNMENT __BIGGEST_ALIGNMENT__
-    #ifndef noreturn
-        #define noreturn
-    #endif
 #else
     #error "C99 or later is required"
 #endif
@@ -100,14 +96,12 @@ AVEN_FN void *aven_arena_alloc(
     size_t align,
     size_t size
 ) {
-    noreturn void abort(void);
-
     assert((align & (align - 1)) == 0);
 
     ptrdiff_t padding = (ptrdiff_t)(-(uintptr_t)arena->base & (align - 1));
     ptrdiff_t available = arena->top - arena->base - padding;
     if (available < 0 || count > ((size_t)available / size)) {
-        abort();
+        aven_panic();
     }
 
     void *ptr = arena->base + padding;

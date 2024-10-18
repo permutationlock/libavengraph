@@ -31,6 +31,16 @@
     #include <assert.h>
 #endif
 
+#if __STDC_VERSION__ >= 201112L
+    #include <stdnoreturn.h>
+#elif __STDC_VERSION__ >= 199901L
+    #ifndef noreturn
+        #define noreturn
+    #endif
+#else
+    #error "C99 or later is required"
+#endif
+
 #define countof(array) (sizeof(array) / sizeof(*array))
 
 #define Optional(t) struct { t value; bool valid; }
@@ -103,6 +113,12 @@ typedef Slice(unsigned char) ByteSlice;
             (d).len * sizeof(*(d).ptr) + 1 \
         ) \
     )
+
+static inline noreturn void aven_panic(void) {
+    noreturn void _Exit(int status);
+    
+    _Exit(1);
+}
 
 #if defined(AVEN_IMPLEMENTATION) and !defined(AVEN_IMPLEMENTATION_SEPARATE_TU)
     #define AVEN_FN static inline

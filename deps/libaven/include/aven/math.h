@@ -18,7 +18,8 @@
     __has_builtin(__builtin_expf) and \
     __has_builtin(__builtin_powf) and \
     __has_builtin(__builtin_ceilf) and \
-    __has_builtin(__builtin_floorf) \
+    __has_builtin(__builtin_floorf) and \
+    __has_builtin(__builtin_fabsf) \
 )
     #define AVEN_MATH_USE_BUILTINS
 
@@ -35,6 +36,7 @@
     #define powf __builtin_powf
     #define ceilf __builtin_ceilf
     #define floorf __builtin_floorf
+    #define fabsf __builtin_fabsf
 #else
     #ifndef AVEN_MATH_USE_STDMATH
         #define AVEN_MATH_USE_STDMATH
@@ -166,24 +168,6 @@ static inline float vec2_angle_xaxis(Vec2 a) {
 static inline void vec2_midpoint(Vec2 dst, Vec2 a, Vec2 b) {
     vec2_add(dst, a, b);
     vec2_scale(dst, 0.5f, dst);
-}
-
-static inline void vec2_cwise_perp(Vec2 dst, Vec2 a) {
-#ifdef AVEN_MATH_SIMD
-    *(Vec4SIMD *)dst = (Vec4SIMD){ a[1], -a[0] };
-#else
-    dst[0] = a[1];
-    dst[1] = -a[0];
-#endif
-}
-
-static inline void vec2_ccwise_perp(Vec2 dst, Vec2 a) {
-#ifdef AVEN_MATH_SIMD
-    *(Vec4SIMD *)dst = (Vec4SIMD){ -a[1], a[0] };
-#else
-    dst[0] = -a[1];
-    dst[1] = a[0];
-#endif
 }
 
 static inline void mat2_copy(Mat2 dst, Mat2 m) {
@@ -363,7 +347,7 @@ static inline void aff2_camera_position(
     aff2_identity(dst);
     aff2_sub_vec2(dst, dst, pos);
     aff2_rotate(dst, dst, -theta);
-    aff2_stretch(dst, (Vec2){ 1.0f / dim[0], -1.0f / dim[1] }, dst);
+    aff2_stretch(dst, (Vec2){ 1.0f / dim[0], 1.0f / dim[1] }, dst);
 }
 
 static inline void aff2_lerp(

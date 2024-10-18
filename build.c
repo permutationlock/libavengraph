@@ -184,8 +184,44 @@ int main(int argc, char **argv) {
         &arena
     );
 
+    AvenBuildStep gen_tri_obj_step = aven_build_common_step_cc_ex(
+        &opts,
+        graphics_includes,
+        macros,
+        aven_path(&arena, root_path.ptr, "examples", "gen_tri.c", NULL),
+        &work_dir_step,
+        &arena
+    );
+
+    AvenBuildStep *gen_tri_obj_data[3];
+    List(AvenBuildStep *) gen_tri_obj_list = list_array(gen_tri_obj_data);
+
+    list_push(gen_tri_obj_list) = &gen_tri_obj_step;
+    list_push(gen_tri_obj_list) = &stb_obj_step;
+    
+    if (winutf8_obj_step.valid) {
+        list_push(gen_tri_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (glfw_obj_step.valid) {
+        list_push(gen_tri_obj_list) = &glfw_obj_step.value;
+    }
+
+    AvenBuildStepPtrSlice gen_tri_objs = slice_list(gen_tri_obj_list);
+
+    AvenBuildStep gen_tri_exe_step = aven_build_common_step_ld_exe_ex(
+        &opts,
+        libavengl_opts.syslibs,
+        gen_tri_objs,
+        &out_dir_step,
+        aven_str("gen_tri"),
+        true,
+        &arena
+    );
+
     AvenBuildStep root_step = aven_build_step_root();
-    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
+//    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
 
     // Build steps for tests
 
