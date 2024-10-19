@@ -12,6 +12,8 @@ typedef Slice(uint32_t) AvenGraphPropUint32;
 typedef Slice(uint16_t) AvenGraphPropUint16;
 typedef Slice(uint8_t) AvenGraphPropUint8;
 
+typedef Slice(uint8_t) AvenGraphColorSlice;
+
 typedef struct{
     uint32_t vertex;
     uint32_t back_index;

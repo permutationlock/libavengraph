@@ -115,7 +115,7 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
         .faces = { .cap = 2 * size - 4 },
         .valid_faces = { .cap = 2 * size - 4 },
         .active_face = 1,
-        .min_area = min_area,
+        .min_area = 2.0f * min_area,
         .min_coeff = min_coeff,
     };
 
@@ -155,6 +155,38 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
     return ctx;
 }
 
+static bool aven_graph_plane_gen_tri_valid_face_internal(
+    AvenGraphPlaneGenTriCtx *ctx,
+    uint32_t v1,
+    uint32_t v2,
+    uint32_t v3,
+    float scale
+) {
+    Vec2 coords[3];
+    vec2_copy(coords[0], slice_get(ctx->embedding, v1));
+    vec2_copy(coords[1], slice_get(ctx->embedding, v2));
+    vec2_copy(coords[2], slice_get(ctx->embedding, v3));
+
+    float max_side2 = 0.0f;
+    for (uint32_t i = 0; i < 3; i += 1) {
+        uint32_t j = (i + 1) % 3;
+
+        Vec2 side;
+        vec2_sub(side, coords[j], coords[i]);
+        max_side2 = max(max_side2, vec2_dot(side, side));
+    }
+
+    float area = 0.5f * fabsf(
+        coords[0][0] * (coords[1][1] - coords[2][1]) +
+        coords[1][0] * (coords[2][1] - coords[0][1]) +
+        coords[2][0] * (coords[0][1] - coords[1][1])
+    );
+
+    float bh_ratio = 2.0f * area / max_side2;
+
+    return area * bh_ratio > scale * ctx->min_area;
+}
+
 static inline bool aven_graph_plane_gen_tri_step(
     AvenGraphPlaneGenTriCtx *ctx,
     AvenRng rng
@@ -164,7 +196,6 @@ static inline bool aven_graph_plane_gen_tri_step(
     }
 
     if (ctx->active_face == AVEN_GRAPH_PLANE_GEN_FACE_INVALID) {
-        float area = -1.0f;
         uint32_t tries = (uint32_t)ctx->valid_faces.len;
         while (tries != 0) {
             uint32_t valid_face_index = aven_rng_rand_bounded(
@@ -178,23 +209,46 @@ static inline bool aven_graph_plane_gen_tri_step(
                 ctx->active_face
             );
 
-            Vec2 coords[3];
-            for (uint32_t i = 0; i < 3; i += 1) {
-                vec2_copy(
-                    coords[i],
-                    slice_get(ctx->embedding, face->vertices[i])
-                );
-            }
-
-            area = 0.5f * fabsf(
-                coords[0][0] * (coords[1][1] - coords[2][1]) +
-                coords[1][0] * (coords[2][1] - coords[0][1]) +
-                coords[2][0] * (coords[0][1] - coords[1][1])
-            );
-
-            if (area > ctx->min_area) {
+            if (
+                aven_graph_plane_gen_tri_valid_face_internal(
+                    ctx,
+                    face->vertices[0],
+                    face->vertices[1],
+                    face->vertices[2],
+                    1.0f
+                )
+            ) {
                 return false;
             }
+
+            // Vec2 coords[3];
+            // for (uint32_t i = 0; i < 3; i += 1) {
+            //     vec2_copy(
+            //         coords[i],
+            //         slice_get(ctx->embedding, face->vertices[i])
+            //     );
+            // }
+
+            // float max_side2 = 0.0f;
+            // for (uint32_t i = 0; i < 3; i += 1) {
+            //     uint32_t j = (i + 1) % 3;
+
+            //     Vec2 side;
+            //     vec2_sub(side, coords[j], coords[i]);
+            //     max_side2 = max(max_side2, vec2_dot(side, side));
+            // }
+
+            // area = 0.5f * fabsf(
+            //     coords[0][0] * (coords[1][1] - coords[2][1]) +
+            //     coords[1][0] * (coords[2][1] - coords[0][1]) +
+            //     coords[2][0] * (coords[0][1] - coords[1][1])
+            // );
+
+            // float bh_ratio = 2.0f * area / max_side2;
+
+            // if (area > ctx->min_area and bh_ratio > ctx->min_bh_ratio) {
+            //     return false;
+            // }
 
             if (valid_face_index != ctx->valid_faces.len - 1) {
                 list_get(ctx->valid_faces, valid_face_index) = list_get(
@@ -256,7 +310,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         uint32_t neighbor_index;
         uint32_t vertex_index;
     } AvenGraphPlaneGenNeighbor;
-    AvenGraphPlaneGenNeighbor neighbor_data[4];
+    AvenGraphPlaneGenNeighbor neighbor_data[3];
     List(AvenGraphPlaneGenNeighbor) valid_neighbors = list_array(neighbor_data);
 
     for (uint32_t i = 0; i < 3; i += 1) {
@@ -285,6 +339,25 @@ static inline bool aven_graph_plane_gen_tri_step(
         assert(k < 3);
 
         uint32_t n = neighbor->vertices[k];
+
+        if (
+            !aven_graph_plane_gen_tri_valid_face_internal(
+                ctx,
+                v,
+                f1,
+                n,
+                0.5f
+            ) or
+            !aven_graph_plane_gen_tri_valid_face_internal(
+                ctx,
+                n,
+                f2,
+                v,
+                0.5f
+            )
+        ) {
+            continue;
+        }
 
         Vec2 npos;
         vec2_copy(npos, list_get(ctx->embedding, n));
@@ -384,11 +457,11 @@ static inline bool aven_graph_plane_gen_tri_step(
             neighbor_face_index
         );
 
-        AvenGraphPlaneGenFace old_neighbor_face = *neighbor_face;
-
         uint32_t ncur = neighbor->vertex_index;
         uint32_t nnext = (ncur + 1) % 3;
         uint32_t nprev = (ncur + 2) % 3;
+
+        AvenGraphPlaneGenFace old_neighbor_face = *neighbor_face;
 
         neighbor_face->neighbors[nprev] = new_face_index;
         neighbor_face->neighbors[nnext] = new_face->neighbors[2];

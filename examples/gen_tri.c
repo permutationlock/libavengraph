@@ -25,12 +25,12 @@
 #define GRAPH_ARENA_PAGES 1000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (256)
+#define GRAPH_MAX_VERTICES (12)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.015f
+#define VERTEX_RADIUS 0.02f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10000)
 
 typedef struct {
     AvenGlShapeCtx ctx;
@@ -52,8 +52,10 @@ typedef struct {
     AvenRngPcg pcg;
     AvenRng rng;
     AvenGraphPlaneGenTriCtx tri_ctx;
+    AvenArena pre_tri_ctx_arena;
     AvenTimeInst last_update;
     int64_t elapsed;
+    int count;
 } AppCtx;
 
 static GLFWwindow *window;
@@ -66,8 +68,8 @@ static void app_init(void) {
  
     ctx.edge_shapes.ctx = aven_gl_shape_ctx_init(&gl);
     ctx.edge_shapes.geometry = aven_gl_shape_geometry_init(
-        (GRAPH_MAX_EDGES) * 4 * 3,
-        (GRAPH_MAX_EDGES) * 6 * 3,
+        (GRAPH_MAX_EDGES) * 4,
+        (GRAPH_MAX_EDGES) * 6,
         &arena
     );
     ctx.edge_shapes.buffer = aven_gl_shape_buffer_init(
@@ -78,8 +80,8 @@ static void app_init(void) {
 
     ctx.vertex_shapes.ctx = aven_gl_shape_rounded_ctx_init(&gl);
     ctx.vertex_shapes.geometry = aven_gl_shape_rounded_geometry_init(
-        (GRAPH_MAX_VERTICES) * 4 * 3,
-        (GRAPH_MAX_VERTICES) * 6 * 3,
+        (GRAPH_MAX_VERTICES + 3) * 4 * 2,
+        (GRAPH_MAX_VERTICES + 3) * 6 * 2,
         &arena
     );
     ctx.vertex_shapes.buffer = aven_gl_shape_rounded_buffer_init(
@@ -88,13 +90,14 @@ static void app_init(void) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-    ctx.pcg = aven_rng_pcg_seed(0xbeefUL, 0xf00dUL);
+    ctx.pcg = aven_rng_pcg_seed(0xb00baaaaUL, 0xf1f1f00dUL);
     ctx.rng = aven_rng_pcg(&ctx.pcg);
 
+    ctx.pre_tri_ctx_arena = arena;
     ctx.tri_ctx = aven_graph_plane_gen_tri_init(
-        128,
-        40.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.2f,
+        GRAPH_MAX_VERTICES,
+        2.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.05f,
         &arena
     );
 
@@ -106,6 +109,22 @@ static void app_init(void) {
     ctx.embedding = data.embedding;
 
     ctx.last_update = aven_time_now();
+}
+
+static void app_reset(void) {
+    arena = ctx.pre_tri_ctx_arena;
+    ctx.tri_ctx = aven_graph_plane_gen_tri_init(
+        GRAPH_MAX_VERTICES,
+        2.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.2f,
+        &arena
+    );
+    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+        &ctx.tri_ctx,
+        &arena
+    );
+    ctx.graph = data.graph;
+    ctx.embedding = data.embedding;
 }
 
 static void app_deinit(void) {
@@ -142,13 +161,27 @@ static void app_update(
         ctx.elapsed -= BFS_TIMESTEP;
         bool done = aven_graph_plane_gen_tri_step(&ctx.tri_ctx, ctx.rng);
         if (!done) {
+            AvenArena temp_arena = arena;
             AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
                 &ctx.tri_ctx,
-                &arena
+                &temp_arena
             );
             ctx.graph = data.graph;
             ctx.embedding = data.embedding;
-            printf("vertices: %lu\n", ctx.graph.len);
+            //printf("vertices: %lu\n", ctx.graph.len);
+        } else {
+            bool success = true;
+            for (uint32_t i = 0; i < ctx.graph.len; i += 1) {
+                if (slice_get(ctx.graph, i).len != 5) {
+                    success = false;
+                }
+            }
+
+            if (!success) {
+                printf("count: %d\n", ctx.count);
+                ctx.count += 1;
+                app_reset();
+            }
         }
     }
 
@@ -165,7 +198,7 @@ static void app_update(
 
     AvenGraphPlaneGeometryEdge edge_info = {
         .color = { 0.0f, 0.0f, 0.0f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 4.0f),
+        .thickness = (VERTEX_RADIUS / 3.0f),
     };
 
     aven_graph_plane_geometry_push_edges(
@@ -239,11 +272,13 @@ static void app_update(
     gl.Clear(GL_COLOR_BUFFER_BIT);
     assert(gl.GetError() == 0);
 
+    float border_padding = 2.0f * VERTEX_RADIUS;
+
     Aff2 cam_transform;
     aff2_camera_position(
         cam_transform,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ norm_width, norm_height },
+        (Vec2){ norm_width + border_padding, norm_height + border_padding },
         0.0f
     );
 
@@ -288,6 +323,9 @@ static void key_callback(
     (void)mods;
     if (key == GLFW_KEY_ESCAPE and action == GLFW_PRESS) {
         glfwSetWindowShouldClose(win, GLFW_TRUE);
+    }
+    if (key == GLFW_KEY_SPACE and action == GLFW_PRESS) {
+        app_reset();
     }
 }
 
