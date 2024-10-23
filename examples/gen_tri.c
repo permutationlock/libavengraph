@@ -28,9 +28,9 @@
 #define GRAPH_MAX_VERTICES (12)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.02f
+#define VERTEX_RADIUS 0.04f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10000)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 100000)
 
 typedef struct {
     AvenGlShapeCtx ctx;
@@ -90,14 +90,14 @@ static void app_init(void) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-    ctx.pcg = aven_rng_pcg_seed(0xb00baaaaUL, 0xf1f1f00dUL);
+    ctx.pcg = aven_rng_pcg_seed(0xb00b123UL, 0xfafafeedUL);
     ctx.rng = aven_rng_pcg(&ctx.pcg);
 
     ctx.pre_tri_ctx_arena = arena;
     ctx.tri_ctx = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        2.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.05f,
+        4.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.25f,
         &arena
     );
 
@@ -115,8 +115,8 @@ static void app_reset(void) {
     arena = ctx.pre_tri_ctx_arena;
     ctx.tri_ctx = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        2.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.2f,
+        4.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.25f,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
@@ -157,10 +157,13 @@ static void app_update(
     ctx.last_update = now;
     ctx.elapsed += elapsed;
 
+    bool changed = false;
     while (ctx.elapsed >= BFS_TIMESTEP) {
+        changed = true;
         ctx.elapsed -= BFS_TIMESTEP;
         bool done = aven_graph_plane_gen_tri_step(&ctx.tri_ctx, ctx.rng);
-        if (!done) {
+        if (done) {
+            changed = false;
             AvenArena temp_arena = arena;
             AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
                 &ctx.tri_ctx,
@@ -168,8 +171,7 @@ static void app_update(
             );
             ctx.graph = data.graph;
             ctx.embedding = data.embedding;
-            //printf("vertices: %lu\n", ctx.graph.len);
-        } else {
+
             bool success = true;
             for (uint32_t i = 0; i < ctx.graph.len; i += 1) {
                 if (slice_get(ctx.graph, i).len != 5) {
@@ -183,6 +185,16 @@ static void app_update(
                 app_reset();
             }
         }
+    }
+
+    if (changed) {
+        AvenArena temp_arena = arena;
+        AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+            &ctx.tri_ctx,
+            &temp_arena
+        );
+        ctx.graph = data.graph;
+        ctx.embedding = data.embedding;
     }
 
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);

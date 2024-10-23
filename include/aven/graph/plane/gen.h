@@ -313,6 +313,8 @@ static inline bool aven_graph_plane_gen_tri_step(
     AvenGraphPlaneGenNeighbor neighbor_data[3];
     List(AvenGraphPlaneGenNeighbor) valid_neighbors = list_array(neighbor_data);
 
+    uint32_t flips = aven_rng_rand(rng);
+
     for (uint32_t i = 0; i < 3; i += 1) {
         AvenGraphPlaneGenFace *neighbor = &list_get(
             ctx->faces,
@@ -341,19 +343,33 @@ static inline bool aven_graph_plane_gen_tri_step(
         uint32_t n = neighbor->vertices[k];
 
         if (
+            aven_graph_plane_gen_tri_valid_face_internal(
+                ctx,
+                neighbor->vertices[0],
+                neighbor->vertices[1],
+                neighbor->vertices[2],
+                ctx->min_coeff
+            )
+        ) {
+            if ((flips & (1U << i)) == 0) {
+                continue;
+            }
+        }
+
+        if (
             !aven_graph_plane_gen_tri_valid_face_internal(
                 ctx,
                 v,
                 f1,
                 n,
-                0.5f
+                ctx->min_coeff
             ) or
             !aven_graph_plane_gen_tri_valid_face_internal(
                 ctx,
                 n,
                 f2,
                 v,
-                0.5f
+                ctx->min_coeff
             )
         ) {
             continue;
@@ -439,13 +455,7 @@ static inline bool aven_graph_plane_gen_tri_step(
 
     // Randomly flip valid edges around the newly split active face
 
-    uint32_t flips = aven_rng_rand(rng);
-
     for (uint32_t i = 0; i < valid_neighbors.len; i += 1) {
-        if ((flips & (1U << i)) == 0) {
-            continue;
-        }
-
         AvenGraphPlaneGenNeighbor *neighbor = &list_get(valid_neighbors, i);
 
         uint32_t new_face_index = new_face_indices[neighbor->neighbor_index];

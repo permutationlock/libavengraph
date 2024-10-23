@@ -136,6 +136,12 @@ static inline AvenGraphSubset aven_graph_bfs_path(
     return path;
 }
 
+static inline uint32_t aven_graph_bfs_backtrace(AvenGraphBfsCtx *ctx) {
+    uint32_t v = ctx->vertex;
+    ctx->vertex = slice_get(ctx->parents, v);
+    return v;
+}
+
 static inline AvenGraphSubset aven_graph_bfs(
     AvenGraph g,
     uint32_t start_vertex,
