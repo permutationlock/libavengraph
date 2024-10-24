@@ -79,9 +79,10 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
     }
 
     uint32_t v = ctx->min_vertex;
+    size_t deg = 0;
     for (; v < ctx->graph.len; v += 1) {
-        AvenGraphPlaneTestAdjList *adj = &slice_get(ctx->graph, i);
-        size_t deg = adj->len;
+        AvenGraphPlaneTestAdjList *adj = &slice_get(ctx->graph, v);
+        deg = adj->neighbor_list.len;
         while (deg < 6 and adj->maybe_next.valid) {
             adj = &slice_get(ctx->graph, adj->maybe_next.value);
             deg += adj->len;
@@ -100,6 +101,29 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
         return true;
     }
 
+    AvenGraphPlaneTestFace face = { 0 };
+
+    uint32_t u = v;
+    size_t n_index = 0;
+    do {
+        AvenGraphPlaneTestAdjList *adj = slice_get(ctx->graph, u);
+        for (uint32_t i = 0; i < adj->neighbor_list.len; i += 1) {
+            face.vertices[n_index] = list_get(adj->neighbor_list, i);
+            n_index += 1;
+        }
+
+        if (!adj->maybe_next.valid) {
+            break;
+        }
+        u = adj->mayb_next.value;
+    } while (n_index < deg);
+
+    assert(n_index == deg);
+
+    switch (deg) {
+        case 3:
+
+    }
     AvenGraphPlaneTestAdjList *v_adj = &slice_get(ctx->graph, v);
     for (uint32_t i = 0; i < v_adj->len; i += 1) {
         
