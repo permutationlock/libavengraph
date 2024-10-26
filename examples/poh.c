@@ -585,6 +585,15 @@ static void app_update(
     //     &ctx.vertex_text.font,
     //     cam_transform
     // );
+
+    gl.ColorMask(false, false, false, true);
+    assert(gl.GetError() == 0);
+    gl.ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    assert(gl.GetError() == 0);
+    gl.Clear(GL_COLOR_BUFFER_BIT);
+    assert(gl.GetError() == 0);
+    gl.ColorMask(true, true, true, true);
+    assert(gl.GetError() == 0);
 }
 
 static void error_callback(int error, const char *description) {
