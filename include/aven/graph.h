@@ -22,5 +22,35 @@ typedef struct{
 typedef Slice(AvenGraphAugAdjListNode) AvenGraphAugAdjList;
 typedef Slice(AvenGraphAugAdjList) AvenGraphAug;
 
+static inline uint32_t aven_graph_neighbor_index(
+    AvenGraph graph,
+    uint32_t vertex,
+    uint32_t neighbor
+) {
+    AvenGraphAdjList adj = slice_get(graph, vertex);
+    for (uint32_t i = 0; i < adj.len; i += 1) {
+        if (slice_get(adj, i) == neighbor) {
+            return i;
+        }
+    }
+    assert(false);
+}
+
+static inline uint32_t aven_graph_next_neighbor_index(
+    AvenGraph graph,
+    uint32_t vertex,
+    uint32_t neighbor
+) {
+    AvenGraphAdjList adj = slice_get(graph, vertex);
+    for (uint32_t i = 0; i + 1 < adj.len; i += 1) {
+        if (slice_get(adj, i) == neighbor) {
+            return i + 1;
+        }
+    }
+    assert(slice_get(adj, adj.len - 1) == neighbor);
+
+    return 0;
+}
+
 #endif // AVEN_GRAPH_H
 

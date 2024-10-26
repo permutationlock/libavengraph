@@ -2,47 +2,24 @@
 #define AVEN_GRAPH_PLANE_POH_H
 
 typedef struct {
-    uint32_t parent;
-    uint32_t search_code;
-} AvenGraphPlanePohBfsData;
-
-typedef struct {
-    AvenGraphSubset vertices;
-    uint32_t front;
-    uint32_t back;
-} AvenGraphPlanePohBfsQueue;
-
-typedef struct {
-    uint32_t p1;
-    uint32_t pn;
-    uint32_t q1;
-    uint32_t q1p1_edge_index;
-    uint32_t q1q2_edge_index;
-} AvenGraphPlanePohSubgraph;
-
-typedef enum {
-    AVEN_GRAPH_PLANE_POH_STATE_START = 0,
-    AVEN_GRAPH_PLANE_POH_STATE_SEARCH,
-    AVEN_GRAPH_PLANE_POH_STATE_ORIENT,
-    AVEN_GRAPH_PLANE_POH_STATE_COLOR,
-} AvenGraphPlanePohState;
+    uint32_t u;
+    uint32_t w;
+    uint32_t t;
+    uint32_t edge_index;
+    uint32_t face_mark;
+    uint32_t below_mark;
+    uint8_t q_color;
+    uint8_t p_color;
+    bool above_path;
+    bool last_uncolored;
+} AvenGraphPlanePohFrame;
 
 typedef struct {
     AvenGraph graph;
     AvenGraphPropUint8 coloring;
-    List(AvenGraphPlanePohSubgraph) subgraph_list;
-    Slice(AvenGraphPlanePohBfsData) bfs_data;
-    AvenGraphPlanePohBfsCtx bfs_queue;
-    AvenGraphPlanePohSubgraph subgraph;
-    uint32_t neighbor;
-    uint32_t vertex;
-    uint32_t start_vertex;
-    uint32_t end_vertex;
-    uint32_t search_code;
-    bool cord_possible;
-#ifndef NDEBUG
-    AvenGraphPlanePohState state;
-#endif // !defined(NDEBUG)
+    AvenGraphPropUint32 marks;
+    Slice(uint32_t) first_edges;
+    List(AvenGraphPlanePohFrame) frames;
 } AvenGraphPlanePohCtx;
 
 static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
@@ -52,20 +29,12 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
     uint32_t q2,
     AvenArena *arena
 ) {
-    assert(p1 != q1 and p1 != q2 and q1 != q2);
-
-    AvenGraphPohCtx ctx = {
+    AvenGraphPlanePohCtx ctx = {
         .graph = graph,
         .coloring = { .len = graph.len },
-        .subgraph_list = { .cap = graph.len },
-        .bfs_data = { .len = graph.len },
-        .bfs_ctx = {
-            .vertices = { .len = graph.len },
-        },
-        .subgraph = {
-            .p = p1,
-            .q = q1,
-        },
+        .marks = { .len = graph.len },
+        .first_edges = { .len = graph.len },
+        .frames = { .cap = graph.len - 2 },
     };
 
     ctx.coloring.ptr = aven_arena_create_array(
@@ -74,151 +43,208 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
         ctx.coloring.len
     );
 
-    ctx.subgraphs.ptr = aven_arena_create_array(
-        AvenGraphPlanePohSubgraph,
-        arena,
-        ctx.subgraph_list.cap
-    );
+    for (uint32_t i = 0; i < ctx.coloring.len; i += 1) {
+        slice_get(ctx.coloring, i) = 0;
+    }
 
-    ctx.bfs_data = aven_arena_create_array(
-        AvenGraphPlanePohBfsData,
-        arena,
-        bfs_ctx.data.len
-    );
+    slice_get(ctx.coloring, p1) = 1;
+    slice_get(ctx.coloring, q1) = 2;
+    slice_get(ctx.coloring, q2) = 2;
 
-    ctx.bfs_ctx.vertices = aven_arena_create_array(
+    ctx.marks.ptr = aven_arena_create_array(
         uint32_t,
         arena,
-        bfs_ctx.vertices.len
+        ctx.marks.len
     );
 
-    for (uint32_t i = 0; i < ctx.bfs_data.len; i += 1) {
-        slice_get(ctx.bfs_data, i) = (AveGraphPlanePohBfsData){ 0 };
+    for (uint32_t i = 0; i < ctx.marks.len; i += 1) {
+        slice_get(ctx.marks, i) = 0;
     }
 
-    AvenGraphPlanePohSubgraph subgraph = {
-        .p1 = p1,
-        .pn = p1,
-        .q1 = q1,
+    slice_get(ctx.marks, p1) = 1;
+
+    ctx.first_edges.ptr = aven_arena_create_array(
+        uint32_t,
+        arena,
+        ctx.first_edges.len
+    );
+
+    slice_get(ctx.first_edges, p1) = aven_graph_neighbor_index(
+        graph,
+        p1,
+        q1
+    );
+
+    ctx.frames.ptr = aven_arena_create_array(
+        AvenGraphPlanePohFrame,
+        arena,
+        ctx.frames.cap
+    );
+
+    list_push(ctx.frames) = (AvenGraphPlanePohFrame){
+        .p_color = 3,
+        .q_color = 2,
+        .u = p1,
+        .w = p1,
+        .t = p1,
+        .face_mark = 1,
+        .below_mark = 2,
     };
-
-    AvenGraphAdjList q_adj = slice_get(ctx.graph, q1);
-    for (uint32_t i = 0; i < q_adj.len; i += 1) {
-        uint32_t n = slice_get(q_adj, i);
-        if (n == p1) {
-            subgraph.q1p1_edge_index = i;
-        }
-        if (n == q2) {
-            subgraph.q1q2_edge_index = i;
-        }
-    }
-    assert(slice_get(q_adj, subgraph.q1p1_edge_index) == p1);
-    assert(slice_get(q_adj, subgraph.q1q2_edge_index) == q2);
-
-    list_push(ctx.subraph_list) = subgraph;
 
     return ctx;
 }
 
-static inline bool aven_graph_plane_poh_check_done(AvenGraphPlanePohCtx *ctx) {
-    assert(ctx->state == AVEN_GRAPH_PLANE_POH_START);
-    return ctx->subgraph_list.len == 0;
+static inline bool aven_graph_plane_poh_check(AvenGraphPlanePohCtx *ctx) {
+    return ctx->frames.len == 0;
 }
 
-static inline bool aven_graph_plane_poh_start_step(AvenGraphPlanePohCtx *ctx) {
-    assert(ctx->state == AVEN_GRAPH_PLANE_POH_START);
-    assert(ctx->subgraph_list.len != 0);
+static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
+    AvenGraphPlanePohFrame *frame = &list_get(ctx->frames, ctx->frames.len - 1);
 
-    ctx->subgraph = list_get(
-        ctx->subgraph_list,
-        ctx->subgraphs.len - 1
+    int printf(const char *, ...);
+    printf(
+        "frames[%lu] = { .u = %u, .w = %u, .t = %u, .edge_index = %u, .p_color = %u, .q_color = %u, .face_mark = %u, .below_mark = %u }\n",
+        ctx->frames.len - 1,
+        frame->u,
+        frame->w,
+        frame->t,
+        frame->edge_index,
+        frame->p_color,
+        frame->q_color,
+        frame->face_mark,
+        frame->below_mark
     );
-    ctx->subgraph_list.len -= 1;
 
-    AvenGraphAdjList q1_adj = slice_get(ctx->graph, ctx->subgraph.q1);
+    uint8_t path_color = frame->p_color ^ frame->q_color;
 
-    uint32_t q2 = slice_get(q1_adj, ctx->subgraph.q1q2_edge_index);
-    uint8_t q_color = slice_get(ctx->coloring, ctx->subgraph.q1);
+    AvenGraphAdjList u_adj = slice_get(ctx->graph, frame->u);
 
-    if (slice_get(ctx->coloring, q2) != q_color) {
-        if (ctx->subgraph.p1 == ctx->subgraph.pn) {
-            return false;
+    if (frame->edge_index == u_adj.len) {
+        if (frame->t == frame->u) {
+            assert(frame->w == frame->u);
+            ctx->frames.len -= 1;
+            return true;
         }
 
-        assert(
-            slice_get(ctx->coloring, q2) ==
-            slice_get(coliring, ctx->subgraph.p1)
-        );
-    }
-
-    uint32_t q1u_edge_index = (ctx->subgraph.q1p1_edge_index + q1_adj.len - 1) %
-        q1_adj.len;
-    uint32_t u = slice_get(q1_adj, q1u_edge_index);
-
-    if (slice_get(ctx->coloring, u) != 0) {
-        uint8_t p_color = slice_get(ctx->coloring, ctx->subgraph.p1);
-        if (slice_get(ctx->colring, u) == p_color) {
-            list_push(ctx->subgraph_list) = (AvenGraphPlanePohSubgraph){
-                .p1 = u,
-                .pn = ctx->subgraph.pn,
-                .q1 = ctx->subgraph.q1,
-                .q1p1_edge_index = q1u_edge_index,
-                .q1q2_edge_index = ctx->subgraph.q1q2_edge_index
-            };
+        if (frame->w == frame->u) {
+            frame->w = frame->t;
         }
+        frame->u = frame->t;
+        frame->edge_index = 0;
+        frame->above_path = false;
         return false;
     }
 
-#ifndef NDEBUG
-    ctx->state = AVEN_GRAPH_PLANE_POH_SEARCH;
-#endif // !defined(NDEBUG)
-    ctx->search_code += 1;
-
-    ctx->bfs_queue.front = 0;
-    ctx->bfs_queue.back = 0;
-    ctx->neighbor = 0;
-    ctx->start_vertex = u;
-    ctx->vertex = u;
-    slice_get(ctx->bfs_ctx.data, u) = (AvenGraphPlanePohBfsData){
-        .parent = u,
-        .search = ctx->search,
-    };
-
-    return true;
-}
-
-static inline bool aven_graph_plane_poh_search_step(AvenGraphPlanePohCtx *ctx) {
-    assert(ctx->state == AVEN_GRAPH_PLANE_POH_SEARCH);
-
-    if (ctx->neighbor_offset == ) {
-        return aven_graph_plane_poh_bfs_pop_internal(ctx);
+    uint32_t n_index = slice_get(ctx->first_edges, frame->u) +
+        frame->edge_index;
+    if (n_index >= u_adj.len) {
+        n_index -= (uint32_t)u_adj.len;
     }
+    uint32_t n = slice_get(u_adj, n_index);
+    uint32_t n_color = slice_get(ctx->coloring, n);
+    uint32_t n_mark = slice_get(ctx->marks, n);
 
-    AvenGraphAdjList adj = slice_get(ctx->graph, ctx->vertex);
-    uint32_t edge_index = (ctx->neighbor_start + ctx->neighbor_offset) %
-        adj.len;
-    uint32_t n = slice_get(adj, edge_index);
-    uint8_t n_color = slice_get(ctx->coloring, n);
+    printf("\tn = %u, n_index = %u, n_color = %u, n_mark = %u\n", n, n_index, n_color, n_mark);
 
-    if (n_color != 0) {
-        aven_graph_plane_poh_bfs_push_internal(ctx, n);
-        ctx->cord_possible = false;
-    } else if (n_color == slice_get(ctx->coloring, ctx->subgraph.p1)) {
-        if (ctx->cord_possible) {
-            aven_graph_plane_poh_bfs_push_internal(ctx, n);
-#ifndef NDEBUG
-            ctx->state = AVEN_GRAPH_PLANE_POH_STATE_ORIENT;
-#endif // !defined(NDEBUG)
-            return true;
+    frame->edge_index += 1;
+
+    if (frame->above_path) {
+        if (n_color == 0) {
+            frame->last_uncolored = true;
+            return false;
         }
-        ctx->cord_possible = false;
-    } else if (n_color == slice_get(ctx->coloring, ctx->subgraph.q1)) {
-        ctx->cord_possible = true;
-    }
 
-    ctx->neighbor_offset += 1;
+        if (!frame->last_uncolored) {
+            return false;
+        }
+
+        if (frame->last_uncolored) {
+            assert(n_color != frame->q_color);
+            uint32_t l = slice_get(
+                u_adj,
+                (n_index + u_adj.len - 1) % u_adj.len
+            );
+
+            slice_get(ctx->coloring, l) = frame->q_color;
+            slice_get(ctx->first_edges, l) = aven_graph_neighbor_index(
+                ctx->graph,
+                l,
+                frame->u
+            );
+            
+            list_push(ctx->frames) = (AvenGraphPlanePohFrame){
+                .q_color = path_color,
+                .p_color = frame->p_color,
+                .u = l,
+                .t = l,
+                .w = l,
+                .face_mark = frame->face_mark,
+                .below_mark = frame->below_mark,
+            };
+        }
+
+        frame->last_uncolored = false;
+    } else {
+        if (n == frame->w) {
+            return false;
+        } else if (n_color != 0) {
+            if (n_color == frame->p_color) {
+                frame->above_path = true;
+            }
+            if (frame->w == frame->u) {
+                return false;
+            }
+
+            list_push(ctx->frames) = (AvenGraphPlanePohFrame){
+                .q_color = frame->q_color,
+                .p_color = path_color,
+                .u = frame->w,
+                .w = frame->w,
+                .t = frame->w,
+                .face_mark = frame->below_mark,
+                .below_mark = frame->below_mark + 1,
+            };
+
+            frame->w = frame->u;
+        } else if (n_mark == frame->face_mark) {
+            slice_get(ctx->coloring, n) = path_color;
+            slice_get(ctx->first_edges, n) = aven_graph_next_neighbor_index(
+                ctx->graph,
+                n,
+                frame->u
+            );
+
+            frame->t = n;
+            frame->above_path = true;
+        } else {
+            slice_get(ctx->marks, n) = frame->below_mark;
+
+            if (frame->w == frame->u) {
+                frame->w = n;
+
+                slice_get(ctx->coloring, n) = frame->p_color;
+                slice_get(ctx->first_edges, n) = aven_graph_next_neighbor_index(
+                    ctx->graph,
+                    n,
+                    frame->u
+                );
+            }
+        }
+    }
 
     return false;
+}
+
+static inline AvenGraphPropUint8 aven_graph_plane_poh_result(
+    AvenGraphPlanePohCtx *ctx,
+    AvenArena *arena
+) {
+    AvenGraphPropUint8 coloring = { .len = ctx->coloring.len };
+    coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
+
+    slice_copy(coloring, ctx->coloring);
+
+    return coloring;
 }
 
 #endif // AVEN_GRAPH_PLANE_POH_H

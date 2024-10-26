@@ -219,9 +219,45 @@ int main(int argc, char **argv) {
         &arena
     );
 
+    AvenBuildStep poh_obj_step = aven_build_common_step_cc_ex(
+        &opts,
+        graphics_includes,
+        macros,
+        aven_path(&arena, root_path.ptr, "examples", "poh.c", NULL),
+        &work_dir_step,
+        &arena
+    );
+
+    AvenBuildStep *poh_obj_data[3];
+    List(AvenBuildStep *) poh_obj_list = list_array(poh_obj_data);
+
+    list_push(poh_obj_list) = &poh_obj_step;
+    list_push(poh_obj_list) = &stb_obj_step;
+    
+    if (winutf8_obj_step.valid) {
+        list_push(poh_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (glfw_obj_step.valid) {
+        list_push(poh_obj_list) = &glfw_obj_step.value;
+    }
+
+    AvenBuildStepPtrSlice poh_objs = slice_list(poh_obj_list);
+
+    AvenBuildStep poh_exe_step = aven_build_common_step_ld_exe_ex(
+        &opts,
+        libavengl_opts.syslibs,
+        poh_objs,
+        &out_dir_step,
+        aven_str("poh"),
+        true,
+        &arena
+    );
+
     AvenBuildStep root_step = aven_build_step_root();
 //    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
-    aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
+//    aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
 
     // Build steps for tests
 

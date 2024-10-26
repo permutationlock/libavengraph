@@ -28,6 +28,7 @@ typedef struct {
     Vec4 color;
     float thickness;
 } AvenGraphPlaneGeometryEdge;
+typedef Slice(AvenGraphPlaneGeometryEdge) AvenGraphPlaneGeometryEdgeSlice;
 
 static inline void aven_graph_plane_geometry_push_vertex(
     AvenGlShapeRoundedGeometry *geometry,
@@ -429,6 +430,89 @@ static inline void aven_graph_plane_geometry_subgraph_transform(
         scale,
         dest
     );
+}
+
+static inline void aven_graph_plane_geometry_push_colored_vertices(
+    AvenGlShapeRoundedGeometry *geometry,
+    AvenGraphPlaneEmbedding embedding,
+    AvenGraphPropUint8 coloring,
+    Aff2 trans,
+    AvenGraphPlaneGeometryNodeSlice draw_infos
+) {
+    for (uint32_t v = 0; v < embedding.len; v += 1) {
+        aven_graph_plane_geometry_push_vertex(
+            geometry,
+            embedding,
+            v,
+            trans,
+            &slice_get(draw_infos, slice_get(coloring, v))
+        );
+    }
+}
+
+static inline void aven_graph_plane_geometry_push_colored_edges(
+    AvenGlShapeGeometry *geometry,
+    AvenGraph graph,
+    AvenGraphPlaneEmbedding embedding,
+    AvenGraphPropUint8 coloring,
+    Aff2 trans,
+    AvenGraphPlaneGeometryEdgeSlice draw_infos
+) {
+    for (uint32_t v = 0; v < embedding.len; v += 1) {
+        uint8_t v_color = slice_get(coloring, v);
+        if (v_color == 0) {
+            continue;
+        }
+        AvenGraphAdjList v_adj = slice_get(graph, v);
+        for (uint32_t i = 0; i < v_adj.len; i += 1) {
+            uint32_t u = slice_get(v_adj, i);
+            if (v < u) {
+                continue;
+            }
+            if (slice_get(coloring, u) != v_color) {
+                continue;
+            }
+            aven_graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &slice_get(draw_infos, v_color - 1)
+            );
+        }
+    }
+}
+
+static inline void aven_graph_plane_geometry_push_uncolored_edges(
+    AvenGlShapeGeometry *geometry,
+    AvenGraph graph,
+    AvenGraphPlaneEmbedding embedding,
+    AvenGraphPropUint8 coloring,
+    Aff2 trans,
+    AvenGraphPlaneGeometryEdge *draw_info
+) {
+    for (uint32_t v = 0; v < embedding.len; v += 1) {
+        uint8_t v_color = slice_get(coloring, v);
+        AvenGraphAdjList v_adj = slice_get(graph, v);
+        for (uint32_t i = 0; i < v_adj.len; i += 1) {
+            uint32_t u = slice_get(v_adj, i);
+            if (v < u) {
+                continue;
+            }
+            if (v_color != 0 and slice_get(coloring, u) == v_color) {
+                continue;
+            }
+            aven_graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                draw_info
+            );
+        }
+    }
 }
 
 #endif // AVEN_GRAPH_PLANE_GEOMETRY_H

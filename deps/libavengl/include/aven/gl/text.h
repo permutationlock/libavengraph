@@ -426,7 +426,7 @@ static inline AvenGlTextLine aven_gl_text_line(
     AvenArena *arena
 ) {
     AvenGlTextLine line = {
-        .dim = { 0.0f, font-> height },
+        .dim = { 0.0f, font->height },
         .quads = { .len = text.len },
     };
     line.quads.ptr = aven_arena_create_array(
@@ -454,10 +454,10 @@ static void aven_gl_text_geometry_push_quad(
     Vec4 color
 ) {    
     Vec2 vertices[4] = {
-        { q->p0[0], q->p0[1] },
-        { q->p1[0], q->p0[1] },
-        { q->p1[0], q->p1[1] },
-        { q->p0[0], q->p1[1] },
+        { q->p0[0], -q->p0[1] },
+        { q->p1[0], -q->p0[1] },
+        { q->p1[0], -q->p1[1] },
+        { q->p0[0], -q->p1[1] },
     };
 
     for (size_t j = 0; j < countof(vertices); j += 1) {
@@ -503,8 +503,8 @@ static inline void aven_gl_text_geometry_push_line(
     Vec4 color
 ) {
     Vec2 offset = {
-        -line->dim[0] / 2.0f,
-        -line->dim[1] / 2.0f
+        -0.5f * line->dim[0],
+        0.0f,
     };    
 
     Aff2 text_trans;
