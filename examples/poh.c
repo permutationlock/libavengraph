@@ -28,12 +28,12 @@
 #define GRAPH_ARENA_PAGES 1000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (2000)
+#define GRAPH_MAX_VERTICES (500)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.02f
+#define VERTEX_RADIUS 0.0275f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 30)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 15)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
@@ -93,8 +93,8 @@ static void app_reset(void) {
     ctx.state = APP_STATE_GEN;
     ctx.data.gen = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        2.5f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.2f,
+        (1.25f * VERTEX_RADIUS * 1.25f * VERTEX_RADIUS),
+        0.1f,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
@@ -391,7 +391,7 @@ static void app_update(
     }
 
     AvenGraphPlaneGeometryEdge edge_info = {
-        .color = { 0.0f, 0.0f, 0.0f, 1.0f },
+        .color = { 0.1f, 0.1f, 0.1f, 1.0f },
         .thickness = (VERTEX_RADIUS / 3.0f),
     };
     AvenGraphPlaneGeometryEdge edge_color_data[] = {

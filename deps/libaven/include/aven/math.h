@@ -170,6 +170,14 @@ static inline void vec2_midpoint(Vec2 dst, Vec2 a, Vec2 b) {
     vec2_scale(dst, 0.5f, dst);
 }
 
+static inline float vec2_triangle_area(Vec2 p1, Vec2 p2, Vec2 p3) {
+    return 0.5f * fabsf(
+        p1[0] * (p2[1] - p3[1]) +
+        p2[0] * (p3[1] - p1[1]) +
+        p3[0] * (p1[1] - p2[1])
+    );
+}
+
 static inline void mat2_copy(Mat2 dst, Mat2 m) {
 #ifdef AVEN_MATH_SIMD
     *(Vec4SIMD *)dst = *(Vec4SIMD *)m;
