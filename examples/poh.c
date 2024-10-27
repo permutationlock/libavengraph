@@ -28,13 +28,13 @@
 #define GRAPH_ARENA_PAGES 1000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (100)
+#define GRAPH_MAX_VERTICES (2000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.0375f
+#define VERTEX_RADIUS 0.02f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 2)
-#define DONE_WAIT_STEPS (5 * AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 30)
+#define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
     AvenGlShapeCtx ctx;
@@ -93,8 +93,8 @@ static void app_reset(void) {
     ctx.state = APP_STATE_GEN;
     ctx.data.gen = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        2.8f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.25f,
+        2.5f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.2f,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
@@ -666,7 +666,7 @@ int main(void) {
     glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
     // Raster msaa sample count should try to match the sample count of 4 used
     // for multisampling in our shape fragment shaders and stb font textures
-    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_SAMPLES, 16);
 
     window = glfwCreateWindow(
         (int)width,

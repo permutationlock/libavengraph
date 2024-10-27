@@ -101,19 +101,19 @@ static inline bool aven_graph_plane_poh_check(AvenGraphPlanePohCtx *ctx) {
 static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
     AvenGraphPlanePohFrame *frame = &list_get(ctx->frames, ctx->frames.len - 1);
 
-    int printf(const char *, ...);
-    printf(
-        "frames[%lu] = { .u = %u, .w = %u, .t = %u, .edge_index = %u, .p_color = %u, .q_color = %u, .face_mark = %u, .below_mark = %u }\n",
-        ctx->frames.len - 1,
-        frame->u,
-        frame->w,
-        frame->t,
-        frame->edge_index,
-        frame->p_color,
-        frame->q_color,
-        frame->face_mark,
-        frame->below_mark
-    );
+//    int printf(const char *, ...);
+//    printf(
+//        "frames[%lu] = { .u = %u, .w = %u, .t = %u, .edge_index = %u, .p_color = %u, .q_color = %u, .face_mark = %u, .below_mark = %u }\n",
+//        ctx->frames.len - 1,
+//        frame->u,
+//        frame->w,
+//        frame->t,
+//        frame->edge_index,
+//        frame->p_color,
+//        frame->q_color,
+//        frame->face_mark,
+//        frame->below_mark
+//    );
 
     uint8_t path_color = frame->p_color ^ frame->q_color;
 
@@ -144,7 +144,7 @@ static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
     uint32_t n_color = slice_get(ctx->coloring, n);
     uint32_t n_mark = slice_get(ctx->marks, n);
 
-    printf("\tn = %u, n_index = %u, n_color = %u, n_mark = %u\n", n, n_index, n_color, n_mark);
+//    printf("\tn = %u, n_index = %u, n_color = %u, n_mark = %u\n", n, n_index, n_color, n_mark);
 
     frame->edge_index += 1;
 
