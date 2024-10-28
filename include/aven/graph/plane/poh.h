@@ -24,11 +24,13 @@ typedef struct {
 
 static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
     AvenGraph graph,
-    uint32_t p1,
-    uint32_t q1,
-    uint32_t q2,
+    AvenGraphSubset p,
+    AvenGraphSubset q,
     AvenArena *arena
 ) {
+    uint32_t p1 = slice_get(p, 0);
+    uint32_t q1 = slice_get(q, 0);
+
     AvenGraphPlanePohCtx ctx = {
         .graph = graph,
         .coloring = { .len = graph.len },
@@ -47,9 +49,11 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
         slice_get(ctx.coloring, i) = 0;
     }
 
-    slice_get(ctx.coloring, p1) = 1;
-    slice_get(ctx.coloring, q1) = 2;
-    slice_get(ctx.coloring, q2) = 2;
+    slice_get(ctx.coloring, slice_get(p, 0)) = 1;
+
+    for (uint32_t i = 0; i < q.len; i += 1) {
+        slice_get(ctx.coloring, slice_get(q, i)) = 2;
+    }
 
     ctx.marks.ptr = aven_arena_create_array(
         uint32_t,
@@ -61,7 +65,9 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
         slice_get(ctx.marks, i) = 0;
     }
 
-    slice_get(ctx.marks, p1) = 1;
+    for (uint32_t i = 0; i < p.len; i += 1) {
+        slice_get(ctx.marks, slice_get(p, i)) = 1;
+    }
 
     ctx.first_edges.ptr = aven_arena_create_array(
         uint32_t,
