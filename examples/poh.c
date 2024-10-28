@@ -28,12 +28,12 @@
 #define GRAPH_ARENA_PAGES 1000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (500)
+#define GRAPH_MAX_VERTICES (1000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.035f
+#define VERTEX_RADIUS 0.05f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 15)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
@@ -93,7 +93,7 @@ static void app_reset(void) {
     ctx.state = APP_STATE_GEN;
     ctx.data.gen = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        (1.25f * VERTEX_RADIUS * 1.25f * VERTEX_RADIUS),
+        1.25f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
         true,
         &arena
@@ -267,7 +267,7 @@ static void app_update(
     };
     AvenGraphPlaneGeometryEdge edge_below_info = {
         .color = { 0.5f, 0.5f, 0.1f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 2.0f),
+        .thickness = (VERTEX_RADIUS / 1.5f),
     };
     AvenGraphPlaneGeometryNode node_below_info = {
         .color = { 0.5f, 0.5f, 0.1f, 1.0f },
@@ -280,7 +280,7 @@ static void app_update(
     };
     AvenGraphPlaneGeometryEdge edge_marked_info = {
         .color = { 0.1f, 0.5f, 0.5f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 2.0f),
+        .thickness = (VERTEX_RADIUS / 1.5f),
     };
     AvenGraphPlaneGeometryNode node_marked_info = {
         .color = { 0.1f, 0.5f, 0.5f, 1.0f },
@@ -396,20 +396,20 @@ static void app_update(
 
     AvenGraphPlaneGeometryEdge edge_info = {
         .color = { 0.15f, 0.15f, 0.15f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 3.0f),
+        .thickness = (VERTEX_RADIUS / 3.5f),
     };
     AvenGraphPlaneGeometryEdge edge_color_data[] = {
         {
             .color = { 0.75f, 0.25f, 0.25f, 1.0f },
-            .thickness = (VERTEX_RADIUS / 3.0f),
+            .thickness = (VERTEX_RADIUS / 2.5f),
         },
         {
-            .color = { 0.25f, 0.75f, 0.25f, 1.0f },
-            .thickness = (VERTEX_RADIUS / 3.0f),
+            .color = { 0.2f, 0.55f, 0.15f, 1.0f },
+            .thickness = (VERTEX_RADIUS / 2.5f),
         },
         {
-            .color = { 0.25f, 0.25f, 0.75f, 1.0f },
-            .thickness = (VERTEX_RADIUS / 3.0f),
+            .color = { 0.15f, 0.35f, 0.75f, 1.0f },
+            .thickness = (VERTEX_RADIUS / 2.5f),
         },
     };
     AvenGraphPlaneGeometryEdgeSlice edge_colors = slice_array(edge_color_data);
@@ -479,7 +479,7 @@ static void app_update(
     };
 
     AvenGraphPlaneGeometryNode node_green_info = {
-        .color = { 0.25f, 0.75f, 0.25f, 1.0f },
+        .color = { 0.2f, 0.55f, 0.15f, 1.0f },
         .mat = {
             { 0.75f * VERTEX_RADIUS, 0.0f },
             { 0.0f, 0.75f * VERTEX_RADIUS }
@@ -489,7 +489,7 @@ static void app_update(
     };
 
     AvenGraphPlaneGeometryNode node_blue_info = {
-        .color = { 0.25f, 0.25f, 0.75f, 1.0f },
+        .color = { 0.15f, 0.35f, 0.75f, 1.0f },
         .mat = {
             { 0.75f * VERTEX_RADIUS, 0.0f },
             { 0.0f, 0.75f * VERTEX_RADIUS }
@@ -538,7 +538,7 @@ static void app_update(
 
     gl.Viewport(0, 0, width, height);
     assert(gl.GetError() == 0);
-    gl.ClearColor(0.55f, 0.55f, 0.55f, 1.0f);
+    gl.ClearColor(0.65f, 0.65f, 0.65f, 1.0f);
     assert(gl.GetError() == 0);
     gl.Clear(GL_COLOR_BUFFER_BIT);
     assert(gl.GetError() == 0);
