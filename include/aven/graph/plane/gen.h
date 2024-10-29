@@ -96,7 +96,6 @@ typedef struct {
 typedef Slice(AvenGraphPlaneGenFace) AvenGraphPlaneGenFaceSlice;
 
 typedef struct {
-    AvenGraph graph;
     List(Vec2) embedding;
     List(AvenGraphPlaneGenFace) faces;
     List(uint32_t) valid_faces;
@@ -107,27 +106,21 @@ typedef struct {
 } AvenGraphPlaneGenTriCtx;
 
 static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
-    uint32_t size,
+    AvenGraphPlaneEmbedding embedding,
     float min_area,
     float min_coeff,
     bool square,
     AvenArena *arena
 ) {
     AvenGraphPlaneGenTriCtx ctx = {
-        .embedding = { .cap = size },
-        .faces = { .cap = 2 * size - 4 },
-        .valid_faces = { .cap = 2 * size - 4 },
+        .embedding = { .ptr = embedding.ptr, .cap = embedding.len },
+        .faces = { .cap = 2 * embedding.len - 4 },
+        .valid_faces = { .cap = 2 * embedding.len - 4 },
         .active_face = AVEN_GRAPH_PLANE_GEN_FACE_INVALID,
         .min_area = 2.0f * min_area,
         .min_coeff = min_coeff,
         .square = square,
     };
-
-    ctx.embedding.ptr = aven_arena_create_array(
-        Vec2,
-        arena,
-        ctx.embedding.cap
-    );
 
     ctx.faces.ptr = aven_arena_create_array(
         AvenGraphPlaneGenFace,
@@ -540,39 +533,64 @@ static inline bool aven_graph_plane_gen_tri_step(
     return false;
 }
 
-static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
-    AvenGraphPlaneGenTriCtx *ctx,
+typedef struct {
+    List(AvenGraphAdjList) graph;
+    List(uint32_t) master_adj;
+} AvenGraphPlaneGenTriData;
+
+static inline AvenGraphPlaneGenTriData aven_graph_plane_gen_tri_data_alloc(
+    uint32_t size,
     AvenArena *arena
 ) {
-    AvenGraph graph = { .len = ctx->embedding.len };
-    graph.ptr = aven_arena_create_array(AvenGraphAdjList, arena, graph.len);
+    AvenGraphPlaneGenTriData data = {
+        .graph = { .cap = size },
+        .master_adj = { .cap = 6 * size - 12 },
+    };
 
-    for (uint32_t i = 0; i < graph.len; i += 1) {
-        slice_get(graph, i) = (AvenGraphAdjList){ 0 };
+    data.graph.ptr = aven_arena_create_array(
+        AvenGraphAdjList,
+        arena,
+        data.graph.cap
+    );
+    data.master_adj.ptr = aven_arena_create_array(
+        uint32_t,
+        arena,
+        data.master_adj.cap
+    );
+
+    return data;
+}
+
+static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
+    AvenGraphPlaneGenTriCtx *ctx,
+    AvenGraphPlaneGenTriData *data
+) {
+    data->graph.len = 0;
+    data->master_adj.len = 0;
+
+    for (uint32_t i = 0; i < ctx->embedding.len; i += 1) {
+        list_push(data->graph) = (AvenGraphAdjList){ 0 };
     }
-
-    List(uint32_t) master_adj = { .cap = 2 * (graph.len * 3 - 6) };
-    master_adj.ptr = aven_arena_create_array(uint32_t, arena, master_adj.cap);
 
     for (uint32_t i = 0; i < ctx->faces.len; i += 1) {
         AvenGraphPlaneGenFace *face = &list_get(ctx->faces, i);
 
         for (uint32_t j = 0; j < 3; j += 1) {
             uint32_t v = face->vertices[j];
-            if (slice_get(graph, v).len != 0) {
+            if (slice_get(data->graph, v).len != 0) {
                 continue;
             }
 
-            uint32_t adj_start = (uint32_t)master_adj.len;
-            slice_get(graph, v).ptr = &master_adj.ptr[adj_start];
+            uint32_t adj_start = (uint32_t)data->master_adj.len;
+            slice_get(data->graph, v).ptr = &data->master_adj.ptr[adj_start];
 
             {
                 uint32_t u = face->vertices[(j + 1) % 3];
                 if (!ctx->square) {
-                    list_push(master_adj) = u;
+                    list_push(data->master_adj) = u;
                 } else {
                     if ((u != 1 or v != 3) and (u != 3 or v != 1)) {
-                        list_push(master_adj) = u;
+                        list_push(data->master_adj) = u;
                     }
                 }
             }
@@ -595,29 +613,60 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
 
                 uint32_t u = cur_face->vertices[(k + 1) % 3];
                 if (!ctx->square) {
-                    list_push(master_adj) = u;
+                    list_push(data->master_adj) = u;
                 } else {
                     if ((u != 1 or v != 3) and (u != 3 or v != 1)) {
-                        list_push(master_adj) = u;
+                        list_push(data->master_adj) = u;
                     }
                 }
                 face_index = cur_face->neighbors[k];
             }
 
-            slice_get(graph, v).len = (uint32_t)(master_adj.len - adj_start);
+            slice_get(data->graph, v).len = (uint32_t)(
+                data->master_adj.len - adj_start
+            );
         }
     }
 
-    AvenGraphPlaneEmbedding embedding = { .len = ctx->embedding.len };
-    embedding.ptr = aven_arena_create_array(Vec2, arena, embedding.len);
-    
-    AvenGraphPlaneEmbedding ctx_embedding = slice_list(ctx->embedding);
-    slice_copy(embedding, ctx_embedding);
-
     return (AvenGraphPlaneGenData){
-        .graph = graph,
-        .embedding = embedding,
+        .graph = (AvenGraph){ .ptr = data->graph.ptr, .len = data->graph.len },
+        .embedding = (AvenGraphPlaneEmbedding){
+            .ptr = ctx->embedding.ptr,
+            .len = ctx->embedding.len,
+        },
     };
+}
+
+static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
+    uint32_t size,
+    float min_area,
+    float min_coeff,
+    bool square,
+    AvenRng rng,
+    AvenArena *arena    
+) {
+    AvenGraphPlaneGenTriData data = aven_graph_plane_gen_tri_data_alloc(
+        size,
+        arena
+    );
+    AvenGraphPlaneEmbedding embedding = { .len = size };
+    embedding.ptr = aven_arena_create_array(
+        Vec2,
+        arena,
+        embedding.len
+    );
+
+    AvenArena temp_arena = *arena;
+    AvenGraphPlaneGenTriCtx ctx = aven_graph_plane_gen_tri_init(
+        embedding,
+        min_area,
+        min_coeff,
+        square,
+        &temp_arena
+    );
+    while (aven_graph_plane_gen_tri_step(&ctx, rng)) {}
+
+    return aven_graph_plane_gen_tri_data(&ctx, &data);
 }
 
 #endif // AVEN_GRAPH_PLANE_GEN_H

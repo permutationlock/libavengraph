@@ -552,11 +552,15 @@ static inline AvenGlShapeRoundedCtx aven_gl_shape_rounded_ctx_init(AvenGl *gl) {
         "    float magnitude = 0.0;\n"
         "    vec2 offset = vec2(uPx / tDim.x, uPx / tDim.y);\n"
         "    magnitude += oversample(tPos);\n"
+        "    magnitude += oversample(tPos + vec2(0, -offset.y));\n"
+        "    magnitude += oversample(tPos + vec2(offset.x, 0));\n"
+        "    magnitude += oversample(tPos + vec2(0, offset.y));\n"
+        "    magnitude += oversample(tPos + vec2(-offset.x, 0));\n"
+        "    magnitude += oversample(tPos + vec2(-offset.x, offset.y));\n"
         "    magnitude += oversample(tPos + vec2(-offset.x, -offset.y));\n"
         "    magnitude += oversample(tPos + vec2(offset.x, -offset.y));\n"
         "    magnitude += oversample(tPos + vec2(offset.x, offset.y));\n"
-        "    magnitude += oversample(tPos + vec2(-offset.x, offset.y));\n"
-        "    magnitude /= 5.0;\n"
+        "    magnitude /= 9.0;\n"
         "    gl_FragColor = vec4(fColor.xyz, fColor.w * magnitude);\n"
         "}\n";
 

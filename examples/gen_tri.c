@@ -28,7 +28,7 @@
 #define GRAPH_MAX_VERTICES (12)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.04f
+#define VERTEX_RADIUS 0.05f
 
 #define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 100000)
 
@@ -96,8 +96,9 @@ static void app_init(void) {
     ctx.pre_tri_ctx_arena = arena;
     ctx.tri_ctx = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        4.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.25f,
+        3.5f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.01f,
+        false,
         &arena
     );
 
@@ -115,8 +116,9 @@ static void app_reset(void) {
     arena = ctx.pre_tri_ctx_arena;
     ctx.tri_ctx = aven_graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
-        4.0f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
-        0.25f,
+        3.5f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
+        0.01f,
+        false,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(

@@ -7,7 +7,6 @@ typedef struct {
     uint32_t t;
     uint32_t edge_index;
     uint32_t face_mark;
-    uint32_t below_mark;
     uint8_t q_color;
     uint8_t p_color;
     bool above_path;
@@ -23,6 +22,7 @@ typedef struct {
 } AvenGraphPlanePohCtx;
 
 static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
+    AvenGraphPropUint8 coloring,
     AvenGraph graph,
     AvenGraphSubset p,
     AvenGraphSubset q,
@@ -33,17 +33,11 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
 
     AvenGraphPlanePohCtx ctx = {
         .graph = graph,
-        .coloring = { .len = graph.len },
+        .coloring = coloring,
         .marks = { .len = graph.len },
         .first_edges = { .len = graph.len },
         .frames = { .cap = graph.len - 2 },
     };
-
-    ctx.coloring.ptr = aven_arena_create_array(
-        uint8_t,
-        arena,
-        ctx.coloring.len
-    );
 
     for (uint32_t i = 0; i < ctx.coloring.len; i += 1) {
         slice_get(ctx.coloring, i) = 0;
@@ -94,7 +88,6 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
         .w = p1,
         .t = p1,
         .face_mark = 1,
-        .below_mark = 2,
     };
 
     return ctx;
@@ -106,20 +99,6 @@ static inline bool aven_graph_plane_poh_check(AvenGraphPlanePohCtx *ctx) {
 
 static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
     AvenGraphPlanePohFrame *frame = &list_get(ctx->frames, ctx->frames.len - 1);
-
-//    int printf(const char *, ...);
-//    printf(
-//        "frames[%lu] = { .u = %u, .w = %u, .t = %u, .edge_index = %u, .p_color = %u, .q_color = %u, .face_mark = %u, .below_mark = %u }\n",
-//        ctx->frames.len - 1,
-//        frame->u,
-//        frame->w,
-//        frame->t,
-//        frame->edge_index,
-//        frame->p_color,
-//        frame->q_color,
-//        frame->face_mark,
-//        frame->below_mark
-//    );
 
     uint8_t path_color = frame->p_color ^ frame->q_color;
 
@@ -146,25 +125,17 @@ static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
     if (n_index >= u_adj.len) {
         n_index -= (uint32_t)u_adj.len;
     }
+
     uint32_t n = slice_get(u_adj, n_index);
     uint32_t n_color = slice_get(ctx->coloring, n);
     uint32_t n_mark = slice_get(ctx->marks, n);
-
-//    printf("\tn = %u, n_index = %u, n_color = %u, n_mark = %u\n", n, n_index, n_color, n_mark);
 
     frame->edge_index += 1;
 
     if (frame->above_path) {
         if (n_color == 0) {
             frame->last_uncolored = true;
-            return false;
-        }
-
-        if (!frame->last_uncolored) {
-            return false;
-        }
-
-        if (frame->last_uncolored) {
+        } else if (frame->last_uncolored) {
             assert(n_color != frame->q_color);
             uint32_t l = slice_get(
                 u_adj,
@@ -185,33 +156,26 @@ static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
                 .t = l,
                 .w = l,
                 .face_mark = frame->face_mark,
-                .below_mark = frame->below_mark,
             };
+            frame->last_uncolored = false;
         }
-
-        frame->last_uncolored = false;
-    } else {
-        if (n == frame->w) {
-            return false;
-        } else if (n_color != 0) {
+    } else if (n != frame->w) {
+        if (n_color != 0) {
             if (n_color == frame->p_color) {
                 frame->above_path = true;
             }
-            if (frame->w == frame->u) {
-                return false;
+            if (frame->w != frame->u) {
+                list_push(ctx->frames) = (AvenGraphPlanePohFrame){
+                    .q_color = frame->q_color,
+                    .p_color = path_color,
+                    .u = frame->w,
+                    .w = frame->w,
+                    .t = frame->w,
+                    .face_mark = frame->face_mark + 1,
+                };
+
+                frame->w = frame->u;
             }
-
-            list_push(ctx->frames) = (AvenGraphPlanePohFrame){
-                .q_color = frame->q_color,
-                .p_color = path_color,
-                .u = frame->w,
-                .w = frame->w,
-                .t = frame->w,
-                .face_mark = frame->below_mark,
-                .below_mark = frame->below_mark + 1,
-            };
-
-            frame->w = frame->u;
         } else if (n_mark == frame->face_mark) {
             slice_get(ctx->coloring, n) = path_color;
             slice_get(ctx->first_edges, n) = aven_graph_next_neighbor_index(
@@ -223,7 +187,7 @@ static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
             frame->t = n;
             frame->above_path = true;
         } else {
-            slice_get(ctx->marks, n) = frame->below_mark;
+            slice_get(ctx->marks, n) = frame->face_mark + 1;
 
             if (frame->w == frame->u) {
                 frame->w = n;
@@ -241,14 +205,27 @@ static inline bool aven_graph_plane_poh_step(AvenGraphPlanePohCtx *ctx) {
     return false;
 }
 
-static inline AvenGraphPropUint8 aven_graph_plane_poh_result(
-    AvenGraphPlanePohCtx *ctx,
+static inline AvenGraphPropUint8 aven_graph_plane_poh(
+    AvenGraph graph,
+    AvenGraphSubset p,
+    AvenGraphSubset q,
     AvenArena *arena
 ) {
-    AvenGraphPropUint8 coloring = { .len = ctx->coloring.len };
+    AvenGraphPropUint8 coloring = { .len = graph.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
-    slice_copy(coloring, ctx->coloring);
+    AvenArena temp_arena = *arena;
+    AvenGraphPlanePohCtx ctx = aven_graph_plane_poh_init(
+        coloring,
+        graph,
+        p,
+        q,
+        &temp_arena
+    );
+
+    while (!aven_graph_plane_poh_check(&ctx)) {
+        while (!aven_graph_plane_poh_step(&ctx)) {}
+    }
 
     return coloring;
 }

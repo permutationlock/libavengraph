@@ -9,12 +9,12 @@
 #define AVEN_GRAPH_BFS_VERTEX_INVALID 0xffffffffU
 
 typedef struct {
+    AvenGraph graph;
     AvenGraphSubset vertices;
     AvenGraphPropUint32 parents;
     uint32_t front;
     uint32_t back;
     uint32_t neighbor;
-    uint32_t target_vertex;
     uint32_t vertex;
 } AvenGraphBfsCtx;
 
@@ -34,6 +34,7 @@ static void aven_graph_bfs_push_entry_internal(
 static void aven_graph_bfs_pop_entry_internal(AvenGraphBfsCtx *ctx) {
     if (ctx->front == ctx->back) {
         ctx->vertex = AVEN_GRAPH_BFS_VERTEX_INVALID;
+        return;
     }
 
     ctx->vertex = slice_get(ctx->vertices, ctx->front);
@@ -42,19 +43,17 @@ static void aven_graph_bfs_pop_entry_internal(AvenGraphBfsCtx *ctx) {
 }
 
 static inline AvenGraphBfsCtx aven_graph_bfs_init(
-    AvenGraph g,
-    uint32_t start_vertex,
-    uint32_t target_vertex,
+    AvenGraph graph,
+    uint32_t root_vertex,
     AvenArena *arena
 ) {
-    assert(start_vertex < g.len);
-    assert(target_vertex < g.len);
+    assert(root_vertex < graph.len);
 
     AvenGraphBfsCtx ctx = {
-        .vertex = start_vertex,
-        .target_vertex = target_vertex,
-        .vertices = { .len = g.len },
-        .parents = { .len = g.len },
+        .graph = graph,
+        .vertex = root_vertex,
+        .vertices = { .len = graph.len },
+        .parents = { .len = graph.len },
     };
 
     ctx.vertices.ptr = aven_arena_create_array(
@@ -73,67 +72,38 @@ static inline AvenGraphBfsCtx aven_graph_bfs_init(
     return ctx;
 }
 
-static inline bool aven_graph_bfs_step(AvenGraphBfsCtx *ctx, AvenGraph g) {
-    if (ctx->vertex == AVEN_GRAPH_BFS_VERTEX_INVALID) {
-        return true;
-    }
-
-    if (ctx->vertex == ctx->target_vertex) {
-        return true;
-    }
-
-    if (ctx->neighbor == slice_get(g, ctx->vertex).len) {
+static inline bool aven_graph_bfs_step(AvenGraphBfsCtx *ctx) {
+    if (ctx->neighbor == slice_get(ctx->graph, ctx->vertex).len) {
         aven_graph_bfs_pop_entry_internal(ctx);
-        return false;
+        return ctx->vertex == AVEN_GRAPH_BFS_VERTEX_INVALID;
     }
 
-    uint32_t u = slice_get(slice_get(g, ctx->vertex), ctx->neighbor);
+    uint32_t u = slice_get(slice_get(ctx->graph, ctx->vertex), ctx->neighbor);
     aven_graph_bfs_push_entry_internal(ctx, u, ctx->vertex);
     ctx->neighbor += 1;
-
-    if (u == ctx->target_vertex) {
-        ctx->vertex = u;
-        return true;
-    }
 
     return false;
 }
 
 static inline AvenGraphSubset aven_graph_bfs_path(
+    AvenGraphSubset path_space,
     AvenGraphBfsCtx *ctx,
-    AvenArena *arena
+    uint32_t vertex
 ) {
-    if (ctx->vertex != ctx->target_vertex) {
+    if (slice_get(ctx->parents, vertex) == AVEN_GRAPH_BFS_VERTEX_INVALID) {
         return (AvenGraphSubset){ 0 };
     }
 
-    size_t len = 1;
-    uint32_t vertex = ctx->vertex;
-    while (
-        vertex != slice_get(ctx->parents, vertex) and
-        len < ctx->vertices.len
-    ) {
+    size_t len = 0;
+    uint32_t last_vertex;
+    do {
+        slice_get(path_space, len) = vertex;
+        last_vertex = vertex;
+        vertex = slice_get(ctx->parents, last_vertex);
         len += 1;
-        vertex = slice_get(ctx->parents, vertex);
-    }
-    assert(vertex == slice_get(ctx->parents, vertex));
+    } while (last_vertex != vertex);
 
-    AvenGraphSubset path = { .len = len };
-    path.ptr = aven_arena_create_array(uint32_t, arena, path.len);
-
-    vertex = ctx->vertex;
-    while (
-        vertex != slice_get(ctx->parents, vertex) and
-        len != 0
-    ) {
-        len -= 1;
-        slice_get(path, len) = vertex;
-        vertex = slice_get(ctx->parents, vertex);
-    }
-    assert(len == 1);
-    slice_get(path, 0) = vertex;
-
-    return path;
+    return (AvenGraphSubset){ .ptr = path_space.ptr, .len = len };
 }
 
 static inline uint32_t aven_graph_bfs_backtrace(AvenGraphBfsCtx *ctx) {
@@ -143,22 +113,45 @@ static inline uint32_t aven_graph_bfs_backtrace(AvenGraphBfsCtx *ctx) {
 }
 
 static inline AvenGraphSubset aven_graph_bfs(
-    AvenGraph g,
-    uint32_t start_vertex,
-    uint32_t target_vertex,
-    AvenArena *arena,
-    AvenArena temp_arena
+    AvenGraph graph,
+    uint32_t root_vertex,
+    uint32_t vertex,
+    AvenArena *arena
 ) {
+    if (root_vertex == vertex) {
+        AvenGraphSubset path = { .len = 1 };
+        path.ptr = aven_arena_create(uint32_t, arena);
+        slice_get(path, 0) = root_vertex;
+        return path;
+    }
+
+    AvenGraphSubset path_space = { .len = graph.len };
+    path_space.ptr = aven_arena_create_array(
+        uint32_t,
+        arena,
+        path_space.len
+    );
+
+    AvenArena temp_arena = *arena;
     AvenGraphBfsCtx ctx = aven_graph_bfs_init(
-        g,
-        start_vertex,
-        target_vertex,
+        graph,
+        root_vertex,
         &temp_arena
     );
 
-    while (!aven_graph_bfs_step(&ctx, g)) {};
+    while (!aven_graph_bfs_step(&ctx)) {};
 
-    return aven_graph_bfs_path(&ctx, arena);
+    AvenGraphSubset path = aven_graph_bfs_path(path_space, &ctx, vertex);
+    path.ptr = aven_arena_resize_array(
+        uint32_t,
+        arena,
+        path_space.ptr,
+        path_space.len,
+        path.len
+    );
+    assert(path.ptr == path_space.ptr);
+
+    return path;
 }
 
 #endif // AVEN_GRAPH_BFS_H

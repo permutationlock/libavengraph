@@ -255,8 +255,8 @@ int main(int argc, char **argv) {
     );
 
     AvenBuildStep root_step = aven_build_step_root();
-//    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
-//    aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
     aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
 
     // Build steps for tests

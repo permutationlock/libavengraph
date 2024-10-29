@@ -61,8 +61,14 @@ typedef enum {
 } AppState;
 
 typedef union {
-    AvenGraphPlaneGenTriCtx gen;
-    AvenGraphPlanePohCtx poh;
+    struct {
+        AvenGraphPlaneGenTriCtx ctx;
+        AvenGraphPlaneGenTriData data;
+    } gen;
+    struct {
+        AvenGraphPlanePohCtx ctx;
+        AvenGraphPropUint8 coloring;
+    } poh;
 } AppData;
 
 typedef struct {
@@ -91,16 +97,27 @@ static AvenArena arena;
 static void app_reset(void) {
     arena = ctx.init_arena;
     ctx.state = APP_STATE_GEN;
-    ctx.data.gen = aven_graph_plane_gen_tri_init(
+
+    ctx.data.gen.data = aven_graph_plane_gen_tri_data_alloc(
         GRAPH_MAX_VERTICES,
+        &arena
+    );
+    ctx.embedding.len = GRAPH_MAX_VERTICES;
+    ctx.embedding.ptr = aven_arena_create_array(
+        Vec2,
+        &arena,
+        ctx.embedding.len
+    );
+    ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
+        ctx.embedding,
         1.25f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
         true,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
-        &ctx.data.gen,
-        &arena
+        &ctx.data.gen.ctx,
+        &ctx.data.gen.data
     );
     ctx.graph = data.graph;
     ctx.embedding = data.embedding;
@@ -200,24 +217,46 @@ static void app_update(
         switch (ctx.state) {
             case APP_STATE_GEN:
                 done = aven_graph_plane_gen_tri_step(
-                    &ctx.data.gen,
+                    &ctx.data.gen.ctx,
                     ctx.rng
                 );
 
                 AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
-                    &ctx.data.gen,
-                    &arena
+                    &ctx.data.gen.ctx,
+                    &ctx.data.gen.data
                 );
                 ctx.graph = data.graph;
                 ctx.embedding = data.embedding;
 
                 if (done) {
                     ctx.state = APP_STATE_POH;
-                    uint32_t p_data[] = { 0, 1 };
-                    AvenGraphSubset p = slice_array(p_data);
-                    uint32_t q_data[] = { 3, 2 };
-                    AvenGraphSubset q = slice_array(q_data);
-                    ctx.data.poh = aven_graph_plane_poh_init(
+
+                    uint32_t p_data[3];
+                    uint32_t q_data[3];
+
+                    uint32_t p1 = aven_rng_rand_bounded(ctx.rng, 4);
+                    AvenGraphSubset p = {
+                        .len = 1 + aven_rng_rand_bounded(ctx.rng, 3),
+                        .ptr = p_data,
+                    };
+                    for (uint32_t i = 0; i < p.len; i += 1) {
+                        slice_get(p, i) = (p1 + i) % 4;
+                    }
+
+                    uint32_t q1 = (p1 + (uint32_t)p.len) % 4;
+                    AvenGraphSubset q = { .len = 4 - p.len, .ptr = q_data };
+                    for (uint32_t i = 0; i < q.len; i += 1) {
+                        slice_get(q, q.len - i - 1) = (q1 + i) % 4;
+                    }
+
+                    ctx.data.poh.coloring.len = ctx.graph.len;
+                    ctx.data.poh.coloring.ptr = aven_arena_create_array(
+                        uint8_t,
+                        &arena,
+                        ctx.data.poh.coloring.len
+                    );
+                    ctx.data.poh.ctx = aven_graph_plane_poh_init(
+                        ctx.data.poh.coloring,
                         ctx.graph,
                         p,
                         q,
@@ -226,7 +265,7 @@ static void app_update(
                 }
                 break;
             case APP_STATE_POH:
-                done = aven_graph_plane_poh_check(&ctx.data.poh);
+                done = aven_graph_plane_poh_check(&ctx.data.poh.ctx);
                 if (done) {
                     ctx.count += 1;
                     if (ctx.count > DONE_WAIT_STEPS) {
@@ -235,7 +274,7 @@ static void app_update(
                     break;
                 }
 
-                aven_graph_plane_poh_step(&ctx.data.poh);
+                aven_graph_plane_poh_step(&ctx.data.poh.ctx);
                 break;
         }
     }
@@ -294,10 +333,13 @@ static void app_update(
 
     switch (ctx.state) {
         case APP_STATE_GEN:
-            if (ctx.data.gen.active_face != AVEN_GRAPH_PLANE_GEN_FACE_INVALID) {
+            if (
+                ctx.data.gen.ctx.active_face !=
+                    AVEN_GRAPH_PLANE_GEN_FACE_INVALID
+            ) {
                 AvenGraphPlaneGenFace face = list_get(
-                    ctx.data.gen.faces,
-                    ctx.data.gen.active_face
+                    ctx.data.gen.ctx.faces,
+                    ctx.data.gen.ctx.active_face
                 );
                 for (uint32_t i = 0; i < 3; i += 1) {
                     uint32_t j = (i + 1) % 3;
@@ -322,19 +364,19 @@ static void app_update(
             }
             break;
         case APP_STATE_POH:
-            if (ctx.data.poh.frames.len == 0) {
+            if (ctx.data.poh.ctx.frames.len == 0) {
                 break;
             }
             AvenGraphPlanePohFrame *frame = &list_get(
-                ctx.data.poh.frames,
-                ctx.data.poh.frames.len - 1
+                ctx.data.poh.ctx.frames,
+                ctx.data.poh.ctx.frames.len - 1
             );
 
             aven_graph_plane_geometry_push_marked_edges(
                 &ctx.edge_shapes.geometry,
                 ctx.graph,
                 ctx.embedding,
-                ctx.data.poh.marks,
+                ctx.data.poh.ctx.marks,
                 frame->face_mark,
                 graph_transform,
                 &edge_marked_info
@@ -343,8 +385,8 @@ static void app_update(
                 &ctx.edge_shapes.geometry,
                 ctx.graph,
                 ctx.embedding,
-                ctx.data.poh.marks,
-                frame->below_mark,
+                ctx.data.poh.ctx.marks,
+                frame->face_mark + 1,
                 graph_transform,
                 &edge_below_info
             );
@@ -357,7 +399,7 @@ static void app_update(
                     frame->u,
                     slice_get(
                         u_adj,
-                        (slice_get(ctx.data.poh.first_edges, frame->u) +
+                        (slice_get(ctx.data.poh.ctx.first_edges, frame->u) +
                             frame->edge_index) % u_adj.len
                     ),
                     graph_transform,
@@ -368,7 +410,7 @@ static void app_update(
             aven_graph_plane_geometry_push_marked_vertices(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
-                ctx.data.poh.marks,
+                ctx.data.poh.ctx.marks,
                 frame->face_mark,
                 graph_transform,
                 &node_marked_info
@@ -377,8 +419,8 @@ static void app_update(
             aven_graph_plane_geometry_push_marked_vertices(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
-                ctx.data.poh.marks,
-                frame->below_mark,
+                ctx.data.poh.ctx.marks,
+                frame->face_mark + 1,
                 graph_transform,
                 &node_below_info
             );
