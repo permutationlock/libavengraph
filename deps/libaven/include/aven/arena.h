@@ -22,6 +22,8 @@
     #error "C99 or later is required"
 #endif
 
+// Inspired by and/or copied from Chris Wellons (https://nullprogram.com)
+
 typedef struct {
     unsigned char *base;
     unsigned char *top;
@@ -101,7 +103,7 @@ AVEN_FN void *aven_arena_alloc(
     ptrdiff_t padding = (ptrdiff_t)(-(uintptr_t)arena->base & (align - 1));
     ptrdiff_t available = arena->top - arena->base - padding;
     if (available < 0 || count > ((size_t)available / size)) {
-        aven_panic();
+        aven_panic("arena out of memory");
     }
 
     void *ptr = arena->base + padding;

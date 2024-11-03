@@ -39,12 +39,16 @@ typedef struct {
     uint64_t inc;
 } AvenRngPcg;
 
-uint32_t aven_rng_pcg_rand(AvenRngPcg *pcg) {
+static inline uint32_t aven_rng_pcg_rand(AvenRngPcg *pcg) {
     uint64_t oldstate = pcg->state;
     pcg->state = oldstate * 6364136223846793005ULL + pcg->inc;
     uint32_t xorshifted = (uint32_t)(((oldstate >> 18U) ^ oldstate) >> 27U);
     uint32_t rot = (uint32_t)(oldstate >> 59U);
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+}
+
+uint32_t aven_rng_pcg_rand_stub(void *pcg) {
+    return aven_rng_pcg_rand(pcg);
 }
 
 static inline AvenRngPcg aven_rng_pcg_seed(
@@ -64,7 +68,7 @@ static inline AvenRngPcg aven_rng_pcg_seed(
 
 static inline AvenRng aven_rng_pcg(AvenRngPcg *rng) {
     return (AvenRng){
-        .rand = (aven_rng_rand_fn)aven_rng_pcg_rand,
+        .rand = aven_rng_pcg_rand_stub,
         .state = (void *)rng
     };
 }

@@ -5,8 +5,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// Inspired by and/or copied from Chris Wellons (https://nullprogram.com)
-
 #define or ||
 #define and &&
 
@@ -22,11 +20,7 @@
 #endif
 
 #if defined(AVEN_UNREACHABLE_ASSERT) and __has_builtin(__builtin_unreachable)
-    #ifndef NDEBUG
-        #define assert(c) while (!(c)) { __builtin_unreachable(); }
-    #else
-        #define assert(unused) ((void)0)
-    #endif
+    #define assert(c) while (!(c)) { __builtin_unreachable(); }
 #else
     #include <assert.h>
 #endif
@@ -50,7 +44,7 @@
 
 typedef Slice(unsigned char) ByteSlice;
 
-#ifndef NDEBUG
+#if defined(AVEN_UNREACHABLE_ASSERT) or !defined(NDEBUG)
     static inline size_t aven_assert_lt_internal_fn(size_t a, size_t b) {
         assert(a < b);
         return a;
@@ -114,9 +108,13 @@ typedef Slice(unsigned char) ByteSlice;
         ) \
     )
 
-static inline noreturn void aven_panic(void) {
+static inline noreturn void aven_panic(const char *msg) {
+    // TODO: use stderr instead of stdout
+    // using stdout because fprintf(stderr, ...) requires work or stdio.h
+    int printf(const char *fmt, ...);
     noreturn void _Exit(int status);
-    
+
+    printf("PANIC: %s", msg);
     _Exit(1);
 }
 

@@ -1,6 +1,8 @@
 #ifndef AVEN_RNG_H
 #define AVEN_RNG_H
 
+#include "../aven.h"
+
 typedef uint32_t (*aven_rng_rand_fn)(void *state);
 
 typedef struct {
