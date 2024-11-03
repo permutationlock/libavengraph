@@ -503,8 +503,8 @@ static inline void aven_gl_text_geometry_push_line(
     Vec4 color
 ) {
     Vec2 offset = {
-        -0.5f * line->dim[0],
-        0.0f,
+        -line->dim[0] / 2.0f,
+        -line->dim[1] / 2.0f
     };    
 
     Aff2 text_trans;

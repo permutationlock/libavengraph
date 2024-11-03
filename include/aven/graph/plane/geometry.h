@@ -152,6 +152,7 @@ static inline void aven_graph_plane_geometry_push_label(
     AvenGraphPlaneEmbedding embedding,
     uint32_t v,
     Aff2 trans,
+    Vec2 label_offset,
     float scale,
     Vec4 color,
     AvenArena arena
@@ -165,6 +166,7 @@ static inline void aven_graph_plane_geometry_push_label(
     Aff2 label_trans;
     aff2_identity(label_trans);
     aff2_add_vec2(label_trans, label_trans, pos);
+    aff2_add_vec2(label_trans, label_trans, label_offset);
 
     aven_gl_text_geometry_push_line(
         geometry,
@@ -180,6 +182,7 @@ static inline void aven_graph_plane_geometry_push_labels(
     AvenGlTextFont * font,
     AvenGraphPlaneEmbedding embedding,
     Aff2 trans,
+    Vec2 label_offset,
     float scale,
     Vec4 color,
     AvenArena arena
@@ -191,6 +194,7 @@ static inline void aven_graph_plane_geometry_push_labels(
             embedding,
             v,
             trans,
+            label_offset,
             scale,
             color,
             arena

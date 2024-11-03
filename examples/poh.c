@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// #include "font.h"
+#include "font.h"
 
 #define ARENA_PAGE_SIZE 4096
 #define GRAPH_ARENA_PAGES 1000
@@ -31,9 +31,9 @@
 #define GRAPH_MAX_VERTICES (1000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.05f
+#define VERTEX_RADIUS 0.035f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 15)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 60)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
@@ -85,6 +85,7 @@ typedef struct {
     AvenTimeInst last_update;
     Aff2 last_camera_transform;
     Aff2 camera_transform;
+    Vec2 norm_dim;
     int64_t elapsed;
     int count;
 } AppCtx;
@@ -108,9 +109,18 @@ static void app_reset(void) {
         &arena,
         ctx.embedding.len
     );
+
+    Aff2 area_transform;
+    aff2_identity(area_transform);
+    aff2_stretch(
+        area_transform,
+        ctx.norm_dim,
+        area_transform
+    );
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
-        1.25f * (VERTEX_RADIUS * VERTEX_RADIUS),
+        area_transform,
+        1.2f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
         true,
         &arena
@@ -126,7 +136,7 @@ static void app_reset(void) {
 }
 
 static void app_init(void) {
-    ctx = (AppCtx){ 0 };
+    ctx = (AppCtx){ .norm_dim = { 1.0f, 1.0f } };
  
     ctx.edge_shapes.ctx = aven_gl_shape_ctx_init(&gl);
     ctx.edge_shapes.geometry = aven_gl_shape_geometry_init(
@@ -152,24 +162,24 @@ static void app_init(void) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-    // ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
-    // ctx.vertex_text.font = aven_gl_text_font_init(
-    //     &gl,
-    //     font_bytes,
-    //     32.0f,
-    //     arena
-    // );
+    ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
+    ctx.vertex_text.font = aven_gl_text_font_init(
+        &gl,
+        font_bytes,
+        20.0f,
+        arena
+    );
 
-    // ctx.vertex_text.ctx = aven_gl_text_ctx_init(&gl);
-    // ctx.vertex_text.geometry = aven_gl_text_geometry_init(
-    //     GRAPH_MAX_VERTICES * 10,
-    //     &arena
-    // );
-    // ctx.vertex_text.buffer = aven_gl_text_buffer_init(
-    //     &gl,
-    //     &ctx.vertex_text.geometry,
-    //     AVEN_GL_BUFFER_USAGE_DYNAMIC
-    // );
+    ctx.vertex_text.ctx = aven_gl_text_ctx_init(&gl);
+    ctx.vertex_text.geometry = aven_gl_text_geometry_init(
+        GRAPH_MAX_VERTICES * 10,
+        &arena
+    );
+    ctx.vertex_text.buffer = aven_gl_text_buffer_init(
+        &gl,
+        &ctx.vertex_text.geometry,
+        AVEN_GL_BUFFER_USAGE_DYNAMIC
+    );
 
     ctx.pcg = aven_rng_pcg_seed(0xbeef1234UL, 0x9abcdeadUL);
     ctx.rng = aven_rng_pcg(&ctx.pcg);
@@ -209,6 +219,9 @@ static void app_update(
     int64_t elapsed = aven_time_since(now, ctx.last_update);
     ctx.last_update = now;
     ctx.elapsed += elapsed;
+
+    ctx.norm_dim[0] = norm_width;
+    ctx.norm_dim[1] = norm_height;
 
     while (ctx.elapsed >= BFS_TIMESTEP) {
         ctx.elapsed -= BFS_TIMESTEP;
@@ -281,7 +294,7 @@ static void app_update(
 
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx.vertex_shapes.geometry);
-    // aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
+    aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
 
     Aff2 graph_transform;
     aff2_identity(graph_transform);
@@ -568,15 +581,16 @@ static void app_update(
             break;
     }
 
-    // aven_graph_plane_geometry_push_labels(
-    //     &ctx.vertex_text.geometry,
-    //     &ctx.vertex_text.font,
-    //     ctx.embedding,
-    //     graph_transform,
-    //     pixel_size,
-    //     (Vec4){ 0.1f, 0.1f, 0.1f, 1.0f },
-    //     arena
-    // );
+    aven_graph_plane_geometry_push_labels(
+        &ctx.vertex_text.geometry,
+        &ctx.vertex_text.font,
+        ctx.embedding,
+        graph_transform,
+        (Vec2){ 0.0f, (ctx.vertex_text.font.height * pixel_size) / 4.0f },
+        pixel_size,
+        (Vec4){ 0.1f, 0.1f, 0.1f, 1.0f },
+        arena
+    );
 
     gl.Viewport(0, 0, width, height);
     assert(gl.GetError() == 0);
@@ -605,11 +619,11 @@ static void app_update(
         &ctx.vertex_shapes.buffer,
         &ctx.vertex_shapes.geometry
     );
-    // aven_gl_text_buffer_update(
-    //     &gl,
-    //     &ctx.vertex_text.buffer,
-    //     &ctx.vertex_text.geometry
-    // );
+    aven_gl_text_buffer_update(
+        &gl,
+        &ctx.vertex_text.buffer,
+        &ctx.vertex_text.geometry
+    );
 
     aven_gl_shape_draw(
         &gl,
@@ -624,13 +638,13 @@ static void app_update(
         pixel_size,
         cam_transform
     );
-    // aven_gl_text_geometry_draw(
-    //     &gl,
-    //     &ctx.vertex_text.ctx,
-    //     &ctx.vertex_text.buffer,
-    //     &ctx.vertex_text.font,
-    //     cam_transform
-    // );
+    aven_gl_text_geometry_draw(
+        &gl,
+        &ctx.vertex_text.ctx,
+        &ctx.vertex_text.buffer,
+        &ctx.vertex_text.font,
+        cam_transform
+    );
 
     gl.ColorMask(false, false, false, true);
     assert(gl.GetError() == 0);

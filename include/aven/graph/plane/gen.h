@@ -107,6 +107,7 @@ typedef struct {
 
 static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
     AvenGraphPlaneEmbedding embedding,
+    Aff2 trans,
     float min_area,
     float min_coeff,
     bool square,
@@ -135,9 +136,16 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
     );
 
     if (!ctx.square) {
-        vec2_copy(list_push(ctx.embedding), (Vec2){  0.0f,  1.0f });
-        vec2_copy(list_push(ctx.embedding), (Vec2){  1.0f, -1.0f });
-        vec2_copy(list_push(ctx.embedding), (Vec2){ -1.0f, -1.0f });
+        Vec2 points[3] = {
+            {  0.0f, 1.0f },
+            {  1.0f, -1.0f },
+            { -1.0f, -1.0f },
+        };
+
+        for (size_t i = 0; i < countof(points); i += 1) {
+            aff2_transform(points[i], trans, points[i]);
+            vec2_copy(list_push(ctx.embedding), points[i]);
+        }
 
         float area = vec2_triangle_area(
             slice_get(ctx.embedding, 0),
@@ -158,10 +166,17 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
 
         list_push(ctx.valid_faces) = 1;
     } else {
-        vec2_copy(list_push(ctx.embedding), (Vec2){ -1.0f,  1.0f });
-        vec2_copy(list_push(ctx.embedding), (Vec2){  1.0f,  1.0f });
-        vec2_copy(list_push(ctx.embedding), (Vec2){  1.0f, -1.0f });
-        vec2_copy(list_push(ctx.embedding), (Vec2){ -1.0f, -1.0f });
+        Vec2 points[4] = {
+            { -1.0f,  1.0f },
+            {  1.0f,  1.0f },
+            {  1.0f, -1.0f },
+            { -1.0f, -1.0f },
+        };
+
+        for (size_t i = 0; i < countof(points); i += 1) {
+            aff2_transform(points[i], trans, points[i]);
+            vec2_copy(list_push(ctx.embedding), points[i]);
+        }
 
         float area = vec2_triangle_area(
             slice_get(ctx.embedding, 0),
@@ -639,6 +654,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
 
 static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
     uint32_t size,
+    Aff2 trans,
     float min_area,
     float min_coeff,
     bool square,
@@ -659,6 +675,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
     AvenArena temp_arena = *arena;
     AvenGraphPlaneGenTriCtx ctx = aven_graph_plane_gen_tri_init(
         embedding,
+        trans,
         min_area,
         min_coeff,
         square,
