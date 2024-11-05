@@ -2,6 +2,7 @@
 #define AVEN_GRAPH_H
 
 #include <aven.h>
+#include <aven/arena.h>
 
 typedef Slice(uint32_t) AvenGraphAdjList;
 typedef Slice(AvenGraphAdjList) AvenGraph;

@@ -37,6 +37,9 @@
 #define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 60)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
+#define COLOR_DIVISIONS 8UL
+#define MAX_COLOR (((COLOR_DIVISIONS - 1UL) * (COLOR_DIVISIONS - 2UL)) / 2UL)
+
 typedef struct {
     AvenGlShapeCtx ctx;
     AvenGlShapeGeometry geometry;
@@ -58,7 +61,7 @@ typedef struct {
 
 typedef enum {
     APP_STATE_GEN,
-    APP_STATE_POH,
+    APP_STATE_HARTMAN,
 } AppState;
 
 typedef union {
@@ -73,10 +76,11 @@ typedef union {
 } AppData;
 
 typedef struct {
+    Vec4 color_data[MAX_COLOR];
+    AvenGraphPlaneHartmanGeometryInfo hartman_geometry_info;
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
     VertexText vertex_text;
-    AvenGraph graph;
     AvenGraphPlaneEmbedding embedding;
     AvenRngPcg pcg;
     AvenRng rng;
@@ -84,8 +88,6 @@ typedef struct {
     AppData data;
     AvenArena init_arena;
     AvenTimeInst last_update;
-    Aff2 last_camera_transform;
-    Aff2 camera_transform;
     Vec2 norm_dim;
     int64_t elapsed;
     int count;
@@ -121,7 +123,7 @@ static void app_reset(void) {
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.2f * (VERTEX_RADIUS * VERTEX_RADIUS),
+        1.25f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
         true,
         &arena
@@ -138,6 +140,45 @@ static void app_reset(void) {
 
 static void app_init(void) {
     ctx = (AppCtx){ .norm_dim = { 1.0f, 1.0f } };
+
+    size_t color_index = 0;
+    for (size_t i = 0; i < COLOR_DIVISIONS - 2UL; i += 1) {
+        for (size_t j = i + 1; j < COLOR_DIVISIONS - 1UL; j += 1) {
+            float coeffs[3] = {
+                (float)(i + 1) / (float)COLOR_DIVISIONS,
+                (float)(j + 1) / (float)COLOR_DIVISIONS,
+                (float)(COLOR_DIVISIONS - (j + 1)) / (float)COLOR_DIVISIONS,
+            };
+
+            Vec4 base_colors[3] = {
+                { 0.8f, 0.1f, 0.1f, 1.0f },
+                { 0.1f, 0.8f, 0.1f, 1.0f },
+                { 0.1f, 0.1f, 0.8f, 1.0f },
+            };
+            for (size_t k = 0; k < 3; k += 1) {
+                vec4_scale(base_colors[k], coeffs[k], base_colors[k]);
+                vec4_add(
+                    ctx.color_data[color_index],
+                    cxt.color_data[color_index],
+                    base_colors[k]
+                );
+            }
+            color_index += 1;
+        }
+    }
+
+    ctx.hartman_geometry_info = (AvenGraphPlaneHartmanGeometryInfo){
+        .list_colors = slice_array(ctx.color_data),
+        .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
+        .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
+        .cycle_edge_color = { 0.5f, 0.5f, 0.1f, 1.0f },
+        .py_vertex_color = { 0.1f, 0.5f, 0.5f, 1.0f },
+        .xp_vertex_color = { 0.65f, 0.65f, 0.35f },
+        .yx_vertex_color = { 0.65f, 0.35f, 0.65f },
+        .edge_thickness = VERTEX_RADIUS / 3.5f,
+        .border_thickness = VERTEX_RADIUS * 0.25f,
+        .radius = VERTEX_RADIUS,
+    };
  
     ctx.edge_shapes.ctx = aven_gl_shape_ctx_init(&gl);
     ctx.edge_shapes.geometry = aven_gl_shape_geometry_init(
@@ -235,15 +276,16 @@ static void app_update(
                     ctx.rng
                 );
 
-                AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
-                    &ctx.data.gen.ctx,
-                    &ctx.data.gen.data
-                );
-                ctx.graph = data.graph;
-                ctx.embedding = data.embedding;
-
                 if (done) {
-                    ctx.state = APP_STATE_POH;
+                    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+                        &ctx.data.gen.ctx,
+                        &ctx.data.gen.data
+                    );
+
+                    AvenGraphAug aug_graph = aven_graph_aug(data.graph, &arena);
+
+                    ctx.embedding = data.embedding;
+                    ctx.state = APP_STATE_HARTMAN;
 
                     uint32_t outer_face_data[4];
                     AvenGraphSubset outer_face = {
@@ -295,11 +337,10 @@ static void app_update(
                         slice_get(ctx.data.hartman.color_lists, i) = list;
                     }
                     
-                    ctx.data.poh.ctx = aven_graph_plane_poh_init(
+                    ctx.data.hartman.ctx = aven_graph_plane_hartman_init(
                         ctx.data.hartman.color_lists,
-                        ctx.graph,
-                        p,
-                        q,
+                        aug_graph,
+                        outer_face,
                         &arena
                     );
                 }
@@ -331,291 +372,25 @@ static void app_update(
     //     graph_transform
     // );
 
-    AvenGraphPlaneHartmanGeometryInfo hartman_draw_info = {
-        .list_colors = slice_array(list_color_data),
-        .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
-        .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
-        .cycle_edge_color = { 0.5f, 0.5f, 0.1f, 1.0f },
-        .py_vertex_color = { 0.1f, 0.5f, 0.5f, 1.0f },
-        .xp_vertex_color = { 0.65f, 0.65f, 0.35f },
-        .yx_vertex_color = { 0.65f, 0.35f, 0.65f },
-        .radius = VERTEX_RADIUS,
-        .border_thickness = VERTEX_RADIUS / 5.0f,
-    }
-
-    AvenGraphPlaneGeometryEdge edge_active_info = {
-        .color = { 0.5f, 0.1f, 0.5f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 1.5f),
-    };
-    AvenGraphPlaneGeometryNode node_active_info = {
-        .color = { 0.5f, 0.1f, 0.5f, 1.0f },
-        .mat = {
-            { 1.33f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 1.33f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-    AvenGraphPlaneGeometryEdge edge_below_info = {
-        .color = { 0.5f, 0.5f, 0.1f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 1.5f),
-    };
-    AvenGraphPlaneGeometryNode node_below_info = {
-        .color = { 0.5f, 0.5f, 0.1f, 1.0f },
-        .mat = {
-            { 1.25f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 1.25f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-    AvenGraphPlaneGeometryEdge edge_marked_info = {
-        .color = { 0.1f, 0.5f, 0.5f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 1.5f),
-    };
-    AvenGraphPlaneGeometryNode node_marked_info = {
-        .color = { 0.1f, 0.5f, 0.5f, 1.0f },
-        .mat = {
-            { 1.25f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 1.25f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-
     switch (ctx.state) {
         case APP_STATE_GEN:
-            if (
-                ctx.data.gen.ctx.active_face !=
-                    AVEN_GRAPH_PLANE_GEN_FACE_INVALID
-            ) {
-                AvenGraphPlaneGenFace face = list_get(
-                    ctx.data.gen.ctx.faces,
-                    ctx.data.gen.ctx.active_face
-                );
-                for (uint32_t i = 0; i < 3; i += 1) {
-                    uint32_t j = (i + 1) % 3;
-                    aven_graph_plane_geometry_push_edge(
-                        &ctx.edge_shapes.geometry,
-                        ctx.embedding,
-                        face.vertices[i],
-                        face.vertices[j],
-                        graph_transform,
-                        &edge_active_info
-                    );
-                }
-                for (uint32_t i = 0; i < 3; i += 1) {
-                    aven_graph_plane_geometry_push_vertex(
-                        &ctx.vertex_shapes.geometry,
-                        ctx.embedding,
-                        face.vertices[i],
-                        graph_transform,
-                        &node_active_info
-                    );
-                }
-            }
-            break;
-        case APP_STATE_POH:
-            if (ctx.data.hartman.ctx.frames.len == 0) {
-                break;
-            }
-            AvenGraphPlanePohFrame *frame = &list_get(
-                ctx.data.poh.ctx.frames,
-                ctx.data.poh.ctx.frames.len - 1
-            );
-
-            aven_graph_plane_geometry_push_marked_edges(
+            aven_graph_plane_gen_geometry_push_tri_ctx(
                 &ctx.edge_shapes.geometry,
-                ctx.graph,
-                ctx.embedding,
-                ctx.data.poh.ctx.marks,
-                frame->face_mark,
-                graph_transform,
-                &edge_marked_info
-            );
-            aven_graph_plane_geometry_push_marked_edges(
-                &ctx.edge_shapes.geometry,
-                ctx.graph,
-                ctx.embedding,
-                ctx.data.poh.ctx.marks,
-                frame->face_mark + 1,
-                graph_transform,
-                &edge_below_info
-            );
-
-            AvenGraphAdjList u_adj = slice_get(ctx.graph, frame->u);
-            if (frame->edge_index < u_adj.len) {
-                aven_graph_plane_geometry_push_edge(
-                    &ctx.edge_shapes.geometry,
-                    ctx.embedding,
-                    frame->u,
-                    slice_get(
-                        u_adj,
-                        (slice_get(ctx.data.poh.ctx.first_edges, frame->u) +
-                            frame->edge_index) % u_adj.len
-                    ),
-                    graph_transform,
-                    &edge_active_info
-                );
-            }
-
-            aven_graph_plane_geometry_push_marked_vertices(
                 &ctx.vertex_shapes.geometry,
-                ctx.embedding,
-                ctx.data.poh.ctx.marks,
-                frame->face_mark,
+                &ctx.data.gen.ctx,
                 graph_transform,
-                &node_marked_info
-            );
-
-            aven_graph_plane_geometry_push_marked_vertices(
-                &ctx.vertex_shapes.geometry,
-                ctx.embedding,
-                ctx.data.poh.ctx.marks,
-                frame->face_mark + 1,
-                graph_transform,
-                &node_below_info
-            );
-
-            aven_graph_plane_geometry_push_vertex(
-                &ctx.vertex_shapes.geometry,
-                ctx.embedding,
-                frame->u,
-                graph_transform,
-                &node_active_info
-            );
-
-            break;
-    }
-
-    AvenGraphPlaneGeometryEdge edge_info = {
-        .color = { 0.15f, 0.15f, 0.15f, 1.0f },
-        .thickness = (VERTEX_RADIUS / 3.5f),
-    };
-    AvenGraphPlaneGeometryEdge edge_color_data[] = {
-        {
-            .color = { 0.75f, 0.25f, 0.25f, 1.0f },
-            .thickness = (VERTEX_RADIUS / 2.5f),
-        },
-        {
-            .color = { 0.2f, 0.55f, 0.15f, 1.0f },
-            .thickness = (VERTEX_RADIUS / 2.5f),
-        },
-        {
-            .color = { 0.15f, 0.35f, 0.75f, 1.0f },
-            .thickness = (VERTEX_RADIUS / 2.5f),
-        },
-    };
-    AvenGraphPlaneGeometryEdgeSlice edge_colors = slice_array(edge_color_data);
-
-    switch (ctx.state) {
-        case APP_STATE_GEN:
-            aven_graph_plane_geometry_push_edges(
-                &ctx.edge_shapes.geometry,
-                ctx.graph,
-                ctx.embedding,
-                graph_transform,
-                &edge_info
+                &gen_geometry_info,
+                arena
             );
             break;
-        case APP_STATE_POH:
-            aven_graph_plane_geometry_push_uncolored_edges(
+        case APP_STATE_HARTMAN:
+            aven_graph_plane_hartman_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
-                ctx.graph,
-                ctx.embedding,
-                ctx.data.poh.coloring,
-                graph_transform,
-                &edge_info
-            );
-            aven_graph_plane_geometry_push_colored_edges(
-                &ctx.edge_shapes.geometry,
-                ctx.graph,
-                ctx.embedding,
-                ctx.data.poh.coloring,
-                graph_transform,
-                edge_colors
-            );
-            break;
-    }
-
-    AvenGraphPlaneGeometryNode node_outline_info = {
-        .color = { 0.15f, 0.15f, 0.15f, 1.0f },
-        .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-
-    aven_graph_plane_geometry_push_vertices(
-        &ctx.vertex_shapes.geometry,
-        ctx.embedding,
-        graph_transform,
-        &node_outline_info
-    );
-
-    AvenGraphPlaneGeometryNode node_empty_info = {
-        .color = { 0.9f, 0.9f, 0.9f, 1.0f },
-        .mat = {
-            { 0.75f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 0.75f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-
-    AvenGraphPlaneGeometryNode node_red_info = {
-        .color = { 0.75f, 0.25f, 0.25f, 1.0f },
-        .mat = {
-            { 0.75f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 0.75f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-
-    AvenGraphPlaneGeometryNode node_green_info = {
-        .color = { 0.2f, 0.55f, 0.15f, 1.0f },
-        .mat = {
-            { 0.75f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 0.75f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-
-    AvenGraphPlaneGeometryNode node_blue_info = {
-        .color = { 0.15f, 0.35f, 0.75f, 1.0f },
-        .mat = {
-            { 0.75f * VERTEX_RADIUS, 0.0f },
-            { 0.0f, 0.75f * VERTEX_RADIUS }
-        },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-        .roundness = 1.0f,
-    };
-
-    AvenGraphPlaneGeometryNode node_color_data[] = {
-        node_empty_info,
-        node_red_info,
-        node_green_info,
-        node_blue_info,
-    };
-    AvenGraphPlaneGeometryNodeSlice node_colors = slice_array(node_color_data);
-
-    switch (ctx.state) {
-        case APP_STATE_GEN:
-            aven_graph_plane_geometry_push_vertices(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
-                graph_transform,
-                &node_empty_info
-            );
-            break;
-        case APP_STATE_POH:
-            aven_graph_plane_geometry_push_colored_vertices(
-                &ctx.vertex_shapes.geometry,
-                ctx.embedding,
-                ctx.data.poh.coloring,
-                graph_transform,
-                node_colors
+                ctx.data.hartman.ctx,
+                graph_trans,
+                &ctx.hartman_geometry_info
             );
             break;
     }

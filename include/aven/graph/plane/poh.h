@@ -1,6 +1,11 @@
 #ifndef AVEN_GRAPH_PLANE_POH_H
 #define AVEN_GRAPH_PLANE_POH_H
 
+#include <aven.h>
+#include <aven/arena.h>
+
+#include "../../graph.h"
+
 typedef struct {
     uint32_t u;
     uint32_t w;
