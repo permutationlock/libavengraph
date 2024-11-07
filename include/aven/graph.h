@@ -70,10 +70,15 @@ static inline AvenGraphAug aven_graph_aug(AvenGraph graph, AvenArena *arena) {
             v_adj.len
         );
 
-        slice_get(aug_graph, v) = (AvenGraphAugAdjList){
+        AvenGraphAugAdjList *v_aug_adj = &slice_get(aug_graph, v);
+        *v_aug_adj = (AvenGraphAugAdjList){
             .len = v_adj.len,
             .ptr = v_aug_adj_nodes,
         };
+
+        for (uint32_t i = 0; i < v_adj.len; i += 1) {
+            slice_get(*v_aug_adj, i).vertex = slice_get(v_adj, i);
+        }
     }
 
     AvenArena temp_arena = *arena;

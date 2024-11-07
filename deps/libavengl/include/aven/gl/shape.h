@@ -828,6 +828,69 @@ static inline void aven_gl_shape_rounded_draw(
     assert(gl->GetError() == 0);
 }
 
+static inline void aven_gl_shape_rounded_geometry_push_sector(
+    AvenGlShapeRoundedGeometry *geometry,
+    Aff2 trans,
+    float start_angle,
+    float stop_angle,
+    Vec4 color
+) {
+    assert((stop_angle - start_angle) < AVEN_MATH_PI_F);
+
+    float angle = stop_angle - start_angle;
+
+    Vec2 tex_points[3];
+    vec2_copy(tex_points[0], (Vec2){ 0.0f, 0.0f });
+    vec2_copy(tex_points[1], (Vec2){ 1.0f, 0.0f });
+    vec2_copy(tex_points[2], (Vec2){ cosf(angle), sinf(angle) });
+
+    Vec2 height_vec;
+    mat2_mul_vec2(height_vec, trans, (Vec2){ 0.0f, tex_points[2][1] });
+
+    Vec2 width_vec;
+    mat2_mul_vec2(width_vec, trans, (Vec2){ 1.0f, 0.0f });
+
+    float width = 2.0f * vec2_mag(width_vec);
+    float height = 2.0f * vec2_mag(height_vec);
+
+    Vec2 midpoint;
+    vec2_add(midpoint, tex_points[1], tex_points[2]);
+    vec2_scale(midpoint, 0.5f, midpoint);
+    float scale = vec2_mag(midpoint);
+
+    vec2_scale(tex_points[1], 1.0f / scale, tex_points[1]);
+    vec2_scale(tex_points[2], 1.0f / scale, tex_points[2]);
+    vec2_scale(midpoint, scale, midpoint);
+
+    Vec2 points[3];
+
+    Mat2 rot;
+    mat2_identity(rot);
+    mat2_rotate(rot, rot, start_angle);
+
+    mat2_mul_vec2(points[0], rot, tex_points[0]);
+    mat2_mul_vec2(points[1], rot, tex_points[1]);
+    mat2_mul_vec2(points[2], rot, tex_points[2]);
+
+    aff2_transform(points[0], trans, points[0]);
+    aff2_transform(points[1], trans, points[1]);
+    aff2_transform(points[2], trans, points[2]);
+
+    size_t start_index = geometry->vertices.len;
+
+    for (size_t i = 0; i < countof(points); i += 1) {
+        list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
+            .pos = { points[i][0], points[i][1] },
+            .info = { tex_points[i][0], tex_points[i][1], width, height },
+            .color = { color[0], color[1], color[2], color[3] },
+        };
+    }
+
+    list_push(geometry->indices) = (GLushort)start_index + 0;
+    list_push(geometry->indices) = (GLushort)start_index + 1;
+    list_push(geometry->indices) = (GLushort)start_index + 2;
+}
+
 static inline void aven_gl_shape_rounded_geometry_push_triangle(
     AvenGlShapeRoundedGeometry *geometry,
     Aff2 trans,
@@ -960,6 +1023,65 @@ static inline void aven_gl_shape_rounded_geometry_push_square(
     list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
         .pos = { p2[0], p2[1] },
         .info = { 1.0f * rs, -1.0f * rs, width, height },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+    list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
+        .pos = { p3[0], p3[1] },
+        .info = { 1.0f * rs, 1.0f * rs, width, height },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+    list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
+        .pos = { p4[0], p4[1] },
+        .info = { -1.0f * rs, 1.0f * rs, width, height },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+
+    list_push(geometry->indices) = (GLushort)start_index + 0;
+    list_push(geometry->indices) = (GLushort)start_index + 1;
+    list_push(geometry->indices) = (GLushort)start_index + 2;
+    list_push(geometry->indices) = (GLushort)start_index + 0;
+    list_push(geometry->indices) = (GLushort)start_index + 2;
+    list_push(geometry->indices) = (GLushort)start_index + 3;
+}
+
+static inline void aven_gl_shape_rounded_geometry_push_square_half(
+    AvenGlShapeRoundedGeometry *geometry,
+    Aff2 trans,
+    float roundness,
+    Vec4 color
+) {
+    Vec2 p1 = { -1.0f, -1.0f };
+    Vec2 p2 = {  1.0f, -1.0f };
+    Vec2 p3 = {  1.0f,  1.0f };
+    Vec2 p4 = { -1.0f,  1.0f };
+
+    aff2_transform(p1, trans, p1);
+    aff2_transform(p2, trans, p2);
+    aff2_transform(p3, trans, p3);
+    aff2_transform(p4, trans, p4);
+
+    Vec2 p1p2;
+    vec2_sub(p1p2, p2, p1);
+
+    Vec2 p1p4;
+    vec2_sub(p1p4, p4, p1);
+
+    float width = vec2_mag(p1p2);
+    float height = 2.0f * vec2_mag(p1p4);
+
+    float rs = (1.0f / AVEN_MATH_SQRT2_F) +
+        roundness * (1.0f - (1.0f / AVEN_MATH_SQRT2_F));
+
+    size_t start_index = geometry->vertices.len;
+
+    list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
+        .pos = { p1[0], p1[1] },
+        .info = { -1.0f * rs, 0.0f, width, height },
+        .color = { color[0], color[1], color[2], color[3] },
+    };
+    list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
+        .pos = { p2[0], p2[1] },
+        .info = { 1.0f * rs, 0.0f, width, height },
         .color = { color[0], color[1], color[2], color[3] },
     };
     list_push(geometry->vertices) = (AvenGlShapeRoundedVertex){
