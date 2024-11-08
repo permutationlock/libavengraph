@@ -176,9 +176,9 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                 u_mark == x_mark and
                 vu_node.back_index != u_info.nb.first
             ) {
-                uint32_t maybe_uv_index = (
-                    vu_node.back_index + (uint32_t)u_aug_adj.len - 1
-                ) % u_aug_adj.len;
+                uint32_t maybe_uv_index = (uint32_t)(
+                    (vu_node.back_index + u_aug_adj.len - 1) % u_aug_adj.len
+                );
 
                 assert(slice_get(u_aug_adj, maybe_uv_index).vertex == frame->v);
                 v = frame->v;

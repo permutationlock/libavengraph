@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "font.h"
+// #include "font.h"
 
 #define ARENA_PAGE_SIZE 4096
 #define GRAPH_ARENA_PAGES 1000
@@ -38,8 +38,8 @@
 #define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 2)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
-#define COLOR_DIVISIONS 5UL
-#define MAX_COLOR (((COLOR_DIVISIONS - 1UL) * (COLOR_DIVISIONS - 2UL)) / 2UL)
+#define COLOR_DIVISIONS 2UL
+#define MAX_COLOR (((COLOR_DIVISIONS + 2) * (COLOR_DIVISIONS + 1)) / 2UL)
 
 typedef struct {
     AvenGlShapeCtx ctx;
@@ -163,19 +163,22 @@ static void app_init(void) {
     );
 
     size_t color_index = 1;
-    for (size_t i = 0; i < COLOR_DIVISIONS - 2UL; i += 1) {
-        for (size_t j = i + 1; j < COLOR_DIVISIONS - 1UL; j += 1) {
+    for (size_t i = 0; i <= COLOR_DIVISIONS; i += 1) {
+        for (size_t j = i; j <= COLOR_DIVISIONS; j += 1) {
             float coeffs[3] = {
-                (float)(i + 1) / (float)COLOR_DIVISIONS,
+                (float)(i) / (float)COLOR_DIVISIONS,
                 (float)(j - i) / (float)COLOR_DIVISIONS,
-                (float)(COLOR_DIVISIONS - (j + 1)) /
+                (float)(COLOR_DIVISIONS - j) /
                     (float)COLOR_DIVISIONS,
             };
 
             Vec4 base_colors[3] = {
-                { 1.0f, 0.1f, 0.1f, 1.0f },
-                { 0.1f, 1.0f, 0.1f, 1.0f },
-                { 0.1f, 0.1f, 1.0f, 1.0f },
+                // { 0.9f, 0.2f, 0.2f, 1.0f },
+                // { 0.2f, 0.9f, 0.2f, 1.0f },
+                // { 0.2f, 0.2f, 0.9f, 1.0f },
+                { 0.85f, 0.15f, 0.15f, 1.0f },
+                { 0.15f, 0.75f, 0.15f, 1.0f },
+                { 0.15f, 0.15f, 0.85f, 1.0f },
             };
             for (size_t k = 0; k < 3; k += 1) {
                 vec4_scale(base_colors[k], coeffs[k], base_colors[k]);
@@ -193,7 +196,7 @@ static void app_init(void) {
         .colors = slice_array(ctx.color_data),
         .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
         .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
-        .cycle_color = { 0.55f, 0.55f, 0.15f, 1.0f },
+        .cycle_color = { 0.55f, 0.65f, 0.15f, 1.0f },
         .py_color = { 0.15f, 0.55f, 0.55f, 1.0f },
         .xp_color = { 0.65f, 0.25f, 0.15f, 1.0f },
         .edge_thickness = VERTEX_RADIUS / 3.5f,
@@ -288,7 +291,7 @@ static void app_update(
 
     int64_t timestep = BFS_TIMESTEP;
     if (ctx.state == APP_STATE_GEN) {
-        timestep = BFS_TIMESTEP / 4;
+        timestep = BFS_TIMESTEP / 8;
     }
 
     while (ctx.elapsed >= timestep) {
@@ -325,7 +328,9 @@ static void app_update(
                         countof(outer_face_data)
                     );
                     for (uint32_t i = 0; i < outer_face.len; i += 1) {
-                        slice_get(outer_face, i) = (v1 + i) % outer_face.len;
+                        slice_get(outer_face, i) = (uint32_t)(
+                            (v1 + i) % outer_face.len
+                        );
                     }
 
                     ctx.data.hartman.color_lists.len = aug_graph.len;
@@ -400,7 +405,7 @@ static void app_update(
         }
 
         if (ctx.state == APP_STATE_GEN) {
-            timestep = BFS_TIMESTEP / 4;
+            timestep = BFS_TIMESTEP / 8;
         } else {
             timestep = BFS_TIMESTEP;
         }
@@ -539,7 +544,7 @@ static void app_update(
 
     gl.Viewport(0, 0, width, height);
     assert(gl.GetError() == 0);
-    gl.ClearColor(0.65f, 0.65f, 0.65f, 1.0f);
+    gl.ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
     assert(gl.GetError() == 0);
     gl.Clear(GL_COLOR_BUFFER_BIT);
     assert(gl.GetError() == 0);
