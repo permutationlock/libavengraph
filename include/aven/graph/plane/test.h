@@ -1,6 +1,11 @@
 #ifndef AVEN_GRAPH_PLANE_TEST_H
 #define AVEN_GRAPH_PLANE_TEST_H
 
+#include <aven.h>
+#include <aven/arena.h>
+
+#include "../graph.h"
+
 typedef struct {
     uint32_t vertices[3];
     uint32_t neighbors[3];
@@ -21,13 +26,20 @@ typedef enum {
 
 typedef struct {
     AvenGraphPlaneTestOpType type;
-    uint32_t vertices[5];
+    uint32_t vertex;
+    uint32_t face;
+    uint32_t edge;
 } AvenGraphPlaneTestOp;
 
 typedef struct {
-    Slice(AvenGraphPlaneTestAdjList) graph;
+    uint32_t degree;
+    uint32_t face;
+} AvenGraphPlaneTestVertex;
+
+typedef struct {
+    Slice(AvenGraphPlaneTextFace) faces;
+    Slice(AvenGraphPlaneTestVertex) vertices;
     List(AvenGraphPlaneTestOp) op_stack;
-    uint32_t min_vertex;
 } AvenGraphPlaneTestCtx;
 
 static inline AvenGraphPlaneTestCtx aven_graph_plane_test_init(

@@ -13,6 +13,7 @@
 typedef struct {
     Vec4 node_color;
     Vec4 outline_color;
+    Vec4 edge_color;
     Vec4 active_color;
     float edge_thickness;
     float radius;
@@ -79,7 +80,7 @@ static inline void aven_graph_plane_gen_geometry_push_tri_ctx(
     AvenGraphPlaneGeometryEdge edge_info = {
         .thickness = info->edge_thickness,
     };
-    vec4_copy(edge_info.color, info->outline_color);
+    vec4_copy(edge_info.color, info->edge_color);
 
     aven_graph_plane_geometry_push_edges(
         geometry,

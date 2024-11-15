@@ -8,6 +8,7 @@
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
 #include <aven/graph.h>
+#include <aven/graph/path_color.h>
 #include <aven/graph/plane.h>
 #include <aven/graph/plane/hartman.h>
 #include <aven/graph/plane/hartman/geometry.h>
@@ -24,18 +25,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// #include "font.h"
+//#define SHOW_VERTEX_LABELS
+
+#ifdef SHOW_VERTEX_LABELS
+#include "font.h"
+#endif
 
 #define ARENA_PAGE_SIZE 4096
-#define GRAPH_ARENA_PAGES 1000
+#define GRAPH_ARENA_PAGES 10000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (500)
+#define GRAPH_MAX_VERTICES (1000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.06f
+#define VERTEX_RADIUS 0.035f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 2)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 8)
+#define CHANGE_V_WAIT_STEPS 1
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 #define COLOR_DIVISIONS 2UL
@@ -53,12 +59,14 @@ typedef struct {
     AvenGlShapeRoundedBuffer buffer;
 } VertexShapes;
 
-// typedef struct {
-//     AvenGlTextFont font;
-//     AvenGlTextCtx ctx;
-//     AvenGlTextGeometry geometry;
-//     AvenGlTextBuffer buffer;
-// } VertexText;
+#ifdef SHOW_VERTEX_LABELS
+typedef struct {
+    AvenGlTextFont font;
+    AvenGlTextCtx ctx;
+    AvenGlTextGeometry geometry;
+    AvenGlTextBuffer buffer;
+} VertexText;
+#endif
 
 typedef enum {
     APP_STATE_GEN,
@@ -85,7 +93,9 @@ typedef struct {
     AvenGraphPlaneHartmanGeometryInfo hartman_geometry_info;
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
-    // VertexText vertex_text;
+#ifdef SHOW_VERTEX_LABELS
+    VertexText vertex_text;
+#endif
     AvenGraph graph;
     AvenGraphPlaneEmbedding embedding;
     AvenRngPcg pcg;
@@ -106,11 +116,12 @@ static AvenArena arena;
 
 static AvenGraphPlaneGenGeometryTriInfo gen_geometry_info = {
     .node_color = { 0.9f, 0.9f, 0.9f, 1.0f },
-    .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
+    .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+    .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
     .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
     .radius = VERTEX_RADIUS,
     .border_thickness = VERTEX_RADIUS * 0.3f,
-    .edge_thickness = VERTEX_RADIUS / 3.5f,
+    .edge_thickness = VERTEX_RADIUS / 2.5f,
 };
 
 static void app_reset(void) {
@@ -138,7 +149,7 @@ static void app_reset(void) {
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.1f * (VERTEX_RADIUS * VERTEX_RADIUS),
+        1.15f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
         true,
         &arena
@@ -194,12 +205,22 @@ static void app_init(void) {
 
     ctx.hartman_geometry_info = (AvenGraphPlaneHartmanGeometryInfo){
         .colors = slice_array(ctx.color_data),
-        .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
-        .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
-        .cycle_color = { 0.55f, 0.65f, 0.15f, 1.0f },
-        .py_color = { 0.15f, 0.55f, 0.55f, 1.0f },
-        .xp_color = { 0.65f, 0.25f, 0.15f, 1.0f },
-        .edge_thickness = VERTEX_RADIUS / 3.5f,
+        .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+        .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+        .uncolored_edge_color = { 0.5f, 0.5f, 0.5f, 1.0f },
+        .active_frame = {
+            .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
+            .xp_color = { 0.55f, 0.65f, 0.15f, 1.0f },
+            .py_color = { 0.15f, 0.6f, 0.6f, 1.0f },
+            .cycle_color = { 0.65f, 0.25f, 0.15f, 1.0f },
+        },
+        .inactive_frame = {
+            .active_color = { 0.35f, 0.35f, 0.35f, 1.0f },
+            .xp_color = { 0.35f, 0.35f, 0.35f, 1.0f },
+            .py_color = { 0.35f, 0.35f, 0.35f, 1.0f },
+            .cycle_color = { 0.35f, 0.35f, 0.35f, 1.0f },
+        },
+        .edge_thickness = VERTEX_RADIUS / 2.5f,
         .border_thickness = VERTEX_RADIUS * 0.3f,
         .radius = VERTEX_RADIUS,
     };
@@ -228,24 +249,26 @@ static void app_init(void) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-    // ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
-    // ctx.vertex_text.font = aven_gl_text_font_init(
-    //     &gl,
-    //     font_bytes,
-    //     10.0f,
-    //     arena
-    // );
+#ifdef SHOW_VERTEX_LABELS
+    ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
+    ctx.vertex_text.font = aven_gl_text_font_init(
+        &gl,
+        font_bytes,
+        16.0f,
+        arena
+    );
 
-    // ctx.vertex_text.ctx = aven_gl_text_ctx_init(&gl);
-    // ctx.vertex_text.geometry = aven_gl_text_geometry_init(
-    //     GRAPH_MAX_VERTICES * 10,
-    //     &arena
-    // );
-    // ctx.vertex_text.buffer = aven_gl_text_buffer_init(
-    //     &gl,
-    //     &ctx.vertex_text.geometry,
-    //     AVEN_GL_BUFFER_USAGE_DYNAMIC
-    // );
+    ctx.vertex_text.ctx = aven_gl_text_ctx_init(&gl);
+    ctx.vertex_text.geometry = aven_gl_text_geometry_init(
+        GRAPH_MAX_VERTICES * 10,
+        &arena
+    );
+    ctx.vertex_text.buffer = aven_gl_text_buffer_init(
+        &gl,
+        &ctx.vertex_text.geometry,
+        AVEN_GL_BUFFER_USAGE_DYNAMIC
+    );
+#endif
 
     ctx.pcg = aven_rng_pcg_seed(0xbeef2341UL, 0xdeada555UL);
     ctx.rng = aven_rng_pcg(&ctx.pcg);
@@ -378,7 +401,31 @@ static void app_update(
                 }
                 break;
             case APP_STATE_HARTMAN:
-                done = aven_graph_plane_hartman_step(&ctx.data.hartman.ctx);
+                ctx.count += 1;
+                done = false;
+                if (ctx.count > CHANGE_V_WAIT_STEPS) {
+                    AvenGraphPlaneHartmanFrame old_frame = slice_get(
+                        ctx.data.hartman.ctx.frames,
+                        ctx.data.hartman.ctx.frames.len - 1
+                    );
+                    done = aven_graph_plane_hartman_step(&ctx.data.hartman.ctx);
+                    if (!done) {
+                        AvenGraphPlaneHartmanFrame new_frame = slice_get(
+                            ctx.data.hartman.ctx.frames,
+                            ctx.data.hartman.ctx.frames.len - 1
+                        );
+                        if (
+                            new_frame.v != old_frame.v and
+                            (
+                                new_frame.v == old_frame.x or
+                                new_frame.x != old_frame.x or
+                                new_frame.y != old_frame.y
+                            )
+                        ) {
+                            ctx.count = 0;
+                        }
+                    }
+                }
                 if (done) {
                     ctx.state = APP_STATE_COLORED;
                     AvenGraphPropUint8 coloring = { .len = ctx.graph.len };
@@ -394,12 +441,15 @@ static void app_update(
                         ).data[0];
                     }
                     ctx.data.colored.coloring = coloring;
+                    ctx.count = 0;
                 }
                 break;
             case APP_STATE_COLORED:
                 ctx.count += 1;
                 if (ctx.count > DONE_WAIT_STEPS) {
-                    app_reset();
+                    if (aven_graph_path_color_verify(ctx.graph, ctx.data.colored.coloring, arena)) {
+                        app_reset();
+                    }
                 }
                 break;
         }
@@ -413,7 +463,9 @@ static void app_update(
 
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx.vertex_shapes.geometry);
-    // aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
+#ifdef SHOW_VERTEX_LABELS
+    aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
+#endif
 
     Aff2 graph_transform;
     aff2_identity(graph_transform);
@@ -450,7 +502,7 @@ static void app_update(
             };
             vec4_copy(
                 simple_edge_info.color,
-                ctx.hartman_geometry_info.outline_color
+                ctx.hartman_geometry_info.uncolored_edge_color
             );
             aven_graph_plane_geometry_push_uncolored_edges(
                 &ctx.edge_shapes.geometry,
@@ -531,16 +583,18 @@ static void app_update(
         }
     }
 
-    // aven_graph_plane_geometry_push_labels(
-    //     &ctx.vertex_text.geometry,
-    //     &ctx.vertex_text.font,
-    //     ctx.embedding,
-    //     graph_transform,
-    //     (Vec2){ 0.0f, (ctx.vertex_text.font.height * pixel_size) / 4.0f },
-    //     pixel_size,
-    //     (Vec4){ 0.1f, 0.1f, 0.1f, 1.0f },
-    //     arena
-    // );
+#ifdef SHOW_VERTEX_LABELS
+    aven_graph_plane_geometry_push_labels(
+        &ctx.vertex_text.geometry,
+        &ctx.vertex_text.font,
+        ctx.embedding,
+        graph_transform,
+        (Vec2){ 0.0f, (ctx.vertex_text.font.height * pixel_size) / 4.0f },
+        pixel_size,
+        (Vec4){ 0.1f, 0.1f, 0.1f, 1.0f },
+        arena
+    );
+#endif
 
     gl.Viewport(0, 0, width, height);
     assert(gl.GetError() == 0);
@@ -569,11 +623,13 @@ static void app_update(
         &ctx.vertex_shapes.buffer,
         &ctx.vertex_shapes.geometry
     );
-    // aven_gl_text_buffer_update(
-    //     &gl,
-    //     &ctx.vertex_text.buffer,
-    //     &ctx.vertex_text.geometry
-    // );
+#ifdef SHOW_VERTEX_LABELS
+    aven_gl_text_buffer_update(
+        &gl,
+        &ctx.vertex_text.buffer,
+        &ctx.vertex_text.geometry
+    );
+#endif
 
     aven_gl_shape_draw(
         &gl,
@@ -588,13 +644,15 @@ static void app_update(
         pixel_size,
         cam_transform
     );
-    // aven_gl_text_geometry_draw(
-    //     &gl,
-    //     &ctx.vertex_text.ctx,
-    //     &ctx.vertex_text.buffer,
-    //     &ctx.vertex_text.font,
-    //     cam_transform
-    // );
+#ifdef SHOW_VERTEX_LABELS 
+    aven_gl_text_geometry_draw(
+        &gl,
+        &ctx.vertex_text.ctx,
+        &ctx.vertex_text.buffer,
+        &ctx.vertex_text.font,
+        cam_transform
+    );
+#endif
 
     gl.ColorMask(false, false, false, true);
     assert(gl.GetError() == 0);

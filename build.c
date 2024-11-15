@@ -34,10 +34,18 @@ int main(int argc, char **argv) {
     AvenArgSlice libaven_args = libaven_build_args();
     AvenArgSlice libavengl_args = libavengl_build_args();
 
-    AvenArgSlice args = { .len = common_args.len + libavengl_args.len + 1 };
+    AvenArgSlice args = {
+        .len = 1 + common_args.len + libavengl_args.len + libaven_args.len
+    };
     args.ptr = aven_arena_create_array(AvenArg, &arena, args.len);
 
     size_t arg_index = 0;
+    slice_get(args, arg_index) = (AvenArg){
+        .name = "bench",
+        .description = "Build and run benchmarks",
+        .type = AVEN_ARG_TYPE_BOOL,
+    };
+    arg_index += 1;
     for (size_t i = 0; i < libaven_args.len; i += 1) {
         slice_get(args, arg_index) = slice_get(libaven_args, i);
         arg_index += 1;
@@ -66,6 +74,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    bool opt_bench = aven_arg_get_bool(args, "bench");
     AvenBuildCommonOpts opts = aven_build_common_opts(args, &arena);
     LibAvenBuildOpts libaven_opts = libaven_build_opts(args, &arena);
     LibAvenGlBuildOpts libavengl_opts = libavengl_build_opts(args, &arena);
@@ -290,9 +299,10 @@ int main(int argc, char **argv) {
     );
 
     AvenBuildStep root_step = aven_build_step_root();
-    //aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
+    //aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
+    (void)gen_tri_exe_step;
+    aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
     aven_build_step_add_dep(&root_step, &hartman_exe_step, &arena);
 
     // Build steps for tests
@@ -327,6 +337,52 @@ int main(int argc, char **argv) {
     AvenBuildStep test_root_step = aven_build_step_root();
     aven_build_step_add_dep(&test_root_step, &test_step, &arena);
 
+    // Build steps for benchmarks
+
+    AvenStr bench_dir = aven_str("build_bench");
+    AvenBuildStep bench_dir_step = aven_build_step_mkdir(bench_dir);
+
+    AvenBuildStep *bench_obj_data[1];
+    List(AvenBuildStep *) bench_obj_list = list_array(bench_obj_data);
+
+    if (winutf8_obj_step.valid) {
+        list_push(bench_obj_list) = &winutf8_obj_step.value;
+    }
+
+    AvenBuildStepPtrSlice bench_objs = slice_list(bench_obj_list);
+
+    AvenStrSlice bench_args =  { 0 };
+
+    // AvenBuildStep bench_gen_tri_step = aven_build_common_step_cc_ld_run_exe_ex(
+    //     &opts,
+    //     includes,
+    //     macros,
+    //     syslibs,
+    //     bench_objs,
+    //     aven_path(&arena, root_path.ptr, "benchmarks", "gen_tri.c", NULL),
+    //     &bench_dir_step,
+    //     false,
+    //     bench_args,
+    //     &arena
+    // );
+
+    AvenBuildStep bench_poh_step = aven_build_common_step_cc_ld_run_exe_ex(
+        &opts,
+        includes,
+        macros,
+        syslibs,
+        bench_objs,
+        aven_path(&arena, root_path.ptr, "benchmarks", "poh.c", NULL),
+        &bench_dir_step,
+        false,
+        bench_args,
+        &arena
+    );
+
+    AvenBuildStep bench_root_step = aven_build_step_root();
+    // aven_build_step_add_dep(&bench_root_step, &bench_gen_tri_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &bench_poh_step, &arena);
+
     // Run build steps according to args
 
     if (opts.clean) {
@@ -336,6 +392,11 @@ int main(int argc, char **argv) {
         error = aven_build_step_run(&test_root_step, arena);
         if (error != 0) {
             fprintf(stderr, "TEST FAILED\n");
+        }
+    } else if (opt_bench) {
+        error = aven_build_step_run(&bench_root_step, arena);
+        if (error != 0) {
+            fprintf(stderr, "BENCHMARK FAILED\n");
         }
     } else {
         error = aven_build_step_run(&root_step, arena);

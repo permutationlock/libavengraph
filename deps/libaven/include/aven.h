@@ -108,13 +108,21 @@ typedef Slice(unsigned char) ByteSlice;
         ) \
     )
 
-static inline noreturn void aven_panic(const char *msg) {
-    // TODO: use stderr instead of stdout
+#define aven_panic(msg) aven_panic_internal_fn(msg, sizeof(msg) - 1)
+
+static inline noreturn void aven_panic_internal_fn(const char *msg, size_t len) {
+    // TODO: get working on windows
     // using stdout because fprintf(stderr, ...) requires work or stdio.h
-    int printf(const char *fmt, ...);
     noreturn void _Exit(int status);
 
-    printf("PANIC: %s", msg);
+#ifndef _WIN32
+    long write(int fd, const void *buffer, size_t count);
+    write(2, msg, len);
+#else
+    (void)msg;
+    (void)len;
+#endif
+
     _Exit(1);
 }
 
