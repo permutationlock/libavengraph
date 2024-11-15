@@ -4,6 +4,7 @@
 
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
+#include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
@@ -312,6 +313,12 @@ static void app_update(
     ctx.norm_dim[0] = norm_width;
     ctx.norm_dim[1] = norm_height;
 
+    if (ctx->camera_time > 0) {
+        int64_t new_camera_time = ctx->camera_time - ctx.elapsed;
+        ctx.elapsed = max(0, ctx.elapsed - ctx->camera_time);
+        ctx->camera_time = new_camera_time;
+    }
+
     int64_t timestep = BFS_TIMESTEP;
     if (ctx.state == APP_STATE_GEN) {
         timestep = BFS_TIMESTEP / 8;
@@ -603,6 +610,7 @@ static void app_update(
     gl.Clear(GL_COLOR_BUFFER_BIT);
     assert(gl.GetError() == 0);
 
+    float camera_frac = (float)ctx->camera_time / (float)CAMERA_TIMESTEP;
     float border_padding = 2.0f * VERTEX_RADIUS;
 
     Aff2 cam_transform;
