@@ -20,8 +20,8 @@
 
 #define ARENA_SIZE (4096UL * 400000UL)
 
-#define NGRAPHS 1000000
-#define MAX_VERTICES 101
+#define NGRAPHS 1
+#define MAX_VERTICES 1000001
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -38,7 +38,7 @@ int main(void) {
     aff2_identity(ident);
 
     for (uint32_t n = 10; n < MAX_VERTICES; n *= 10) {
-        uint32_t ngraphs = NGRAPHS;
+        uint32_t ngraphs = NGRAPHS * (MAX_VERTICES / n);
         double avg_deg_sum = 0;
         size_t overall_max_deg = 0;
         size_t overall_min_deg = MAX_VERTICES;
@@ -90,13 +90,14 @@ int main(void) {
         double avg_min_deg = (double)min_deg_sum / (double)ngraphs;
 
         printf(
-            "generating graphs with %lu vertices:\n"
+            "generating %lu graph(s) with %lu vertices:\n"
             "\ttime per graph: %fns\n"
             "\taverage degree: %f\n"
             "\tmin degree: %lu\n"
             "\taverage min degree: %f\n"
             "\tmax degree: %lu\n"
             "\taverage max degree: %f\n",
+            (unsigned long)ngraphs,
             (unsigned long)n,
             ns_per_graph,
             avg_deg,

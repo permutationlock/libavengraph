@@ -661,14 +661,7 @@ static inline bool aven_graph_plane_gen_tri_step_unrestricted(
     AvenGraphPlaneGenNeighbor neighbor_data[3];
     List(AvenGraphPlaneGenNeighbor) valid_neighbors = list_array(neighbor_data);
 
-    uint32_t flips = aven_rng_rand_bounded(rng, 10);
-    if (flips > 7) {
-        flips = 2;
-    } else if (flips > 4) {
-        flips = 1;
-    } else {
-        flips = 0;
-    }
+    uint32_t flips = aven_rng_rand_bounded(rng, 3);
     uint32_t offset = aven_rng_rand_bounded(rng, 3);
 
     for (uint32_t n_index = 0; n_index < 3; n_index += 1) {

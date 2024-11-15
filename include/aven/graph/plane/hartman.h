@@ -50,10 +50,16 @@ static inline AvenGraphPlaneHartmanCtx aven_graph_plane_hartman_init(
         .graph = graph,
         .color_lists = color_lists,
         .vertex_info = { .len = graph.len },
-        .marks = { .len = 3 * graph.len - 6 + 1 },
         .frames = { .cap = 2 * graph.len - 4 },
+        .marks = { .len = 6 * graph.len - 12 + 1 },
         .next_mark = 1,
     };
+
+    ctx.frames.ptr = aven_arena_create_array(
+        AvenGraphPlaneHartmanFrame,
+        arena,
+        ctx.frames.cap
+    );
 
     ctx.vertex_info.ptr = aven_arena_create_array(
         AvenGraphPlaneHartmanVertex,
@@ -74,12 +80,6 @@ static inline AvenGraphPlaneHartmanCtx aven_graph_plane_hartman_init(
     for (uint32_t i = 0; i < ctx.marks.len; i += 1) {
         slice_get(ctx.marks, i) = i;
     }
-
-    ctx.frames.ptr = aven_arena_create_array(
-        AvenGraphPlaneHartmanFrame,
-        arena,
-        ctx.frames.cap
-    );
 
     uint32_t face_mark = ctx.next_mark;
     ctx.next_mark += 1;
@@ -378,6 +378,23 @@ static inline bool aven_graph_plane_hartman_step(
     }
 
     return done;
+}
+
+static inline void aven_graph_plane_hartman(
+    AvenGraphPlaneHartmanListProp color_lists,
+    AvenGraph graph,
+    AvenGraphSubset outer_face,
+    AvenArena arena
+) {
+    AvenGraphAug aug_graph = aven_graph_aug(graph, &arena);
+    AvenGraphPlaneHartmanCtx ctx = aven_graph_plane_hartman_init(
+        color_lists,
+        aug_graph,
+        outer_face,
+        &arena
+    );
+
+    while (!aven_graph_plane_hartman_step(&ctx)) {}
 }
 
 #endif // AVEN_GRAPH_PLANE_HARTMAN_H

@@ -21,10 +21,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 1600000UL)
+#define ARENA_SIZE (4096UL * 800000UL)
 
 #define NGRAPHS 1
-#define MAX_VERTICES 10000001
+#define MAX_VERTICES 1000001
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -48,7 +48,7 @@ int main(void) {
             AvenGraphPropUint8 coloring;
         } CaseData;
 
-        Slice(CaseData) cases = { .len = NGRAPHS * MAX_VERTICES / n };
+        Slice(CaseData) cases = { .len = NGRAPHS * (MAX_VERTICES / n) };
         cases.ptr = aven_arena_create_array(
             CaseData,
             &temp_arena,
@@ -102,8 +102,8 @@ int main(void) {
         }
 
         printf(
-            "coloing %lu graphs with %lu vertices:\n"
-            "\tvalid colorings: %lu\n"
+            "path 3-coloring %lu graph(s) with %lu vertices:\n"
+            "\tvalid 3-colorings: %lu\n"
             "\ttime per graph: %fns\n",
             (unsigned long)cases.len,
             (unsigned long)n,

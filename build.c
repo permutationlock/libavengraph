@@ -353,18 +353,20 @@ int main(int argc, char **argv) {
 
     AvenStrSlice bench_args =  { 0 };
 
-    // AvenBuildStep bench_gen_tri_step = aven_build_common_step_cc_ld_run_exe_ex(
-    //     &opts,
-    //     includes,
-    //     macros,
-    //     syslibs,
-    //     bench_objs,
-    //     aven_path(&arena, root_path.ptr, "benchmarks", "gen_tri.c", NULL),
-    //     &bench_dir_step,
-    //     false,
-    //     bench_args,
-    //     &arena
-    // );
+    AvenBuildStep bench_gen_tri_step = aven_build_common_step_cc_ld_run_exe_ex(
+        &opts,
+        includes,
+        macros,
+        syslibs,
+        bench_objs,
+        aven_path(&arena, root_path.ptr, "benchmarks", "gen_tri.c", NULL),
+        &bench_dir_step,
+        false,
+        bench_args,
+        &arena
+    );
+    AvenBuildStep gen_tri_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&gen_tri_root_step, &bench_gen_tri_step, &arena);
 
     AvenBuildStep bench_poh_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
@@ -378,10 +380,29 @@ int main(int argc, char **argv) {
         bench_args,
         &arena
     );
+    AvenBuildStep poh_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&poh_root_step, &bench_poh_step, &arena);
+
+    AvenBuildStep bench_hartman_step = aven_build_common_step_cc_ld_run_exe_ex(
+        &opts,
+        includes,
+        macros,
+        syslibs,
+        bench_objs,
+        aven_path(&arena, root_path.ptr, "benchmarks", "hartman.c", NULL),
+        &bench_dir_step,
+        false,
+        bench_args,
+        &arena
+    );
+
+    AvenBuildStep hartman_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&hartman_root_step, &bench_hartman_step, &arena);
 
     AvenBuildStep bench_root_step = aven_build_step_root();
-    // aven_build_step_add_dep(&bench_root_step, &bench_gen_tri_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &bench_poh_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &gen_tri_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
 
     // Run build steps according to args
 
