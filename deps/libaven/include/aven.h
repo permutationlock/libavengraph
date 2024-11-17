@@ -99,6 +99,8 @@ typedef Slice(unsigned char) ByteSlice;
     void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
 #endif
 
+void *memset(void *ptr, int value, size_t num);
+
 #define slice_copy(d, s) memcpy( \
         (d).ptr, \
         (s).ptr, \

@@ -2,6 +2,8 @@
     #define _POSIX_C_SOURCE 200112L
 #endif
 
+#define AVEN_GRAPH_PLANE_POH_X86_PTHREAD
+
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
 #include <aven/arena.h>
@@ -77,10 +79,11 @@ int main(void) {
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            slice_get(cases, i).coloring = aven_graph_plane_poh(
+            slice_get(cases, i).coloring = aven_graph_plane_poh_pthread(
                 slice_get(cases, i).graph,
                 p,
                 q,
+                3,
                 &temp_arena
             );
         }
@@ -88,6 +91,8 @@ int main(void) {
         AvenTimeInst end_inst = aven_time_now();
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
+
+        AvenTimeInst verify_start_inst = aven_time_now();
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -101,16 +106,28 @@ int main(void) {
             }
         }
 
+        AvenTimeInst verify_end_inst = aven_time_now();
+        int64_t verify_elapsed_ns = aven_time_since(
+            verify_end_inst,
+            verify_start_inst
+        );
+        double verify_ns_per_graph = (double)verify_elapsed_ns /
+            (double)cases.len;
+
         printf(
             "path 3-coloring %lu graph(s) with %lu vertices:\n"
             "\tvalid 3-colorings: %lu\n"
             "\ttime per graph: %fns\n"
-            "\ttime per half-edge: %fns\n",
+            "\ttime per half-edge: %fns\n"
+            "\tverify time per graph: %fns\n"
+            "\tverify time per half-edge: %fns\n",
             (unsigned long)cases.len,
             (unsigned long)n,
             (unsigned long)nvalid,
             ns_per_graph,
-            ns_per_graph / (float)(6 * n - 12)
+            ns_per_graph / (double)(6 * n - 12),
+            verify_ns_per_graph,
+            verify_ns_per_graph / (double)(6 * n - 12)
         );
     }
 

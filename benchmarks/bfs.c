@@ -8,9 +8,8 @@
 #include <aven/fs.h>
 #include <aven/math.h>
 #include <aven/graph.h>
-#include <aven/graph/path_color.h>
 #include <aven/graph/plane.h>
-#include <aven/graph/plane/poh.h>
+#include <aven/graph/bfs.h>
 #include <aven/graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
@@ -45,7 +44,9 @@ int main(void) {
 
         typedef struct {
             AvenGraph graph;
-            AvenGraphPropUint8 coloring;
+            uint32_t root;
+            uint32_t target;
+            AvenGraphSubset path;
         } CaseData;
 
         Slice(CaseData) cases = { .len = NGRAPHS * (MAX_VERTICES / n) };
@@ -67,20 +68,19 @@ int main(void) {
             if (data.graph.len != n) {
                 abort();
             }
+            slice_get(cases, i).root = aven_rng_rand_bounded(rng, n);
+            do {
+                slice_get(cases, i).target = aven_rng_rand_bounded(rng, n);
+            } while (slice_get(cases, i).target == slice_get(cases, i).root);
         }
-
-        uint32_t p_data[] = { 1, 2 };
-        uint32_t q_data[] = { 0 };
-        AvenGraphSubset p = slice_array(p_data);
-        AvenGraphSubset q = slice_array(q_data);
 
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            slice_get(cases, i).coloring = aven_graph_plane_poh(
+            slice_get(cases, i).path = aven_graph_bfs(
                 slice_get(cases, i).graph,
-                p,
-                q,
+                slice_get(cases, i).root,
+                slice_get(cases, i).target,
                 &temp_arena
             );
         }
@@ -91,26 +91,24 @@ int main(void) {
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            bool valid = aven_graph_path_color_verify(
-                slice_get(cases, i).graph,
-                slice_get(cases, i).coloring,
-                temp_arena
-            );
+            AvenGraphSubset path = slice_get(cases, i).path;
+            bool valid = (slice_get(path, 0) == slice_get(cases, i).target) and
+                (slice_get(path, path.len - 1) == slice_get(cases, i).root);
             if (valid) {
                 nvalid += 1;
             }
         }
 
         printf(
-            "path 3-coloring %lu graph(s) with %lu vertices:\n"
-            "\tvalid 3-colorings: %lu\n"
+            "bfs on %lu graph(s) with %lu vertices:\n"
+            "\tvalid paths: %lu\n"
             "\ttime per graph: %fns\n"
             "\ttime per half-edge: %fns\n",
             (unsigned long)cases.len,
             (unsigned long)n,
             (unsigned long)nvalid,
             ns_per_graph,
-            ns_per_graph / (float)(6 * n - 12)
+            ns_per_graph / (double)(6 * n - 12)
         );
     }
 

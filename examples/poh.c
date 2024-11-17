@@ -2,6 +2,10 @@
     #define _POSIX_C_SOURCE 200112L
 #endif
 
+#define SHOW_VERTEX_LABELS
+
+#define AVEN_GRAPH_PLANE_POH_PTHREAD
+
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
 #include <aven/fs.h>
@@ -25,7 +29,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "font.h"
+#ifdef SHOW_VERTEX_LABELS
+    #include "font.h"
+#endif
 
 #define ARENA_PAGE_SIZE 4096
 #define GRAPH_ARENA_PAGES 1000
@@ -36,7 +42,7 @@
 
 #define VERTEX_RADIUS 0.045f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 30)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
@@ -51,6 +57,15 @@ typedef struct {
     AvenGlShapeRoundedBuffer buffer;
 } VertexShapes;
 
+#ifdef SHOW_VERTEX_LABELS
+typedef struct {
+    AvenGlTextFont font;
+    AvenGlTextCtx ctx;
+    AvenGlTextGeometry geometry;
+    AvenGlTextBuffer buffer;
+} VertexText;
+#endif
+
 typedef enum {
     APP_STATE_GEN,
     APP_STATE_POH,
@@ -63,6 +78,7 @@ typedef union {
     } gen;
     struct {
         AvenGraphPlanePohCtx ctx;
+        AvenGraphPlanePohFrameOptional active_frames[1];
         AvenGraphPropUint8 coloring;
     } poh;
 } AppData;
@@ -70,6 +86,9 @@ typedef union {
 typedef struct {
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
+#ifdef SHOW_VERTEX_LABELS
+    VertexText vertex_text;
+#endif
     AvenGraph graph;
     AvenGraphPlaneEmbedding embedding;
     AvenRngPcg pcg;
@@ -91,6 +110,7 @@ static AvenArena arena;
 static AvenGraphPlaneGenGeometryTriInfo gen_geometry_info = {
     .node_color = { 0.9f, 0.9f, 0.9f, 1.0f },
     .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
+    .edge_color = { 0.15f, 0.15f, 0.15f, 1.0f },
     .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
     .radius = VERTEX_RADIUS,
     .border_thickness = VERTEX_RADIUS * 0.25f,
@@ -140,7 +160,7 @@ static void app_reset(void) {
         area_transform,
         1.2f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
-        true,
+        false,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
@@ -179,6 +199,27 @@ static void app_init(void) {
         &ctx.vertex_shapes.geometry,
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
+
+#ifdef SHOW_VERTEX_LABELS
+    ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
+    ctx.vertex_text.font = aven_gl_text_font_init(
+        &gl,
+        font_bytes,
+        16.0f,
+        arena
+    );
+
+    ctx.vertex_text.ctx = aven_gl_text_ctx_init(&gl);
+    ctx.vertex_text.geometry = aven_gl_text_geometry_init(
+        GRAPH_MAX_VERTICES * 10,
+        &arena
+    );
+    ctx.vertex_text.buffer = aven_gl_text_buffer_init(
+        &gl,
+        &ctx.vertex_text.geometry,
+        AVEN_GL_BUFFER_USAGE_DYNAMIC
+    );
+#endif 
 
     ctx.pcg = aven_rng_pcg_seed(0xbeef1234UL, 0x9abcdeadUL);
     ctx.rng = aven_rng_pcg(&ctx.pcg);
@@ -222,7 +263,7 @@ static void app_update(
     ctx.norm_dim[0] = norm_width;
     ctx.norm_dim[1] = norm_height;
 
-    while (ctx.elapsed >= BFS_TIMESTEP) {
+    if (ctx.elapsed >= BFS_TIMESTEP) {
         ctx.elapsed -= BFS_TIMESTEP;
 
         bool done = false;
@@ -246,19 +287,19 @@ static void app_update(
                     uint32_t p_data[3];
                     uint32_t q_data[3];
 
-                    uint32_t p1 = aven_rng_rand_bounded(ctx.rng, 4);
+                    uint32_t p1 = aven_rng_rand_bounded(ctx.rng, 3);
                     AvenGraphSubset p = {
-                        .len = 1 + aven_rng_rand_bounded(ctx.rng, 3),
+                        .len = 1 + aven_rng_rand_bounded(ctx.rng, 2),
                         .ptr = p_data,
                     };
                     for (uint32_t i = 0; i < p.len; i += 1) {
-                        slice_get(p, i) = (p1 + i) % 4;
+                        slice_get(p, i) = (p1 + i) % 3;
                     }
 
-                    uint32_t q1 = (p1 + (uint32_t)p.len) % 4;
-                    AvenGraphSubset q = { .len = 4 - p.len, .ptr = q_data };
+                    uint32_t q1 = (p1 + (uint32_t)p.len) % 3;
+                    AvenGraphSubset q = { .len = 3 - p.len, .ptr = q_data };
                     for (uint32_t i = 0; i < q.len; i += 1) {
-                        slice_get(q, q.len - i - 1) = (q1 + i) % 4;
+                        slice_get(q, q.len - i - 1) = (q1 + i) % 3;
                     }
 
                     ctx.data.poh.coloring.len = ctx.graph.len;
@@ -274,25 +315,53 @@ static void app_update(
                         q,
                         &arena
                     );
+                    ctx.data.poh.active_frames[0] = aven_graph_plane_poh_next_frame(
+                        &ctx.data.poh.ctx
+                    );
                 }
                 break;
-            case APP_STATE_POH:
-                done = aven_graph_plane_poh_check(&ctx.data.poh.ctx);
-                if (done) {
+            case APP_STATE_POH: {
+                bool all_done = true;
+                for (uint32_t i = 0; i < countof(ctx.data.poh.active_frames); i += 1) {
+                    if (ctx.data.poh.active_frames[i].valid) {
+                        bool frame_done = aven_graph_plane_poh_frame_step(
+                            &ctx.data.poh.ctx,
+                            &ctx.data.poh.active_frames[i].value
+                        );
+                        if (frame_done) {
+                            if (ctx.data.poh.ctx.frames.len > 0) {
+                                ctx.data.poh.active_frames[i] = aven_graph_plane_poh_next_frame(
+                                    &ctx.data.poh.ctx
+                                );
+                            } else {
+                                ctx.data.poh.active_frames[i].valid = false;
+                            }
+                        }
+                        all_done = false;
+                    } else if (ctx.data.poh.ctx.frames.len > 0) {
+                        ctx.data.poh.active_frames[i] = aven_graph_plane_poh_next_frame(
+                            &ctx.data.poh.ctx
+                        );
+                        all_done = false;
+                    }
+                }
+                if (all_done) {
                     ctx.count += 1;
                     if (ctx.count > DONE_WAIT_STEPS) {
                         app_reset();
                     }
                     break;
                 }
-
-                aven_graph_plane_poh_step(&ctx.data.poh.ctx);
                 break;
+            }
         }
     }
 
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx.vertex_shapes.geometry);
+#ifdef SHOW_VERTEX_LABELS
+    aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
+#endif
 
     Aff2 graph_transform;
     aff2_identity(graph_transform);
@@ -314,11 +383,25 @@ static void app_update(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 &ctx.data.poh.ctx,
+                &ctx.data.poh.active_frames[0],
                 graph_transform,
                 &poh_geometry_info
             );
             break;
     }
+
+#ifdef SHOW_VERTEX_LABELS
+    aven_graph_plane_geometry_push_labels(
+        &ctx.vertex_text.geometry,
+        &ctx.vertex_text.font,
+        ctx.embedding,
+        graph_transform,
+        (Vec2){ 0.0f, (ctx.vertex_text.font.height * pixel_size) / 4.0f },
+        pixel_size,
+        (Vec4){ 0.1f, 0.1f, 0.1f, 1.0f },
+        arena
+    );
+#endif
 
     gl.Viewport(0, 0, width, height);
     assert(gl.GetError() == 0);
@@ -347,6 +430,13 @@ static void app_update(
         &ctx.vertex_shapes.buffer,
         &ctx.vertex_shapes.geometry
     );
+#ifdef SHOW_VERTEX_LABELS
+    aven_gl_text_buffer_update(
+        &gl,
+        &ctx.vertex_text.buffer,
+        &ctx.vertex_text.geometry
+    );
+#endif
 
     aven_gl_shape_draw(
         &gl,
@@ -361,6 +451,15 @@ static void app_update(
         pixel_size,
         cam_transform
     );
+#ifdef SHOW_VERTEX_LABELS 
+    aven_gl_text_geometry_draw(
+        &gl,
+        &ctx.vertex_text.ctx,
+        &ctx.vertex_text.buffer,
+        &ctx.vertex_text.font,
+        cam_transform
+    );
+#endif
 
     gl.ColorMask(false, false, false, true);
     assert(gl.GetError() == 0);
