@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//#define SHOW_VERTEX_LABELS
+// #define SHOW_VERTEX_LABELS
 
 #ifdef SHOW_VERTEX_LABELS
 #include "font.h"
@@ -36,12 +36,12 @@
 #define GRAPH_ARENA_PAGES 10000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (1000)
+#define GRAPH_MAX_VERTICES (2000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.035f
+#define VERTEX_RADIUS 0.02f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 8)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 30)
 #define CHANGE_V_WAIT_STEPS 1
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
@@ -82,6 +82,7 @@ typedef union {
     } gen;
     struct {
         AvenGraphPlaneHartmanCtx ctx;
+        AvenGraphPlaneHartmanFrameOptional frames[2];
         AvenGraphPlaneHartmanListProp color_lists;
     } hartman;
     struct {
@@ -216,9 +217,9 @@ static void app_init(void) {
             .cycle_color = { 0.65f, 0.25f, 0.15f, 1.0f },
         },
         .inactive_frame = {
-            .active_color = { 0.35f, 0.35f, 0.35f, 1.0f },
-            .xp_color = { 0.35f, 0.35f, 0.35f, 1.0f },
-            .py_color = { 0.35f, 0.35f, 0.35f, 1.0f },
+            .active_color = { 0.25f, 0.25f, 0.25f, 1.0f },
+            .xp_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+            .py_color = { 0.4f, 0.4f, 0.4f, 1.0f },
             .cycle_color = { 0.35f, 0.35f, 0.35f, 1.0f },
         },
         .edge_thickness = VERTEX_RADIUS / 2.5f,
@@ -255,7 +256,7 @@ static void app_init(void) {
     ctx.vertex_text.font = aven_gl_text_font_init(
         &gl,
         font_bytes,
-        16.0f,
+        9.0f,
         arena
     );
 
@@ -313,11 +314,11 @@ static void app_update(
     ctx.norm_dim[0] = norm_width;
     ctx.norm_dim[1] = norm_height;
 
-    if (ctx->camera_time > 0) {
-        int64_t new_camera_time = ctx->camera_time - ctx.elapsed;
-        ctx.elapsed = max(0, ctx.elapsed - ctx->camera_time);
-        ctx->camera_time = new_camera_time;
-    }
+    // if (ctx->camera_time > 0) {
+    //     int64_t new_camera_time = ctx->camera_time - ctx.elapsed;
+    //     ctx.elapsed = max(0, ctx.elapsed - ctx->camera_time);
+    //     ctx->camera_time = new_camera_time;
+    // }
 
     int64_t timestep = BFS_TIMESTEP;
     if (ctx.state == APP_STATE_GEN) {
@@ -334,6 +335,7 @@ static void app_update(
                     &ctx.data.gen.ctx,
                     ctx.rng
                 );
+                ctx.embedding.len = ctx.data.gen.ctx.embedding.len;
 
                 if (done) {
                     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
@@ -405,31 +407,58 @@ static void app_update(
                         outer_face,
                         &arena
                     );
+                    ctx.data.hartman.frames[0] = aven_graph_plane_hartman_next_frame(
+                        &ctx.data.hartman.ctx
+                    );
                 }
                 break;
             case APP_STATE_HARTMAN:
                 ctx.count += 1;
-                done = false;
                 if (ctx.count > CHANGE_V_WAIT_STEPS) {
-                    AvenGraphPlaneHartmanFrame old_frame = slice_get(
-                        ctx.data.hartman.ctx.frames,
-                        ctx.data.hartman.ctx.frames.len - 1
-                    );
-                    done = aven_graph_plane_hartman_step(&ctx.data.hartman.ctx);
-                    if (!done) {
-                        AvenGraphPlaneHartmanFrame new_frame = slice_get(
-                            ctx.data.hartman.ctx.frames,
-                            ctx.data.hartman.ctx.frames.len - 1
-                        );
-                        if (
-                            new_frame.v != old_frame.v and
-                            (
-                                new_frame.v == old_frame.x or
-                                new_frame.x != old_frame.x or
-                                new_frame.y != old_frame.y
-                            )
-                        ) {
-                            ctx.count = 0;
+                    done = true;
+                    for (
+                        size_t i = 0;
+                        i < countof(ctx.data.hartman.frames);
+                        i += 1
+                    ) {
+                        AvenGraphPlaneHartmanFrameOptional *frame =
+                            &ctx.data.hartman.frames[i];
+                        if (frame->valid) {
+                            frame->valid = !aven_graph_plane_hartman_frame_step(
+                                &ctx.data.hartman.ctx,
+                                &frame->value
+                            );
+                            done = false;
+                        } else {
+                            for (
+                                size_t j = 0;
+                                j < ctx.data.hartman.ctx.frames.len;
+                                j += 1
+                            ) {
+                                AvenGraphPlaneHartmanFrame *nframe = &list_get(
+                                    ctx.data.hartman.ctx.frames,
+                                    j
+                                );
+                                if (
+                                    slice_get(
+                                        ctx.data.hartman.ctx.color_lists,
+                                        nframe->v
+                                    ).len == 1
+                                ) {
+                                    frame->value = *nframe;
+                                    frame->valid = true;
+                                    *nframe = list_get(
+                                        ctx.data.hartman.ctx.frames,
+                                        ctx.data.hartman.ctx.frames.len - 1
+                                    );
+                                    ctx.data.hartman.ctx.frames.len -= 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (frame->valid) {
+                            done = false;
                         }
                     }
                 }
@@ -493,16 +522,32 @@ static void app_update(
                 arena
             );
             break;
-        case APP_STATE_HARTMAN:
+        case APP_STATE_HARTMAN: {
+            AvenGraphPlaneHartmanFrame valid_frame_data[
+                countof(ctx.data.hartman.frames)
+            ];
+            List(AvenGraphPlaneHartmanFrame) valid_frames = list_array(
+                valid_frame_data
+            );
+            for (size_t i = 0; i < countof(ctx.data.hartman.frames); i += 1) {
+                AvenGraphPlaneHartmanFrameOptional *frame =
+                    &ctx.data.hartman.frames[i];
+                if (frame->valid) {
+                    list_push(valid_frames) = frame->value;
+                }
+            }
+            AvenGraphPlaneHartmanFrameSlice vf_slice = slice_list(valid_frames);
             aven_graph_plane_hartman_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 &ctx.data.hartman.ctx,
+                vf_slice,
                 graph_transform,
                 &ctx.hartman_geometry_info
             );
             break;
+        }
         case APP_STATE_COLORED: {
             AvenGraphPlaneGeometryEdge simple_edge_info = {
                 .thickness = ctx.hartman_geometry_info.edge_thickness,
@@ -610,7 +655,7 @@ static void app_update(
     gl.Clear(GL_COLOR_BUFFER_BIT);
     assert(gl.GetError() == 0);
 
-    float camera_frac = (float)ctx->camera_time / (float)CAMERA_TIMESTEP;
+    // float camera_frac = (float)ctx->camera_time / (float)CAMERA_TIMESTEP;
     float border_padding = 2.0f * VERTEX_RADIUS;
 
     Aff2 cam_transform;

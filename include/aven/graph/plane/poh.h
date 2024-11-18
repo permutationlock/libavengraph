@@ -313,10 +313,10 @@ static inline AvenGraphPropUint8 aven_graph_plane_poh(
         &ctx
     );
 
-    while (cur_frame.valid) {
+    do {
         while (!aven_graph_plane_poh_frame_step(&ctx, &cur_frame.value)) {}
         cur_frame = aven_graph_plane_poh_next_frame(&ctx);
-    }
+    } while (cur_frame.valid);
 
     return coloring;
 }

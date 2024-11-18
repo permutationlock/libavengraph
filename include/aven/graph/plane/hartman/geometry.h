@@ -516,11 +516,14 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
     }
 }
 
+typedef Slice(AvenGraphPlaneHartmanFrame) AvenGraphPlaneHartmanFrameSlice;
+
 static inline void aven_graph_plane_hartman_geometry_push_ctx(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
     AvenGraphPlaneEmbedding embedding,
     AvenGraphPlaneHartmanCtx *ctx,
+    AvenGraphPlaneHartmanFrameSlice active_frames,
     Aff2 trans,
     AvenGraphPlaneHartmanGeometryInfo *info
 ) {
@@ -540,6 +543,16 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                 for (uint32_t j = 0; j < ctx->frames.len; j += 1) {
                     AvenGraphPlaneHartmanFrame *frame = &list_get(
                         ctx->frames,
+                        j
+                    );
+                    if (v == frame->v or v == frame->x or v == frame->y) {
+                        v_done = false;
+                        break;
+                    }
+                }
+                for (uint32_t j = 0; j < active_frames.len; j += 1) {
+                    AvenGraphPlaneHartmanFrame *frame = &list_get(
+                        active_frames,
                         j
                     );
                     if (v == frame->v or v == frame->x or v == frame->y) {
@@ -570,6 +583,16 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                             break;
                         }
                     }
+                    for (uint32_t j = 0; j < active_frames.len; j += 1) {
+                        AvenGraphPlaneHartmanFrame *frame = &list_get(
+                            active_frames,
+                            j
+                        );
+                        if (u == frame->v or u == frame->x or u == frame->y) {
+                            u_done = false;
+                            break;
+                        }
+                    }
                 }
 
                 if (!u_done and !v_done) {
@@ -587,7 +610,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
             }
         }
 
-        for (size_t i = 0; i < ctx->frames.len - 1; i += 1) {
+        for (size_t i = 0; i < ctx->frames.len; i += 1) {
             aven_graph_plane_hartman_geometry_push_frame_outline(
                 geometry,
                 rounded_geometry,
@@ -601,7 +624,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
             );
         }
 
-        for (size_t i = 0; i < ctx->frames.len - 1; i += 1) {
+        for (size_t i = 0; i < ctx->frames.len; i += 1) {
             aven_graph_plane_hartman_geometry_push_frame_active(
                 geometry,
                 rounded_geometry,
@@ -615,29 +638,33 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
             );
         }
 
-        aven_graph_plane_hartman_geometry_push_frame_outline(
-            geometry,
-            rounded_geometry,
-            embedding,
-            ctx,
-            &list_get(ctx->frames, ctx->frames.len - 1),
-            trans,
-            info->radius + info->border_thickness,
-            info->edge_thickness + info->border_thickness,
-            &info->active_frame
-        );
+        for (size_t i = 0; i < active_frames.len; i += 1) {
+            aven_graph_plane_hartman_geometry_push_frame_outline(
+                geometry,
+                rounded_geometry,
+                embedding,
+                ctx,
+                &slice_get(active_frames, i),
+                trans,
+                info->radius + info->border_thickness,
+                info->edge_thickness + info->border_thickness,
+                &info->active_frame
+            );
+        }
 
-        aven_graph_plane_hartman_geometry_push_frame_active(
-            geometry,
-            rounded_geometry,
-            embedding,
-            ctx,
-            &list_get(ctx->frames, ctx->frames.len - 1),
-            trans,
-            info->radius + info->border_thickness,
-            info->edge_thickness + info->border_thickness,
-            &info->active_frame
-        );
+        for (size_t i = 0; i < active_frames.len; i += 1) {
+            aven_graph_plane_hartman_geometry_push_frame_active(
+                geometry,
+                rounded_geometry,
+                embedding,
+                ctx,
+                &slice_get(active_frames, i),
+                trans,
+                info->radius + info->border_thickness,
+                info->edge_thickness + info->border_thickness,
+                &info->active_frame
+            );
+        }
 
         vec4_copy(edge_info.color, info->edge_color);
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
@@ -649,6 +676,16 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                 for (uint32_t j = 0; j < ctx->frames.len; j += 1) {
                     AvenGraphPlaneHartmanFrame *frame = &list_get(
                         ctx->frames,
+                        j
+                    );
+                    if (v == frame->v or v == frame->x or v == frame->y) {
+                        v_done = false;
+                        break;
+                    }
+                }
+                for (uint32_t j = 0; j < active_frames.len; j += 1) {
+                    AvenGraphPlaneHartmanFrame *frame = &list_get(
+                        active_frames,
                         j
                     );
                     if (v == frame->v or v == frame->x or v == frame->y) {
@@ -676,6 +713,16 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                     for (uint32_t j = 0; j < ctx->frames.len; j += 1) {
                         AvenGraphPlaneHartmanFrame *frame = &list_get(
                             ctx->frames,
+                            j
+                        );
+                        if (u == frame->v or u == frame->x or u == frame->y) {
+                            u_done = false;
+                            break;
+                        }
+                    }
+                    for (uint32_t j = 0; j < active_frames.len; j += 1) {
+                        AvenGraphPlaneHartmanFrame *frame = &list_get(
+                            active_frames,
                             j
                         );
                         if (u == frame->v or u == frame->x or u == frame->y) {
