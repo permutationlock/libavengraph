@@ -42,6 +42,15 @@
 #define Slice(t) struct { t *ptr; size_t len; }
 #define List(t) struct { t *ptr; size_t len; size_t cap; }
 
+#define PoolEntry(t) union { t data; size_t parent; }
+#define Pool(t) struct { \
+        PoolEntry(t) *ptr; \
+        size_t len; \
+        size_t cap; \
+        size_t free; \
+        size_t used; \
+    }
+
 typedef Slice(unsigned char) ByteSlice;
 
 #if defined(AVEN_UNREACHABLE_ASSERT) or !defined(NDEBUG)
@@ -55,9 +64,63 @@ typedef Slice(unsigned char) ByteSlice;
     #define aven_assert_lt_internal(a, b) a
 #endif
 
+static inline size_t aven_pool_next_internal(
+    size_t *used,
+    size_t *len,
+    size_t cap
+) {
+    assert(*len < cap);
+    *used += 1;
+    size_t index = *len;
+    *len += 1;
+    return index;
+}
+
+static inline size_t aven_pool_pop_free_internal(
+    size_t *used,
+    size_t *free,
+    size_t parent
+) {
+    *used += 1;
+
+    size_t index = *free;
+    *free = parent;
+    return index - 1;
+}
+
+static inline void aven_pool_push_free_internal(
+    size_t *used,
+    size_t *free,
+    size_t *parent,
+    size_t index
+) {
+    assert(*used > 0);
+
+    *used -= 1;
+    *parent = *free;
+    *free = index + 1;
+}
+
 #define slice_get(s, i) (s).ptr[aven_assert_lt_internal(i, (s).len)]
-#define list_get(l, i) (l).ptr[aven_assert_lt_internal(i, (l).len)]
+#define list_get(l, i) slice_get(l, i)
+#define list_back(l) slice_get(l, (l).len - 1)
+#define list_pop(l) (l).ptr[aven_assert_lt_internal(--(l).len, (l).cap)]
 #define list_push(l) (l).ptr[aven_assert_lt_internal((l).len++, (l).cap)]
+#define pool_get(p, i) slice_get(p, i).data
+#define pool_create(p) (((p).free == 0) ? \
+        aven_pool_next_internal(&(p).used, &(p).len, (p).cap) : \
+        aven_pool_pop_free_internal( \
+            &(p).used, \
+            &(p).free, \
+            slice_get(p, (p).free - 1).parent \
+        ) \
+    )
+#define pool_delete(p, i) aven_pool_push_free_internal( \
+        &(p).used, \
+        &(p).free, \
+        &slice_get(p, i).parent, \
+        i \
+    )
 
 #define slice_array(a) { .ptr = a, .len = countof(a) }
 #define slice_list(l) { .ptr = (l).ptr, .len = (l).len }
@@ -88,10 +151,7 @@ typedef Slice(unsigned char) ByteSlice;
         .ptr = (unsigned char *)(s).ptr, \
         .len = (s).len * sizeof(*(s).ptr), \
     }
-#define list_as_bytes(l) (ByteSlice) { \
-        .ptr = (unsigned char *)(l).ptr, \
-        .len = (l).len * sizeof(*(l).ptr), \
-    }
+#define list_as_bytes(l) slice_as_bytes(l)
 
 #if defined(_WIN32) and defined(_MSC_VER)
     void *memcpy(void *s1, const void *s2, size_t n);
@@ -114,7 +174,6 @@ void *memset(void *ptr, int value, size_t num);
 
 static inline noreturn void aven_panic_internal_fn(const char *msg, size_t len) {
     // TODO: get working on windows
-    // using stdout because fprintf(stderr, ...) requires work or stdio.h
     noreturn void _Exit(int status);
 
 #ifndef _WIN32

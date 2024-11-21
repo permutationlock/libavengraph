@@ -90,6 +90,19 @@ AVEN_FN void *aven_arena_realloc(
         sizeof(t) \
     )
 
+#define aven_arena_create_slice(t, a, n) { \
+        .ptr = aven_arena_create_array(t, a, n), \
+        .len = n, \
+    }
+#define aven_arena_create_list(t, a, n) { \
+        .ptr = aven_arena_create_array(t, a, n), \
+        .cap = n, \
+    }
+#define aven_arena_create_pool(t, a, n) { \
+        .ptr = (void *)aven_arena_create_array(PoolEntry(t), a, n), \
+        .cap = n, \
+    }
+
 #ifdef AVEN_IMPLEMENTATION
 
 AVEN_FN void *aven_arena_alloc(

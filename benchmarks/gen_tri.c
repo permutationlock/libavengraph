@@ -20,8 +20,8 @@
 
 #define ARENA_SIZE (4096UL * 400000UL)
 
-#define NGRAPHS 1
-#define MAX_VERTICES 1000001
+#define NGRAPHS 3
+#define MAX_VERTICES 10000001
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -31,7 +31,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xdead, 0xbeef);
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xdeadf00d, 0xbeefea11);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     Aff2 ident;

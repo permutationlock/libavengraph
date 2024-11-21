@@ -11,11 +11,13 @@
 #include <aven/graph/path_color.h>
 #include <aven/graph/plane.h>
 #include <aven/graph/plane/hartman.h>
+#include <aven/graph/plane/hartman/pthread.h>
 #include <aven/graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
 #include <aven/time.h>
+#include <aven/thread_pool.h>
 
 #include <float.h>
 #include <stdio.h>
@@ -28,6 +30,8 @@
 
 #define MAX_COLOR 127
 
+#define NTHREADS 3
+
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
     if (mem == NULL) {
@@ -36,8 +40,15 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xf3fc, 0x7777);
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xf3fc, 0x7777);    
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
+
+    AvenThreadPool thread_pool = aven_thread_pool_init(
+        NTHREADS - 1,
+        NTHREADS - 1,
+        &arena
+    );
+    aven_thread_pool_run(&thread_pool);
 
     Aff2 ident;
     aff2_identity(ident);
@@ -79,7 +90,7 @@ int main(void) {
             color_lists->ptr = aven_arena_create_array(
                 AvenGraphPlaneHartmanList,
                 &temp_arena,
-                n
+                n 
             );
 
             for (uint32_t j = 0; j < color_lists->len; j += 1) {
@@ -119,18 +130,19 @@ int main(void) {
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            aven_graph_plane_hartman(
+            aven_graph_plane_hartman_pthread(
                 slice_get(cases, i).color_lists,
                 slice_get(cases, i).graph,
                 face,
+                &thread_pool,
                 temp_arena
             );
         }
 
         AvenTimeInst end_inst = aven_time_now();
-        printf("stopping\n");
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
+        printf("stopping\n");
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -180,6 +192,8 @@ int main(void) {
             ns_per_graph / (double)(6 * n - 12)
         );
     }
+
+    aven_thread_pool_halt_and_destroy(&thread_pool);
 
     return 0;
 }

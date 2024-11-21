@@ -414,6 +414,21 @@ int main(int argc, char **argv) {
     AvenBuildStep poh_pthread_root_step = aven_build_step_root();
     aven_build_step_add_dep(&poh_pthread_root_step, &bench_poh_pthread_step, &arena);
 
+    AvenBuildStep bench_hartman_pthread_step = aven_build_common_step_cc_ld_run_exe_ex(
+        &opts,
+        includes,
+        macros,
+        syslibs,
+        bench_objs,
+        aven_path(&arena, root_path.ptr, "benchmarks", "hartman_pthread.c", NULL),
+        &bench_dir_step,
+        false,
+        bench_args,
+        &arena
+    );
+    AvenBuildStep hartman_pthread_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&hartman_pthread_root_step, &bench_hartman_pthread_step, &arena);
+
     AvenBuildStep bench_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
@@ -430,17 +445,19 @@ int main(int argc, char **argv) {
     aven_build_step_add_dep(&bfs_root_step, &bench_bfs_step, &arena);
 
     AvenBuildStep bench_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&bench_root_step, &hartman_pthread_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &poh_pthread_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
     aven_build_step_add_dep(&bench_root_step, &bfs_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &gen_tri_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &poh_pthread_root_step, &arena);
 
     // Run build steps according to args
 
     if (opts.clean) {
         aven_build_step_clean(&root_step);
         aven_build_step_clean(&test_root_step);
+        aven_build_step_clean(&bench_root_step);
     } else if (opts.test) {
         error = aven_build_step_run(&test_root_step, arena);
         if (error != 0) {
