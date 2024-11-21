@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 3200000UL)
+#define ARENA_SIZE (4096UL * 1200000UL)
 
 #define NGRAPHS 3
 #define MAX_VERTICES 10000001

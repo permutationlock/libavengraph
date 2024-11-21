@@ -115,7 +115,6 @@ int main(void) {
         uint32_t face_data[3] = { 0, 1, 2 };
         AvenGraphSubset face = slice_array(face_data);
 
-        printf("starting\n");
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -128,7 +127,6 @@ int main(void) {
         }
 
         AvenTimeInst end_inst = aven_time_now();
-        printf("stopping\n");
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
 
