@@ -101,11 +101,18 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenStr include_data[] = {
-        libaven_include_path,
-        libavengraph_build_include_path(root_path, &arena),
-    };
-    AvenStrSlice includes = slice_array(include_data);
+    AvenStr include_data[3];
+    List(AvenStr) include_list = list_array(include_data);
+    list_push(include_list) = libaven_include_path;
+    list_push(include_list) = libavengraph_build_include_path(root_path, &arena);
+    if (libaven_opts.winpthreads.local) {
+        list_push(include_list) = libaven_build_include_winpthreads(
+            root_path,
+            &arena
+        );
+    }
+    
+    AvenStrSlice includes = slice_list(include_list);
     AvenStrSlice macros = { 0 };
     AvenStrSlice syslibs = { 0 };
 
@@ -126,16 +133,41 @@ int main(int argc, char **argv) {
         winutf8_obj_step.valid = true;
     }
 
+    Optional(AvenBuildStep) winpthreads_obj_step = { 0 };
+    if (libaven_opts.winpthreads.local) {
+        winpthreads_obj_step.value = libaven_build_step_winpthreads(
+            &opts,
+            &libaven_opts,
+            libaven_path,
+            &work_dir_step,
+            &arena
+        );
+        winpthreads_obj_step.valid = true;
+    }
+
     // Build steps for examples
 
-    AvenStr graphics_include_data[] = {
-        libaven_include_path,
-        libavengraph_build_include_path(root_path, &arena),
-        libavengl_build_include_path(libavengl_path, &arena),
-        libavengl_build_include_glfw(libavengl_path, &arena),
-        libavengl_build_include_gles2(libavengl_path, &arena),
-    };
-    AvenStrSlice graphics_includes = slice_array(graphics_include_data);
+    AvenStr graphics_include_data[countof(include_data) + 3];
+    List(AvenStr) graphics_include_list = list_array(graphics_include_data);
+
+    for (size_t i = 0; i < includes.len; i += 1) {
+        list_push(graphics_include_list) = slice_get(includes, i);
+    }
+    
+    list_push(graphics_include_list) = libavengl_build_include_path(
+        libavengl_path,
+        &arena
+    );
+    list_push(graphics_include_list) = libavengl_build_include_glfw(
+        libavengl_path,
+        &arena
+    );
+    list_push(graphics_include_list) = libavengl_build_include_gles2(
+        libavengl_path,
+        &arena
+    );
+
+    AvenStrSlice graphics_includes = slice_list(graphics_include_list);
 
     AvenBuildStep stb_obj_step = libavengl_build_step_stb(
         &opts,
@@ -167,7 +199,7 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep *bfs_obj_data[3];
+    AvenBuildStep *bfs_obj_data[5];
     List(AvenBuildStep *) bfs_obj_list = list_array(bfs_obj_data);
 
     list_push(bfs_obj_list) = &bfs_obj_step;
@@ -175,6 +207,10 @@ int main(int argc, char **argv) {
     
     if (winutf8_obj_step.valid) {
         list_push(bfs_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (winpthreads_obj_step.valid) {
+        list_push(bfs_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
@@ -202,7 +238,7 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep *gen_tri_obj_data[3];
+    AvenBuildStep *gen_tri_obj_data[5];
     List(AvenBuildStep *) gen_tri_obj_list = list_array(gen_tri_obj_data);
 
     list_push(gen_tri_obj_list) = &gen_tri_obj_step;
@@ -210,6 +246,10 @@ int main(int argc, char **argv) {
     
     if (winutf8_obj_step.valid) {
         list_push(gen_tri_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (winpthreads_obj_step.valid) {
+        list_push(gen_tri_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
@@ -237,7 +277,7 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep *poh_obj_data[3];
+    AvenBuildStep *poh_obj_data[5];
     List(AvenBuildStep *) poh_obj_list = list_array(poh_obj_data);
 
     list_push(poh_obj_list) = &poh_obj_step;
@@ -245,6 +285,10 @@ int main(int argc, char **argv) {
     
     if (winutf8_obj_step.valid) {
         list_push(poh_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (winpthreads_obj_step.valid) {
+        list_push(poh_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
@@ -272,7 +316,7 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep *hartman_obj_data[3];
+    AvenBuildStep *hartman_obj_data[5];
     List(AvenBuildStep *) hartman_obj_list = list_array(hartman_obj_data);
 
     list_push(hartman_obj_list) = &hartman_obj_step;
@@ -280,6 +324,10 @@ int main(int argc, char **argv) {
     
     if (winutf8_obj_step.valid) {
         list_push(hartman_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (winpthreads_obj_step.valid) {
+        list_push(hartman_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
@@ -343,11 +391,15 @@ int main(int argc, char **argv) {
     AvenStr bench_dir = aven_str("build_bench");
     AvenBuildStep bench_dir_step = aven_build_step_mkdir(bench_dir);
 
-    AvenBuildStep *bench_obj_data[1];
+    AvenBuildStep *bench_obj_data[2];
     List(AvenBuildStep *) bench_obj_list = list_array(bench_obj_data);
 
     if (winutf8_obj_step.valid) {
         list_push(bench_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (winpthreads_obj_step.valid) {
+        list_push(bench_obj_list) = &winpthreads_obj_step.value;
     }
 
     AvenBuildStepPtrSlice bench_objs = slice_list(bench_obj_list);
