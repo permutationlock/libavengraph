@@ -8,8 +8,6 @@
 #include "../../../graph.h"
 #include "../hartman.h"
 
-int printf(const char *fmt, ...);
-
 typedef struct {
     AvenGraphPlaneHartmanFrame frame;
     uint32_t parent;
@@ -25,7 +23,6 @@ typedef struct {
     uint32_t next_mark;
     size_t nthreads;
     size_t frames_active;
-    //pthread_spinlock_t lock;
     bool lock;
 } AvenGraphPlaneHartmanPthreadCtx;
 
@@ -116,15 +113,12 @@ aven_graph_plane_hartman_pthread_init(
     };
     list_push(ctx.valid_entries) = entry_index;
 
-    //pthread_spin_init(&ctx.lock, PTHREAD_PROCESS_PRIVATE);
-
     return ctx;
 }
 
 static inline void aven_graph_plane_hartman_pthread_lock(
     AvenGraphPlaneHartmanPthreadCtx *pthread_ctx
 ) {    
-    //pthread_spin_lock(&pthread_ctx->lock);
     for (;;) {
         if (
             !__atomic_exchange_n(&pthread_ctx->lock, true, __ATOMIC_ACQUIRE)
@@ -132,7 +126,9 @@ static inline void aven_graph_plane_hartman_pthread_lock(
             return;
         }
         while (__atomic_load_n(&pthread_ctx->lock, __ATOMIC_RELAXED)) {
+#if __has_builtin(__builtin_ia32_pause)
             __builtin_ia32_pause();
+#endif
         }
     }
 }
@@ -140,7 +136,6 @@ static inline void aven_graph_plane_hartman_pthread_lock(
 static inline void aven_graph_plane_hartman_pthread_unlock(
     AvenGraphPlaneHartmanPthreadCtx *pthread_ctx
 ) {
-    //pthread_spin_unlock(&pthread_ctx->lock);
     __atomic_store_n(&pthread_ctx->lock, false, __ATOMIC_RELEASE);
 }
 
@@ -156,14 +151,12 @@ aven_graph_plane_hartman_pthread_next_frame(
         1,
         __ATOMIC_RELAXED
     );
-    // printf("%u - looking for new frame\n", thread_index);
 
     for (;;) {
         if (
             __atomic_load_n(&ctx->valid_entries.len, __ATOMIC_RELAXED) > 0 or
             frames_active == 0
         ) {
-            // printf("%u - done waiting: %u / %lu\n", thread_index, pthread_ctx->new_frames, ctx->frames.len);
             aven_graph_plane_hartman_pthread_lock(ctx);
             if (ctx->valid_entries.len > 0) {
                 uint32_t entry_index = list_back(ctx->valid_entries);
@@ -191,7 +184,6 @@ aven_graph_plane_hartman_pthread_next_frame(
             );
 
             if (ctx->entry_pool.used == 0 and frames_active == 0) {
-                // printf("%u - killed\n", thread_index);
                 aven_graph_plane_hartman_pthread_unlock(ctx);
                 return (AvenGraphPlaneHartmanFrameOptional){ 0 };
             }
@@ -199,15 +191,14 @@ aven_graph_plane_hartman_pthread_next_frame(
             aven_graph_plane_hartman_pthread_unlock(ctx);
         }
 
-        // printf("%u - waiting\n", thread_index);
-
+#if __has_builtin(__builtin_ia32_pause)
         __builtin_ia32_pause();
+#endif
         frames_active = __atomic_load_n(
             &ctx->frames_active,
             __ATOMIC_RELAXED
         );
 
-        // printf("%u - done waiting\n", thread_index);
     }
 }
 
@@ -344,7 +335,6 @@ static inline bool aven_graph_plane_hartman_pthread_frame_step(
     AvenGraphPlaneHartmanFrame *frame,
     AvenGraphPlaneHartmanPthreadMarkSet *mark_set
 ) {
-    // printf("v: %u, x: %u, y: %u\n", frame->v, frame->x, frame->y);
     uint32_t v = frame->v;
     AvenGraphAugAdjList v_adj = slice_get(ctx->graph, frame->v);
     AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_pthread_vinfo(

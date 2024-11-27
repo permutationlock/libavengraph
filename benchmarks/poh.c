@@ -23,8 +23,8 @@
 
 #define ARENA_SIZE (4096UL * 1200000UL)
 
-#define NGRAPHS 1
-#define MAX_VERTICES 10000001
+#define NGRAPHS 3
+#define MAX_VERTICES 1000001
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);

@@ -23,14 +23,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 80000UL)
+#define ARENA_SIZE (4096UL * 1200000UL)
 
-#define NGRAPHS 1
+#define NGRAPHS 3
 #define MAX_VERTICES 1000001
 
 #define MAX_COLOR 127
 
-#define NTHREADS 2
+#define NTHREADS 3
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -40,7 +40,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xf3fc, 0x7777);    
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xdeadf00d, 0xbeefea11);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     AvenThreadPool thread_pool = aven_thread_pool_init(
