@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     list_push(include_list) = libavengraph_build_include_path(root_path, &arena);
     if (libaven_opts.winpthreads.local) {
         list_push(include_list) = libaven_build_include_winpthreads(
-            root_path,
+            libaven_path,
             &arena
         );
     }
