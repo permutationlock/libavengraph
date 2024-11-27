@@ -1,15 +1,9 @@
-#ifndef AVEN_GRAPH_PLANE_HARTMAN_THREAD_H
-#define AVEN_GRAPH_PLANE_HARTMAN_THREAD_H
+#ifndef AVEN_GRAPH_PLANE_HARTMAN_PTHREAD_H
+#define AVEN_GRAPH_PLANE_HARTMAN_PTHREAD_H
 
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/thread_pool.h>
-
-#if !defined(__STDC_VERSION__) or __STDC_VERSION__ < 201112L
-    #error "C11 or later is required"
-#endif
-
-#include <stdatomic.h>
 
 #include "../../../graph.h"
 #include "../hartman.h"
@@ -19,29 +13,24 @@ int printf(const char *fmt, ...);
 typedef struct {
     AvenGraphPlaneHartmanFrame frame;
     uint32_t parent;
-} AvenGraphPlaneHartmanThreadEntry;
-
-typedef struct {
-    uint32_t *ptr;
-    atomic_size_t len;
-    size_t cap;
-} AvenGraphPlaneHartmanThreadUint32List;
+} AvenGraphPlaneHartmanPthreadEntry;
 
 typedef struct {
     AvenGraphAug graph;
     AvenGraphPlaneHartmanListProp color_lists;
     Slice(AvenGraphPlaneHartmanVertex) vertex_info;
     Slice(uint32_t) marks;
-    AvenGraphPlaneHartmanThreadUint32List valid_entries;
-    Pool(AvenGraphPlaneHartmanThreadEntry) entry_pool;
+    List(uint32_t) valid_entries;
+    Pool(AvenGraphPlaneHartmanPthreadEntry) entry_pool;
+    uint32_t next_mark;
     size_t nthreads;
-    atomic_int frames_active;
-    atomic_uint_least32_t next_mark;
-    atomic_bool lock;
-} AvenGraphPlaneHartmanThreadCtx;
+    size_t frames_active;
+    //pthread_spinlock_t lock;
+    bool lock;
+} AvenGraphPlaneHartmanPthreadCtx;
 
-static inline AvenGraphPlaneHartmanThreadCtx
-aven_graph_plane_hartman_thread_init(
+static inline AvenGraphPlaneHartmanPthreadCtx
+aven_graph_plane_hartman_pthread_init(
     AvenGraphPlaneHartmanListProp color_lists,
     AvenGraphAug graph,
     AvenGraphSubset cwise_outer_face,
@@ -52,12 +41,13 @@ aven_graph_plane_hartman_thread_init(
         aven_panic("vertices won't fit in 30 bits");
     }
 
-    AvenGraphPlaneHartmanThreadCtx ctx = {
+    AvenGraphPlaneHartmanPthreadCtx ctx = {
         .graph = graph,
         .color_lists = color_lists,
+        .next_mark = 1,
         .nthreads = nthreads,
         .entry_pool = aven_arena_create_pool(
-            AvenGraphPlaneHartmanThreadEntry,
+            AvenGraphPlaneHartmanPthreadEntry,
             arena,
             2 * graph.len - 4
         ),
@@ -77,10 +67,6 @@ aven_graph_plane_hartman_thread_init(
             (3 + nthreads) * graph.len
         ),
     };
-    atomic_init(&ctx.valid_entries.len, 0);
-    atomic_init(&ctx.frames_active, 0);
-    atomic_init(&ctx.next_mark, 1);
-    atomic_init(&ctx.lock, false);
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
         slice_get(ctx.vertex_info, v) = (AvenGraphPlaneHartmanVertex){ 0 };
@@ -90,7 +76,7 @@ aven_graph_plane_hartman_thread_init(
         slice_get(ctx.marks, i) = i;
     }
 
-    uint32_t face_mark = (uint32_t)ctx.next_mark;
+    uint32_t face_mark = ctx.next_mark;
     ctx.next_mark += 1;
 
     uint32_t u = slice_get(cwise_outer_face, cwise_outer_face.len - 1);
@@ -111,7 +97,7 @@ aven_graph_plane_hartman_thread_init(
 
     uint32_t xyv = slice_get(cwise_outer_face, 0);
     AvenGraphPlaneHartmanVertex *xyv_info = &slice_get(ctx.vertex_info, xyv);
-    xyv_info->mark = (uint32_t)ctx.next_mark;
+    xyv_info->mark = ctx.next_mark;
     ctx.next_mark += 1;
 
     AvenGraphPlaneHartmanList *xyv_colors = &slice_get(ctx.color_lists, xyv);
@@ -119,7 +105,7 @@ aven_graph_plane_hartman_thread_init(
     xyv_colors->len = 1;
 
     uint32_t entry_index = (uint32_t)pool_create(ctx.entry_pool);
-    pool_get(ctx.entry_pool, entry_index) = (AvenGraphPlaneHartmanThreadEntry){
+    pool_get(ctx.entry_pool, entry_index) = (AvenGraphPlaneHartmanPthreadEntry){
         .frame = {
             .v = xyv,
             .x = xyv,
@@ -130,118 +116,103 @@ aven_graph_plane_hartman_thread_init(
     };
     list_push(ctx.valid_entries) = entry_index;
 
-    //thread_spin_init(&ctx.lock, THREAD_PROCESS_PRIVATE);
+    //pthread_spin_init(&ctx.lock, PTHREAD_PROCESS_PRIVATE);
 
     return ctx;
 }
 
-static inline void aven_graph_plane_hartman_thread_lock(
-    AvenGraphPlaneHartmanThreadCtx *thread_ctx
+static inline void aven_graph_plane_hartman_pthread_lock(
+    AvenGraphPlaneHartmanPthreadCtx *pthread_ctx
 ) {    
-    //thread_spin_lock(&thread_ctx->lock);
+    //pthread_spin_lock(&pthread_ctx->lock);
     for (;;) {
         if (
-            !atomic_exchange_explicit(
-                &thread_ctx->lock,
-                true,
-                memory_order_acquire
-            )
+            !__atomic_exchange_n(&pthread_ctx->lock, true, __ATOMIC_ACQUIRE)
         ) {
             return;
         }
-        while (atomic_load_explicit(&thread_ctx->lock, memory_order_relaxed)) {
-#if __has_builtin(__builtin_ia32_pause)
+        while (__atomic_load_n(&pthread_ctx->lock, __ATOMIC_RELAXED)) {
             __builtin_ia32_pause();
-#endif
         }
     }
 }
 
-static inline void aven_graph_plane_hartman_thread_unlock(
-    AvenGraphPlaneHartmanThreadCtx *thread_ctx
+static inline void aven_graph_plane_hartman_pthread_unlock(
+    AvenGraphPlaneHartmanPthreadCtx *pthread_ctx
 ) {
-    //thread_spin_unlock(&thread_ctx->lock);
-    atomic_store_explicit(&thread_ctx->lock, false, memory_order_release);
+    //pthread_spin_unlock(&pthread_ctx->lock);
+    __atomic_store_n(&pthread_ctx->lock, false, __ATOMIC_RELEASE);
 }
 
 static inline AvenGraphPlaneHartmanFrameOptional
-aven_graph_plane_hartman_thread_next_frame(
-    AvenGraphPlaneHartmanThreadCtx *ctx,
+aven_graph_plane_hartman_pthread_next_frame(
+    AvenGraphPlaneHartmanPthreadCtx *ctx,
     uint32_t thread_index
 ) {
     (void)thread_index;
 
-    int frames_active = atomic_fetch_sub_explicit(
+    size_t frames_active = __atomic_sub_fetch(
         &ctx->frames_active,
         1,
-        memory_order_relaxed
-    ) + 1;
+        __ATOMIC_RELAXED
+    );
     // printf("%u - looking for new frame\n", thread_index);
 
     for (;;) {
-        size_t available_entries = atomic_load_explicit(
-            &ctx->valid_entries.len,
-            memory_order_relaxed
-        );
         if (
-            available_entries > 0 or
+            __atomic_load_n(&ctx->valid_entries.len, __ATOMIC_RELAXED) > 0 or
             frames_active == 0
         ) {
-            // printf("%u - done waiting: %u / %lu\n", thread_index, thread_ctx->new_frames, ctx->frames.len);
-            aven_graph_plane_hartman_thread_lock(ctx);
+            // printf("%u - done waiting: %u / %lu\n", thread_index, pthread_ctx->new_frames, ctx->frames.len);
+            aven_graph_plane_hartman_pthread_lock(ctx);
             if (ctx->valid_entries.len > 0) {
                 uint32_t entry_index = list_back(ctx->valid_entries);
-                atomic_fetch_sub_explicit(
-                    &ctx->valid_entries.len,
-                    1,
-                    memory_order_relaxed
-                );
+                __atomic_fetch_sub(&ctx->valid_entries.len, 1, __ATOMIC_RELAXED);
                 AvenGraphPlaneHartmanFrame frame = pool_get(
                     ctx->entry_pool,
                     entry_index
                 ).frame;
                 pool_delete(ctx->entry_pool, entry_index);
-                atomic_fetch_add_explicit(
-                    &ctx->frames_active,
-                    1,
-                    memory_order_relaxed
-                );
-                aven_graph_plane_hartman_thread_unlock(ctx);
+                __atomic_add_fetch(
+                        &ctx->frames_active,
+                        1,
+                        __ATOMIC_RELAXED
+                    );
+                aven_graph_plane_hartman_pthread_unlock(ctx);
 
                 return (AvenGraphPlaneHartmanFrameOptional){
                     .value = frame,
                     .valid = true,
                 };
             }
-            frames_active = atomic_load_explicit(
+            frames_active = __atomic_load_n(
                 &ctx->frames_active,
-                memory_order_relaxed
+                __ATOMIC_RELAXED
             );
 
             if (ctx->entry_pool.used == 0 and frames_active == 0) {
                 // printf("%u - killed\n", thread_index);
-                aven_graph_plane_hartman_thread_unlock(ctx);
+                aven_graph_plane_hartman_pthread_unlock(ctx);
                 return (AvenGraphPlaneHartmanFrameOptional){ 0 };
             }
 
-            aven_graph_plane_hartman_thread_unlock(ctx);
+            aven_graph_plane_hartman_pthread_unlock(ctx);
         }
 
         // printf("%u - waiting\n", thread_index);
-#if __has_builtin(__builtin_ia32_pause)
+
         __builtin_ia32_pause();
-#endif
-        frames_active = atomic_load_explicit(
+        frames_active = __atomic_load_n(
             &ctx->frames_active,
-            memory_order_relaxed
+            __ATOMIC_RELAXED
         );
 
         // printf("%u - done waiting\n", thread_index);
     }
 }
 
-static inline void aven_graph_plane_hartman_thread_push_entries(
-    AvenGraphPlaneHartmanThreadCtx *ctx,
+static inline void aven_graph_plane_hartman_pthread_push_entries(
+    AvenGraphPlaneHartmanPthreadCtx *ctx,
     AvenGraphPlaneHartmanList *v_colors,
     AvenGraphPlaneHartmanFrameOptional *maybe_frame
 ) {
@@ -255,15 +226,11 @@ static inline void aven_graph_plane_hartman_thread_push_entries(
         }
     }
 
-    aven_graph_plane_hartman_thread_lock(ctx);
+    aven_graph_plane_hartman_pthread_lock(ctx);
     if (parent_index != 0 and (v_colors->len & 0x3) == 1) {
         do {
             assert(ctx->valid_entries.len < ctx->valid_entries.cap);
-            atomic_fetch_add_explicit(
-                &ctx->valid_entries.len,
-                1,
-                memory_order_relaxed
-            );
+            __atomic_fetch_add(&ctx->valid_entries.len, 1, __ATOMIC_RELAXED);
             list_back(ctx->valid_entries) = parent_index - 1;
             parent_index = pool_get(ctx->entry_pool, parent_index - 1).parent;
         } while (parent_index != 0);
@@ -272,26 +239,22 @@ static inline void aven_graph_plane_hartman_thread_push_entries(
     if (maybe_frame->valid) {
         uint32_t entry_index = (uint32_t)pool_create(ctx->entry_pool);
         pool_get(ctx->entry_pool, entry_index) =
-            (AvenGraphPlaneHartmanThreadEntry){
+            (AvenGraphPlaneHartmanPthreadEntry){
                 .frame = maybe_frame->value,
                 .parent = parent_index,
             };
         if (v_colors->len == 1) {
             assert(ctx->valid_entries.len < ctx->valid_entries.cap);
-            atomic_fetch_add_explicit(
-                &ctx->valid_entries.len,
-                1,
-                memory_order_relaxed
-            );
+            __atomic_fetch_add(&ctx->valid_entries.len, 1, __ATOMIC_RELAXED);
             list_back(ctx->valid_entries) = entry_index;
         } else {
             v_colors->len = (((entry_index + 1) << 2) | (v_colors->len & 0x3));
         }
     }
-    aven_graph_plane_hartman_thread_unlock(ctx);
+    aven_graph_plane_hartman_pthread_unlock(ctx);
 }
 
-static bool aven_graph_plane_hartman_thread_has_color(
+static bool aven_graph_plane_hartman_pthread_has_color(
     AvenGraphPlaneHartmanList *list,
     uint32_t color
 ) {
@@ -305,7 +268,7 @@ static bool aven_graph_plane_hartman_thread_has_color(
     return false;
 }
 
-static void aven_graph_plane_hartman_thread_remove_color(
+static void aven_graph_plane_hartman_pthread_remove_color(
     AvenGraphPlaneHartmanList *list,
     uint32_t color
 ) {
@@ -319,8 +282,8 @@ static void aven_graph_plane_hartman_thread_remove_color(
 }
 
 static inline AvenGraphPlaneHartmanVertex *
-aven_graph_plane_hartman_thread_vinfo(
-    AvenGraphPlaneHartmanThreadCtx *ctx,
+aven_graph_plane_hartman_pthread_vinfo(
+    AvenGraphPlaneHartmanPthreadCtx *ctx,
     AvenGraphPlaneHartmanFrame *frame,
     uint32_t v
 ) {
@@ -339,7 +302,7 @@ aven_graph_plane_hartman_thread_vinfo(
     return &slice_get(ctx->vertex_info, v);
 }
 
-static void aven_graph_plane_hartman_thread_color_differently(
+static void aven_graph_plane_hartman_pthread_color_differently(
     AvenGraphPlaneHartmanList *list,
     uint32_t color
 ) {
@@ -356,17 +319,17 @@ typedef struct {
     uint32_t next_mark;
     uint32_t final_mark;
     uint32_t block_size;
-} AvenGraphPlaneHartmanThreadMarkSet;
+} AvenGraphPlaneHartmanPthreadMarkSet;
 
-static inline uint32_t aven_graph_plane_hartman_thread_next_mark(
-    AvenGraphPlaneHartmanThreadCtx *ctx,
-    AvenGraphPlaneHartmanThreadMarkSet *mark_set
+static inline uint32_t aven_graph_plane_hartman_pthread_next_mark(
+    AvenGraphPlaneHartmanPthreadCtx *ctx,
+    AvenGraphPlaneHartmanPthreadMarkSet *mark_set
 ) {
     if (mark_set->next_mark == mark_set->final_mark) {
-        mark_set->next_mark = (uint32_t)atomic_fetch_add_explicit(
+        mark_set->next_mark = __atomic_fetch_add(
             &ctx->next_mark,
             mark_set->block_size,
-            memory_order_relaxed
+            __ATOMIC_RELAXED
         );
         mark_set->final_mark = mark_set->next_mark + mark_set->block_size;
     }
@@ -376,20 +339,20 @@ static inline uint32_t aven_graph_plane_hartman_thread_next_mark(
     return next_mark;
 }
 
-static inline bool aven_graph_plane_hartman_thread_frame_step(
-    AvenGraphPlaneHartmanThreadCtx *ctx,
+static inline bool aven_graph_plane_hartman_pthread_frame_step(
+    AvenGraphPlaneHartmanPthreadCtx *ctx,
     AvenGraphPlaneHartmanFrame *frame,
-    AvenGraphPlaneHartmanThreadMarkSet *mark_set
+    AvenGraphPlaneHartmanPthreadMarkSet *mark_set
 ) {
     // printf("v: %u, x: %u, y: %u\n", frame->v, frame->x, frame->y);
     uint32_t v = frame->v;
     AvenGraphAugAdjList v_adj = slice_get(ctx->graph, frame->v);
-    AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_thread_vinfo(
+    AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_pthread_vinfo(
         ctx,
         frame,
         v
     );
-    uint32_t vu_index = aven_graph_plane_hartman_thread_vinfo(
+    uint32_t vu_index = aven_graph_plane_hartman_pthread_vinfo(
         ctx,
         frame,
         v
@@ -409,7 +372,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
     AvenGraphAugAdjList u_adj = slice_get(ctx->graph, u);
     uint32_t uv_index = vu.back_index;
     AvenGraphPlaneHartmanVertex *u_info =
-        aven_graph_plane_hartman_thread_vinfo(
+        aven_graph_plane_hartman_pthread_vinfo(
             ctx,
             frame,
             u
@@ -427,7 +390,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
     maybe_frame.valid = false;
 
     if (u_mark == 0) {
-        aven_graph_plane_hartman_thread_remove_color(u_colors, v_color);
+        aven_graph_plane_hartman_pthread_remove_color(u_colors, v_color);
         assert(u_colors->len > 1);
 
         u_info->nb.first = (uint32_t)((uv_index + 1) % u_adj.len);
@@ -435,7 +398,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         u_info->mark = frame->x_info.mark;
     } else if (u_info->nb.first == u_info->nb.last) {
         if (u != frame->x and u != frame->y) {
-            aven_graph_plane_hartman_thread_color_differently(
+            aven_graph_plane_hartman_pthread_color_differently(
                 u_colors,
                 v_color
             );
@@ -451,7 +414,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
 
         u_info->nb.first = (uint32_t)((uv_index + 1) % u_adj.len);
 
-        if (aven_graph_plane_hartman_thread_has_color(u_colors, v_color)) {
+        if (aven_graph_plane_hartman_pthread_has_color(u_colors, v_color)) {
             if (u_colors->len != 1) {
                 u_colors->data[0] = v_color;
                 u_colors->len = ((u_colors->len & 0xfffffffc) | 1);
@@ -462,7 +425,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             if (v != frame->x) {
                 slice_get(ctx->marks, frame->x_info.mark) = frame->y_info.mark;
                 frame->v = frame->x;
-                frame->x_info.mark = aven_graph_plane_hartman_thread_next_mark(
+                frame->x_info.mark = aven_graph_plane_hartman_pthread_next_mark(
                     ctx,
                     mark_set
                 );
@@ -470,12 +433,12 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         }
 
         if (u_nb_old_first != uv_index) {
-            uint32_t new_x_mark = aven_graph_plane_hartman_thread_next_mark(
+            uint32_t new_x_mark = aven_graph_plane_hartman_pthread_next_mark(
                 ctx,
                 mark_set
             );
 
-            uint32_t new_y_mark = aven_graph_plane_hartman_thread_next_mark(
+            uint32_t new_y_mark = aven_graph_plane_hartman_pthread_next_mark(
                 ctx,
                 mark_set
             );
@@ -514,12 +477,12 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             }
         }
     } else if (v == frame->x) {
-        aven_graph_plane_hartman_thread_color_differently(u_colors, v_color);
+        aven_graph_plane_hartman_pthread_color_differently(u_colors, v_color);
 
         assert(uv_index == u_info->nb.last);
 
         u_info->nb.last = (uint32_t)((uv_index + u_adj.len - 1) % u_adj.len);
-        u_info->mark = aven_graph_plane_hartman_thread_next_mark(
+        u_info->mark = aven_graph_plane_hartman_pthread_next_mark(
             ctx,
             mark_set
         );
@@ -537,7 +500,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         u_mark == frame->x_info.mark
     ) {
         assert(
-            !aven_graph_plane_hartman_thread_has_color(
+            !aven_graph_plane_hartman_pthread_has_color(
                 u_colors,
                 v_color
             )
@@ -565,7 +528,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             );
 
             if (u == frame->x) {
-                frame->x_info.mark = aven_graph_plane_hartman_thread_next_mark(
+                frame->x_info.mark = aven_graph_plane_hartman_pthread_next_mark(
                     ctx,
                     mark_set
                 );
@@ -578,12 +541,12 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             );
         }
     } else {
-        aven_graph_plane_hartman_thread_color_differently(u_colors, v_color);
+        aven_graph_plane_hartman_pthread_color_differently(u_colors, v_color);
 
         if (u_info->nb.first != uv_index) {
             assert(!last_neighbor);
             u_info->mark = frame->x_info.mark;
-            uint32_t next_mark = aven_graph_plane_hartman_thread_next_mark(
+            uint32_t next_mark = aven_graph_plane_hartman_pthread_next_mark(
                 ctx,
                 mark_set
             );
@@ -608,7 +571,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             u_info->nb.last = (uint32_t)(
                 (uv_index + u_adj.len - 1) % u_adj.len
             );
-            u_info->mark = aven_graph_plane_hartman_thread_next_mark(
+            u_info->mark = aven_graph_plane_hartman_pthread_next_mark(
                 ctx,
                 mark_set
             );
@@ -629,7 +592,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         }
     }
 
-    aven_graph_plane_hartman_thread_push_entries(
+    aven_graph_plane_hartman_pthread_push_entries(
         ctx,
         u_colors,
         &maybe_frame
@@ -639,47 +602,47 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
 }
 
 typedef struct {
-    AvenGraphPlaneHartmanThreadCtx *thread_ctx;
+    AvenGraphPlaneHartmanPthreadCtx *pthread_ctx;
     uint32_t thread_index;
-} AvenGraphPlaneHartmanThreadWorker;
+} AvenGraphPlaneHartmanPthreadWorker;
 
-static inline void aven_graph_plane_hartman_thread_worker(void *args) {
-    AvenGraphPlaneHartmanThreadWorker *worker = args;
+static inline void aven_graph_plane_hartman_pthread_worker(void *args) {
+    AvenGraphPlaneHartmanPthreadWorker *worker = args;
 
-    atomic_fetch_add_explicit(
-        &worker->thread_ctx->frames_active,
+    __atomic_add_fetch(
+        &worker->pthread_ctx->frames_active,
         1,
-        memory_order_relaxed
+        __ATOMIC_RELAXED
     );
 
     AvenGraphPlaneHartmanFrameOptional frame =
-        aven_graph_plane_hartman_thread_next_frame(
-            worker->thread_ctx,
+        aven_graph_plane_hartman_pthread_next_frame(
+            worker->pthread_ctx,
             worker->thread_index
         );
 
-    AvenGraphPlaneHartmanThreadMarkSet mark_set = {
+    AvenGraphPlaneHartmanPthreadMarkSet mark_set = {
         .block_size = min(
             2048,
-            (uint32_t)worker->thread_ctx->graph.len
+            (uint32_t)worker->pthread_ctx->graph.len
         ),
     };
     while (frame.valid) {
         while (
-            !aven_graph_plane_hartman_thread_frame_step(
-                worker->thread_ctx,
+            !aven_graph_plane_hartman_pthread_frame_step(
+                worker->pthread_ctx,
                 &frame.value,
                 &mark_set
             )
         ) {}
-        frame = aven_graph_plane_hartman_thread_next_frame(
-            worker->thread_ctx,
+        frame = aven_graph_plane_hartman_pthread_next_frame(
+            worker->pthread_ctx,
             worker->thread_index
         );
     }
 }
 
-static inline void aven_graph_plane_hartman_thread(
+static inline void aven_graph_plane_hartman_pthread(
     AvenGraphPlaneHartmanListProp color_lists,
     AvenGraph graph,
     AvenGraphSubset outer_face,
@@ -687,7 +650,7 @@ static inline void aven_graph_plane_hartman_thread(
     AvenArena arena
 ) {
     AvenGraphAug aug_graph = aven_graph_aug(graph, &arena);
-    AvenGraphPlaneHartmanThreadCtx ctx = aven_graph_plane_hartman_thread_init(
+    AvenGraphPlaneHartmanPthreadCtx ctx = aven_graph_plane_hartman_pthread_init(
         color_lists,
         aug_graph,
         outer_face,
@@ -695,15 +658,15 @@ static inline void aven_graph_plane_hartman_thread(
         &arena
     );
 
-    Slice(AvenGraphPlaneHartmanThreadWorker) workers = aven_arena_create_slice(
-        AvenGraphPlaneHartmanThreadWorker,
+    Slice(AvenGraphPlaneHartmanPthreadWorker) workers = aven_arena_create_slice(
+        AvenGraphPlaneHartmanPthreadWorker,
         &arena,
         thread_pool->workers.len + 1
     );
 
     for (uint32_t i = 0; i < thread_pool->workers.len + 1; i += 1) {
-        slice_get(workers, i) = (AvenGraphPlaneHartmanThreadWorker) {
-            .thread_ctx = &ctx,
+        slice_get(workers, i) = (AvenGraphPlaneHartmanPthreadWorker) {
+            .pthread_ctx = &ctx,
             .thread_index = i
         };
     }
@@ -711,14 +674,14 @@ static inline void aven_graph_plane_hartman_thread(
     for (uint32_t i = 0; i < thread_pool->workers.len; i += 1) {
         aven_thread_pool_submit(
             thread_pool,
-            aven_graph_plane_hartman_thread_worker,
+            aven_graph_plane_hartman_pthread_worker,
             &slice_get(workers, i + 1)
         );
     }
 
-    aven_graph_plane_hartman_thread_worker(&slice_get(workers, 0));
+    aven_graph_plane_hartman_pthread_worker(&slice_get(workers, 0));
 
     aven_thread_pool_wait(thread_pool);
 }
 
-#endif // AVEN_GRAPH_PLANE_HARTMAN_THREAD_H
+#endif // AVEN_GRAPH_PLANE_HARTMAN_PTHREAD_H

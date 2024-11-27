@@ -25,7 +25,7 @@
     #include <assert.h>
 #endif
 
-#if defined(__STDC_VERSION__) and __STDC_VERSION__ >= 201112L
+#if __STDC_VERSION__ >= 201112L
     #include <stdnoreturn.h>
 #elif __STDC_VERSION__ >= 199901L
     #ifndef noreturn
