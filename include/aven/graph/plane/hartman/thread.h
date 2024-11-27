@@ -55,7 +55,6 @@ aven_graph_plane_hartman_thread_init(
     AvenGraphPlaneHartmanThreadCtx ctx = {
         .graph = graph,
         .color_lists = color_lists,
-        .next_mark = 1,
         .nthreads = nthreads,
         .entry_pool = aven_arena_create_pool(
             AvenGraphPlaneHartmanThreadEntry,
@@ -78,6 +77,10 @@ aven_graph_plane_hartman_thread_init(
             (3 + nthreads) * graph.len
         ),
     };
+    atomic_init(&ctx.valid_entries.len, 0);
+    atomic_init(&ctx.frames_active, 0);
+    atomic_init(&ctx.next_mark, 1);
+    atomic_init(&ctx.lock, false);
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
         slice_get(ctx.vertex_info, v) = (AvenGraphPlaneHartmanVertex){ 0 };

@@ -57,9 +57,21 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     AvenGraphPlanePohThreadCtx ctx = {
         .graph = graph,
         .coloring = coloring,
-        .vertex_info = { .len = graph.len },
-        .frames = { .cap = graph.len - 2 },
+        .vertex_info = aven_arena_create_slice(
+            AvenGraphPlanePohVertex,
+            arena,
+            graph.len
+        ),
+        .frames = aven_arena_create_list(
+            AvenGraphPlanePohThreadFrame,
+            arena,
+            graph.len - 2
+        ),
     };
+
+    atomic_init(&ctx.frames.len, 0);
+    atomic_init(&ctx.frames_active, 0);
+    atomic_init(&ctx.frames_lock, false);
 
     for (uint32_t i = 0; i < ctx.coloring.len; i += 1) {
         slice_get(ctx.coloring, i) = 0;
@@ -70,12 +82,6 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     for (uint32_t i = 0; i < q.len; i += 1) {
         slice_get(ctx.coloring, slice_get(q, i)) = 2;
     }
-
-    ctx.vertex_info.ptr = aven_arena_create_array(
-        AvenGraphPlanePohVertex,
-        arena,
-        ctx.vertex_info.len
-    );
 
     for (uint32_t i = 0; i < ctx.vertex_info.len; i += 1) {
         slice_get(ctx.vertex_info, i) = (AvenGraphPlanePohVertex){ 0 };
@@ -89,12 +95,6 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
         graph,
         p1,
         q1
-    );
-
-    ctx.frames.ptr = aven_arena_create_array(
-        AvenGraphPlanePohThreadFrame,
-        arena,
-        ctx.frames.cap
     );
 
     list_push(ctx.frames) = (AvenGraphPlanePohThreadFrame){
