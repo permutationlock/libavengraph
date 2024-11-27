@@ -39,9 +39,9 @@
 #define GRAPH_MAX_VERTICES (4000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.02f
+#define VERTEX_RADIUS 0.04f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 30)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 6)
 #define CHANGE_V_WAIT_STEPS 1
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
@@ -413,55 +413,55 @@ static void app_update(
                 }
                 break;
             case APP_STATE_HARTMAN:
-                ctx.count += 1;
-                if (ctx.count > CHANGE_V_WAIT_STEPS) {
-                    done = true;
-                    for (
-                        size_t i = 0;
-                        i < countof(ctx.data.hartman.frames);
-                        i += 1
-                    ) {
-                        AvenGraphPlaneHartmanFrameOptional *frame =
-                            &ctx.data.hartman.frames[i];
-                        if (frame->valid) {
-                            frame->valid = !aven_graph_plane_hartman_frame_step(
-                                &ctx.data.hartman.ctx,
-                                &frame->value
+                // ctx.count += 1;
+                // if (ctx.count > CHANGE_V_WAIT_STEPS) {
+                done = true;
+                for (
+                    size_t i = 0;
+                    i < countof(ctx.data.hartman.frames);
+                    i += 1
+                ) {
+                    AvenGraphPlaneHartmanFrameOptional *frame =
+                        &ctx.data.hartman.frames[i];
+                    if (frame->valid) {
+                        frame->valid = !aven_graph_plane_hartman_frame_step(
+                            &ctx.data.hartman.ctx,
+                            &frame->value
+                        );
+                        done = false;
+                    } else {
+                        for (
+                            size_t j = 0;
+                            j < ctx.data.hartman.ctx.frames.len;
+                            j += 1
+                        ) {
+                            AvenGraphPlaneHartmanFrame *nframe = &list_get(
+                                ctx.data.hartman.ctx.frames,
+                                j
                             );
-                            done = false;
-                        } else {
-                            for (
-                                size_t j = 0;
-                                j < ctx.data.hartman.ctx.frames.len;
-                                j += 1
+                            if (
+                                slice_get(
+                                    ctx.data.hartman.ctx.color_lists,
+                                    nframe->v
+                                ).len == 1
                             ) {
-                                AvenGraphPlaneHartmanFrame *nframe = &list_get(
+                                frame->value = *nframe;
+                                frame->valid = true;
+                                *nframe = list_get(
                                     ctx.data.hartman.ctx.frames,
-                                    j
+                                    ctx.data.hartman.ctx.frames.len - 1
                                 );
-                                if (
-                                    slice_get(
-                                        ctx.data.hartman.ctx.color_lists,
-                                        nframe->v
-                                    ).len == 1
-                                ) {
-                                    frame->value = *nframe;
-                                    frame->valid = true;
-                                    *nframe = list_get(
-                                        ctx.data.hartman.ctx.frames,
-                                        ctx.data.hartman.ctx.frames.len - 1
-                                    );
-                                    ctx.data.hartman.ctx.frames.len -= 1;
-                                    break;
-                                }
+                                ctx.data.hartman.ctx.frames.len -= 1;
+                                break;
                             }
                         }
+                    }
 
-                        if (frame->valid) {
-                            done = false;
-                        }
+                    if (frame->valid) {
+                        done = false;
                     }
                 }
+                // }
                 if (done) {
                     ctx.state = APP_STATE_COLORED;
                     AvenGraphPropUint8 coloring = { .len = ctx.graph.len };
