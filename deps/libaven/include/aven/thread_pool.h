@@ -181,6 +181,10 @@ static void aven_thread_pool_halt_and_destroy(AvenThreadPool *thread_pool) {
 
     aven_thread_pool_wait(thread_pool);
 
+    for (size_t i = 0; i < thread_pool->workers.len; i += 1) {
+        pthread_join(slice_get(thread_pool->workers, i), NULL);
+    }
+
     pthread_mutex_destroy(&thread_pool->lock);
     pthread_cond_destroy(&thread_pool->job_cond);
     pthread_cond_destroy(&thread_pool->done_cond);

@@ -12,7 +12,7 @@
 #include <aven/graph.h>
 #include <aven/graph/path_color.h>
 #include <aven/graph/plane.h>
-#include <aven/graph/plane/poh.h>
+#include <aven/graph/plane/poh/pthread.h>
 #include <aven/graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 3200000UL)
+#define ARENA_SIZE (4096UL * 1200000UL)
 
-#define NGRAPHS 3
+#define NGRAPHS 1
 #define MAX_VERTICES 10000001
 
 #define NTHREADS 3
@@ -43,8 +43,8 @@ int main(void) {
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     AvenThreadPool thread_pool = aven_thread_pool_init(
-        NTHREADS,
-        NTHREADS,
+        NTHREADS - 1,
+        NTHREADS - 1,
         &arena
     );
     aven_thread_pool_run(&thread_pool);

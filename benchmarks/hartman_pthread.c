@@ -23,14 +23,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 1200000UL)
+#define ARENA_SIZE (4096UL * 80000UL)
 
-#define NGRAPHS 3
-#define MAX_VERTICES 10000001
+#define NGRAPHS 1
+#define MAX_VERTICES 1000001
 
 #define MAX_COLOR 127
 
-#define NTHREADS 3
+#define NTHREADS 2
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);

@@ -446,10 +446,10 @@ int main(int argc, char **argv) {
 
     AvenBuildStep bench_root_step = aven_build_step_root();
     aven_build_step_add_dep(&bench_root_step, &hartman_pthread_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &poh_pthread_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &bfs_root_step, &arena);
+    //aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
+    //aven_build_step_add_dep(&bench_root_step, &poh_pthread_root_step, &arena);
+    //aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
+    //aven_build_step_add_dep(&bench_root_step, &bfs_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &gen_tri_root_step, &arena);
 
     // Run build steps according to args
