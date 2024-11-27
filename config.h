@@ -3,7 +3,7 @@
 #if !defined(_WIN32) && defined(__GNUC__)
     #define AVEN_BUILD_COMMON_DEFAULT_CCFLAGS \
         "-DAVEN_UNREACHABLE_ASSERT " \
-        "-std=c11 -pedantic -fstrict-aliasing -O- -g3 -Werror -Wall -Wextra " \
+        "-std=c11 -pedantic -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
         "-Wshadow -Wconversion -Wdouble-promotion -Winit-self " \
         "-Wcast-align -Wstrict-prototypes -Wold-style-definition " \
         "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"

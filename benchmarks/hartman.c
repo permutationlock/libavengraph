@@ -24,7 +24,7 @@
 #define ARENA_SIZE (4096UL * 1200000UL)
 
 #define NGRAPHS 3
-#define MAX_VERTICES 1000001
+#define MAX_VERTICES 10000001
 
 #define MAX_COLOR 127
 
@@ -36,7 +36,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xdeadf00d, 0xbeefea11);
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x12345679, 0xdef12345);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     Aff2 ident;

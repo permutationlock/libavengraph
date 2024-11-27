@@ -11,7 +11,7 @@
 #include <aven/graph/path_color.h>
 #include <aven/graph/plane.h>
 #include <aven/graph/plane/hartman.h>
-#include <aven/graph/plane/hartman/pthread.h>
+#include <aven/graph/plane/hartman/thread.h>
 #include <aven/graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
@@ -26,7 +26,7 @@
 #define ARENA_SIZE (4096UL * 1200000UL)
 
 #define NGRAPHS 3
-#define MAX_VERTICES 1000001
+#define MAX_VERTICES 10000001
 
 #define MAX_COLOR 127
 
@@ -40,7 +40,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xdeadf00d, 0xbeefea11);
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x12345679, 0xdef12345);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     AvenThreadPool thread_pool = aven_thread_pool_init(
@@ -129,7 +129,7 @@ int main(void) {
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            aven_graph_plane_hartman_pthread(
+            aven_graph_plane_hartman_thread(
                 slice_get(cases, i).color_lists,
                 slice_get(cases, i).graph,
                 face,

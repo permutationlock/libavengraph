@@ -12,7 +12,7 @@
 #include <aven/graph.h>
 #include <aven/graph/path_color.h>
 #include <aven/graph/plane.h>
-#include <aven/graph/plane/poh/pthread.h>
+#include <aven/graph/plane/poh/thread.h>
 #include <aven/graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
@@ -27,7 +27,7 @@
 #define ARENA_SIZE (4096UL * 1200000UL)
 
 #define NGRAPHS 3
-#define MAX_VERTICES 1000001
+#define MAX_VERTICES 10000001
 
 #define NTHREADS 3
 
@@ -39,7 +39,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0xdeadf00d, 0xbeefea11);
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x12345679, 0xdef12345);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     AvenThreadPool thread_pool = aven_thread_pool_init(
@@ -89,7 +89,7 @@ int main(void) {
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            slice_get(cases, i).coloring = aven_graph_plane_poh_pthread(
+            slice_get(cases, i).coloring = aven_graph_plane_poh_thread(
                 slice_get(cases, i).graph,
                 p,
                 q,
@@ -101,6 +101,8 @@ int main(void) {
         AvenTimeInst end_inst = aven_time_now();
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
+
+        AvenTimeInst verify_start_inst = aven_time_now();
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -114,16 +116,28 @@ int main(void) {
             }
         }
 
+        AvenTimeInst verify_end_inst = aven_time_now();
+        int64_t verify_elapsed_ns = aven_time_since(
+            verify_end_inst,
+            verify_start_inst
+        );
+        double verify_ns_per_graph = (double)verify_elapsed_ns /
+            (double)cases.len;
+
         printf(
             "path 3-coloring %lu graph(s) with %lu vertices:\n"
             "\tvalid 3-colorings: %lu\n"
             "\ttime per graph: %fns\n"
-            "\ttime per half-edge: %fns\n",
+            "\ttime per half-edge: %fns\n"
+            "\tverify time per graph: %fns\n"
+            "\tverify time per half-edge: %fns\n",
             (unsigned long)cases.len,
             (unsigned long)n,
             (unsigned long)nvalid,
             ns_per_graph,
-            ns_per_graph / (double)(6 * n - 12)
+            ns_per_graph / (double)(6 * n - 12),
+            verify_ns_per_graph,
+            verify_ns_per_graph / (double)(6 * n - 12)
         );
     }
 
