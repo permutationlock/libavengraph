@@ -2,8 +2,6 @@
     #define _POSIX_C_SOURCE 200112L
 #endif
 
-#define AVEN_GRAPH_PLANE_POH_X86_PTHREAD
-
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
 #include <aven/arena.h>

@@ -4,7 +4,10 @@
 #include <aven.h>
 #include <aven/arena.h>
 
-#if !defined(__STDC_VERSION__) or __STDC_VERSION__ < 201112L
+#if !defined(__STDC_VERSION__) or \
+    __STDC_VERSION__ < 201112L or \
+    (defined(_WIN32) and !defined(_MSC_VER))
+
     #define AVEN_THREAD_POOL_USE_PTHREADS
 #endif
 

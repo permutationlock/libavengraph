@@ -25,12 +25,12 @@
     #include <assert.h>
 #endif
 
-#if defined(__STDC_VERSION__) and __STDC_VERSION__ >= 201112L
-    #include <stdnoreturn.h>
-#elif __STDC_VERSION__ >= 199901L
-    #ifndef noreturn
-        #define noreturn
-    #endif
+#if defined(__STDC_VERSION__) and __STDC_VERSION__ >= 202311L
+    #define AVEN_NORETURN noreturn
+#elif defined(__STDC_VERSION__) and __STDC_VERSION__ >= 201112L
+    #define AVEN_NORETURN _Noreturn
+#elif defined(__STDC_VERSION__) and __STDC_VERSION__ >= 199901L
+    #define AVEN_NORETURN
 #else
     #error "C99 or later is required"
 #endif
@@ -172,9 +172,12 @@ void *memset(void *ptr, int value, size_t num);
 
 #define aven_panic(msg) aven_panic_internal_fn(msg, sizeof(msg) - 1)
 
-static inline noreturn void aven_panic_internal_fn(const char *msg, size_t len) {
+static inline AVEN_NORETURN void aven_panic_internal_fn(
+    const char *msg,
+    size_t len
+) {
     // TODO: get working on windows
-    noreturn void _Exit(int status);
+    AVEN_NORETURN void _Exit(int status);
 
 #ifndef _WIN32
     long write(int fd, const void *buffer, size_t count);

@@ -23,8 +23,8 @@ static AvenArg libaven_build_arg_data[] = {
         .type = AVEN_ARG_TYPE_BOOL,
         .value = {
             .type = AVEN_ARG_TYPE_BOOL,
-    #if defined(LIBAVEN_BUILD_DEFUALT_WINPTHREADS_LOCAL)
-            .data = { .arg_bool = LIBAVEN_BUILD_DEFUALT_WINPTHREADS_LOCAL },
+    #if defined(LIBAVEN_BUILD_DEFAULT_WINPTHREADS_LOCAL)
+            .data = { .arg_bool = LIBAVEN_BUILD_DEFAULT_WINPTHREADS_LOCAL },
     #else
             .data = { .arg_bool = 0 },
     #endif

@@ -35,6 +35,7 @@ static inline uint32_t aven_graph_neighbor_index(
         }
     }
     assert(false);
+    return 0xffffffff;
 }
 
 static inline uint32_t aven_graph_next_neighbor_index(
@@ -167,6 +168,7 @@ static inline uint32_t aven_graph_aug_neighbor_index(
         }
     }
     assert(false);
+    return 0xffffffff;
 }
 
 #endif // AVEN_GRAPH_H

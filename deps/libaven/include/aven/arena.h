@@ -3,7 +3,7 @@
 
 #include "../aven.h"
 
-#if __STDC_VERSION__ >= 201112L
+#if defined(__STDC_VERSION__) and __STDC_VERSION__ >= 201112L
     #include <stdalign.h>
     #define aven_arena_alignof(t) alignof(t)
     #if defined(_WIN32) and defined(_MSC_VER)
@@ -12,7 +12,7 @@
     #else
         #define AVEN_ARENA_BIGGEST_ALIGNMENT (alignof(max_align_t))
     #endif
-#elif __STDC_VERSION__ >= 199901L
+#elif defined(__STDC_VERSION__) and __STDC_VERSION__ >= 199901L
     #ifndef __BIGGEST_ALIGNMENT__
         #error "__BIGGEST_ALIGNMENT__ must be the max required alignment"
     #endif
