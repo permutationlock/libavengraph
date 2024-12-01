@@ -18,13 +18,13 @@ static AvenArg libaven_build_arg_data[] = {
         },
     },
     {
-        .name = "-winpthreads-local",
+        .name = "-winpthreads",
         .description = "Build and link a local Mingw-w64 winpthreads",
         .type = AVEN_ARG_TYPE_BOOL,
         .value = {
             .type = AVEN_ARG_TYPE_BOOL,
-    #if defined(LIBAVEN_BUILD_DEFAULT_WINPTHREADS_LOCAL)
-            .data = { .arg_bool = LIBAVEN_BUILD_DEFAULT_WINPTHREADS_LOCAL },
+    #if defined(LIBAVEN_BUILD_DEFAULT_WINPTHREADS)
+            .data = { .arg_bool = LIBAVEN_BUILD_DEFAULT_WINPTHREADS },
     #else
             .data = { .arg_bool = 0 },
     #endif
@@ -68,7 +68,7 @@ static inline LibAvenBuildOpts libaven_build_opts(
     LibAvenBuildOpts opts = { 0 };
     opts.winutf8 = aven_arg_get_bool(args, "-winutf8");
 
-    opts.winpthreads.local = aven_arg_get_bool(args, "-winpthreads-local");
+    opts.winpthreads.local = aven_arg_get_bool(args, "-winpthreads");
     if (aven_arg_has_arg(args, "-winpthreads-ccflags")) {
         opts.winpthreads.ccflags.value = aven_str_split(
             aven_str_cstr(aven_arg_get_str(args, "-winpthreads-ccflags")),
