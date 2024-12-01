@@ -19,9 +19,12 @@
     #define __has_builtin(unused) 0
 #endif
 
-#if defined(AVEN_UNREACHABLE_ASSERT) and __has_builtin(__builtin_unreachable)
+#if !defined(AVEN_USE_STD_ASSERT) and __has_builtin(__builtin_unreachable)
     #define assert(c) while (!(c)) { __builtin_unreachable(); }
 #else
+    #ifndef AVEN_USE_STD_ASSERT
+        #define AVEN_USE_STD_ASSERT
+    #endif
     #include <assert.h>
 #endif
 
@@ -43,17 +46,18 @@
 #define List(t) struct { t *ptr; size_t len; size_t cap; }
 
 #define PoolEntry(t) union { t data; size_t parent; }
-#define Pool(t) struct { \
-        PoolEntry(t) *ptr; \
+#define PoolExplicit(e) struct { \
+        e *ptr; \
         size_t len; \
         size_t cap; \
         size_t free; \
         size_t used; \
     }
+#define Pool(t) PoolExplicit(PoolEntry(t))
 
 typedef Slice(unsigned char) ByteSlice;
 
-#if defined(AVEN_UNREACHABLE_ASSERT) or !defined(NDEBUG)
+#if !defined(AVEN_USE_STD_ASSERT) or !defined(NDEBUG)
     static inline size_t aven_assert_lt_internal_fn(size_t a, size_t b) {
         assert(a < b);
         return a;
@@ -138,6 +142,7 @@ static inline void aven_pool_push_free_internal(
             aven_assert_lt_internal(i, j) \
     }
 #define list_array(a) { .ptr = a, .cap = countof(a) }
+#define pool_array(a) { .ptr = a, .cap = countof(a) }
 
 #define as_bytes(ref) (ByteSlice){ \
         .ptr = (unsigned char *)ref, \
