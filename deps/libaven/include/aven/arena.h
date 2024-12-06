@@ -36,7 +36,7 @@ static inline AvenArena aven_arena_init(void *mem, size_t size) {
 #if __has_attribute(malloc)
     __attribute__((malloc))
 #endif
-#if defined(AVEN_IMPLEMENTATION_SEPARATE_TU)
+#if !defined(AVEN_IMPLEMENTATION)
     // These attributes cause issues when compiling as one translation unit
     #if __has_attribute(alloc_size)
         __attribute__((alloc_size(2, 4)))
@@ -51,7 +51,7 @@ AVEN_FN void *aven_arena_alloc(
     size_t align,
     size_t size
 );
-#if defined(AVEN_IMPLEMENTATION_SEPARATE_TU)
+#if !defined(AVEN_IMPLEMENTATION)
     // These attributes cause issues when compiling as one translation unit
     #if __has_attribute(alloc_size)
         __attribute__((alloc_size(4, 6)))

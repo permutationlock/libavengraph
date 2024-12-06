@@ -2,7 +2,7 @@
     #define _POSIX_C_SOURCE 200112L
 #endif
 
-#define SHOW_VERTEX_LABELS
+//#define SHOW_VERTEX_LABELS
 
 #define AVEN_GRAPH_PLANE_POH_PTHREAD
 
@@ -40,9 +40,9 @@
 #define GRAPH_MAX_VERTICES (300)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.045f
+#define VERTEX_RADIUS 0.05f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 30)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
@@ -150,17 +150,12 @@ static void app_reset(void) {
 
     Aff2 area_transform;
     aff2_identity(area_transform);
-    aff2_stretch(
-        area_transform,
-        ctx.norm_dim,
-        area_transform
-    );
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.2f * (VERTEX_RADIUS * VERTEX_RADIUS),
+        1.33f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
-        false,
+        true,
         &arena
     );
     AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
@@ -263,8 +258,13 @@ static void app_update(
     ctx.norm_dim[0] = norm_width;
     ctx.norm_dim[1] = norm_height;
 
-    if (ctx.elapsed >= BFS_TIMESTEP) {
-        ctx.elapsed -= BFS_TIMESTEP;
+    int64_t timestep = BFS_TIMESTEP;
+    if (ctx.state == APP_STATE_GEN) {
+        timestep = BFS_TIMESTEP / 8;
+    }
+
+    while (ctx.elapsed >= timestep) {
+        ctx.elapsed -= timestep;
 
         bool done = false;
         switch (ctx.state) {
@@ -287,19 +287,19 @@ static void app_update(
                     uint32_t p_data[3];
                     uint32_t q_data[3];
 
-                    uint32_t p1 = aven_rng_rand_bounded(ctx.rng, 3);
+                    uint32_t p1 = aven_rng_rand_bounded(ctx.rng, 4);
                     AvenGraphSubset p = {
-                        .len = 1 + aven_rng_rand_bounded(ctx.rng, 2),
+                        .len = 1 + aven_rng_rand_bounded(ctx.rng, 3),
                         .ptr = p_data,
                     };
                     for (uint32_t i = 0; i < p.len; i += 1) {
-                        slice_get(p, i) = (p1 + i) % 3;
+                        slice_get(p, i) = (p1 + i) % 4;
                     }
 
-                    uint32_t q1 = (p1 + (uint32_t)p.len) % 3;
-                    AvenGraphSubset q = { .len = 3 - p.len, .ptr = q_data };
+                    uint32_t q1 = (p1 + (uint32_t)p.len) % 4;
+                    AvenGraphSubset q = { .len = 4 - p.len, .ptr = q_data };
                     for (uint32_t i = 0; i < q.len; i += 1) {
-                        slice_get(q, q.len - i - 1) = (q1 + i) % 3;
+                        slice_get(q, q.len - i - 1) = (q1 + i) % 4;
                     }
 
                     ctx.data.poh.coloring.len = ctx.graph.len;
@@ -354,6 +354,11 @@ static void app_update(
                 }
                 break;
             }
+        }
+
+        timestep = BFS_TIMESTEP;
+        if (ctx.state == APP_STATE_GEN) {
+            timestep = BFS_TIMESTEP / 8;
         }
     }
 

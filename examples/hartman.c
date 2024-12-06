@@ -39,9 +39,9 @@
 #define GRAPH_MAX_VERTICES (4000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.04f
+#define VERTEX_RADIUS 0.045f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 6)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 4)
 #define CHANGE_V_WAIT_STEPS 1
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
@@ -82,7 +82,7 @@ typedef union {
     } gen;
     struct {
         AvenGraphPlaneHartmanCtx ctx;
-        AvenGraphPlaneHartmanFrameOptional frames[2];
+        AvenGraphPlaneHartmanFrameOptional frames[1];
         AvenGraphPlaneHartmanListProp color_lists;
     } hartman;
     struct {
@@ -151,7 +151,7 @@ static void app_reset(void) {
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.15f * (VERTEX_RADIUS * VERTEX_RADIUS),
+        1.2f * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.001f,
         true,
         &arena
@@ -431,13 +431,13 @@ static void app_update(
                         done = false;
                     } else {
                         for (
-                            size_t j = 0;
-                            j < ctx.data.hartman.ctx.frames.len;
-                            j += 1
+                            size_t j = ctx.data.hartman.ctx.frames.len;
+                            j > 0;
+                            j -= 1
                         ) {
                             AvenGraphPlaneHartmanFrame *nframe = &list_get(
                                 ctx.data.hartman.ctx.frames,
-                                j
+                                j - 1
                             );
                             if (
                                 slice_get(

@@ -302,6 +302,7 @@ static void aven_graph_plane_hartman_thread_remove_color(
             assert((list->len & 0x3) > 1);
             list->data[i] = list->data[list->len - 1];
             list->len -= 1;
+            break;
         }
     }
 }
@@ -335,6 +336,7 @@ static void aven_graph_plane_hartman_thread_color_differently(
         if (list->data[i] != color) {
             list->data[0] = list->data[i];
             list->len = ((list->len & 0xfffffffc) | 1);
+            break;
         }
     }
     assert(list->data[0] != color);

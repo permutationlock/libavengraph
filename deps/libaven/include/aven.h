@@ -105,12 +105,13 @@ static inline void aven_pool_push_free_internal(
     *free = index + 1;
 }
 
-#define slice_get(s, i) (s).ptr[aven_assert_lt_internal(i, (s).len)]
-#define list_get(l, i) slice_get(l, i)
-#define list_back(l) slice_get(l, (l).len - 1)
+#define get(s, i) (s).ptr[aven_assert_lt_internal(i, (s).len)]
+#define slice_get(s, i) get(s, i)
+#define list_get(l, i) get(l, i)
+#define list_back(l) get(l, (l).len - 1)
 #define list_pop(l) (l).ptr[aven_assert_lt_internal(--(l).len, (l).cap)]
 #define list_push(l) (l).ptr[aven_assert_lt_internal((l).len++, (l).cap)]
-#define pool_get(p, i) slice_get(p, i).data
+#define pool_get(p, i) get(p, i).data
 #define pool_create(p) (((p).free == 0) ? \
         aven_pool_next_internal(&(p).used, &(p).len, (p).cap) : \
         aven_pool_pop_free_internal( \
@@ -130,16 +131,16 @@ static inline void aven_pool_push_free_internal(
 #define slice_list(l) { .ptr = (l).ptr, .len = (l).len }
 #define slice_head(s, i) { \
         .ptr = (s).ptr, \
-        .len = aven_assert_lt_internal(i, (s).len) \
+        .len = aven_assert_lt_internal(i, (s).len + 1) \
     }
 #define slice_tail(s, i) { \
         .ptr = (s).ptr + i, \
-        .len = (s).len - aven_assert_lt_internal(i, (s).len) \
+        .len = (s).len - aven_assert_lt_internal(i, (s).len + 1) \
     }
 #define slice_range(s, i, j) { \
         .ptr = (s).ptr + i, \
-        .len = aven_assert_lt_internal(j, (s).len) - \
-            aven_assert_lt_internal(i, j) \
+        .len = aven_assert_lt_internal(j, (s).len + 1) - \
+            aven_assert_lt_internal(i, j + 1) \
     }
 #define list_array(a) { .ptr = a, .cap = countof(a) }
 #define pool_array(a) { .ptr = a, .cap = countof(a) }
@@ -156,7 +157,6 @@ static inline void aven_pool_push_free_internal(
         .ptr = (unsigned char *)(s).ptr, \
         .len = (s).len * sizeof(*(s).ptr), \
     }
-#define list_as_bytes(l) slice_as_bytes(l)
 
 #if defined(_WIN32) and defined(_MSC_VER)
     void *memcpy(void *s1, const void *s2, size_t n);
@@ -175,25 +175,24 @@ void *memset(void *ptr, int value, size_t num);
         ) \
     )
 
-#define aven_panic(msg) aven_panic_internal_fn(msg, sizeof(msg) - 1)
-
 static inline AVEN_NORETURN void aven_panic_internal_fn(
     const char *msg,
     size_t len
 ) {
-    // TODO: get working on windows
     AVEN_NORETURN void _Exit(int status);
 
-#ifndef _WIN32
+#ifdef _WIN32
+    int _write(int fd, const void *buffer, unsigned int count);
+    _write(2, msg, (unsigned int)len);
+#else
     long write(int fd, const void *buffer, size_t count);
     write(2, msg, len);
-#else
-    (void)msg;
-    (void)len;
 #endif
 
     _Exit(1);
 }
+
+#define aven_panic(msg) aven_panic_internal_fn(msg, sizeof(msg) - 1)
 
 #if defined(AVEN_IMPLEMENTATION) and !defined(AVEN_IMPLEMENTATION_SEPARATE_TU)
     #define AVEN_FN static inline
