@@ -33,10 +33,10 @@
 #endif
 
 #define ARENA_PAGE_SIZE 4096
-#define GRAPH_ARENA_PAGES 10000
+#define GRAPH_ARENA_PAGES 2000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (4000)
+#define GRAPH_MAX_VERTICES (1500)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
 #define VERTEX_RADIUS 0.1f
@@ -698,13 +698,16 @@ static void app_update(
     // float camera_frac = (float)ctx->camera_time / (float)CAMERA_TIMESTEP;
     float border_padding = 2.0f * ctx.radius;
 
+    float scale = 1.0f / (1.0f + border_padding);
+
     Aff2 cam_transform;
     aff2_camera_position(
         cam_transform,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ norm_width + border_padding, norm_height + border_padding },
+        (Vec2){ norm_width, norm_height },
         0.0f
     );
+    aff2_stretch(cam_transform, (Vec2){ scale, scale }, cam_transform);
 
     aven_gl_shape_buffer_update(
         &gl,
