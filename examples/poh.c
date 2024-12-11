@@ -416,6 +416,7 @@ static void app_update(
     assert(gl.GetError() == 0);
 
     float border_padding = 2.0f * VERTEX_RADIUS;
+    float scale = 1.0f / (1.0f + border_padding);
 
     Aff2 cam_transform;
     aff2_camera_position(
@@ -424,6 +425,7 @@ static void app_update(
         (Vec2){ norm_width + border_padding, norm_height + border_padding },
         0.0f
     );
+    aff2_stretch(cam_transform, (Vec2){ scale, scale }, cam_transform);
 
     aven_gl_shape_buffer_update(
         &gl,
