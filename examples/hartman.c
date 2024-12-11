@@ -36,12 +36,12 @@
 #define GRAPH_ARENA_PAGES 1000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (300)
+#define GRAPH_MAX_VERTICES (1000)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.045f
+#define VERTEX_RADIUS 0.025f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 4)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 12)
 #define CHANGE_V_WAIT_STEPS 1
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
@@ -82,7 +82,7 @@ typedef union {
     } gen;
     struct {
         AvenGraphPlaneHartmanCtx ctx;
-        AvenGraphPlaneHartmanFrameOptional frames[1];
+        AvenGraphPlaneHartmanFrameOptional frames[3];
         AvenGraphPlaneHartmanListProp color_lists;
     } hartman;
     struct {
@@ -375,24 +375,24 @@ static void app_update(
                     for (uint32_t i = 0; i < aug_graph.len; i += 1) {
                         AvenGraphPlaneHartmanList list = {
                             .len = 3,
-                            .data = {
+                            .ptr = {
                                 1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
                                 1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
                                 1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
                             },
                         };
 
-                        while (list.data[1] == list.data[0]) {
-                            list.data[1] = 1 + aven_rng_rand_bounded(
+                        while (get(list, 1) == get(list, 0)) {
+                            get(list, 1) = 1 + aven_rng_rand_bounded(
                                 ctx.rng,
                                 MAX_COLOR
                             );
                         }
                         while (
-                            list.data[2] == list.data[1] or
-                            list.data[2] == list.data[0]
+                            get(list, 2) == get(list, 1) or
+                            get(list, 2) == get(list, 0)
                         ) {
-                            list.data[2] = 1 + aven_rng_rand_bounded(
+                            get(list, 2) = 1 + aven_rng_rand_bounded(
                                 ctx.rng,
                                 MAX_COLOR
                             );
@@ -442,7 +442,7 @@ static void app_update(
                             if (
                                 slice_get(
                                     ctx.data.hartman.ctx.color_lists,
-                                    nframe->v
+                                    nframe->z
                                 ).len == 1
                             ) {
                                 frame->value = *nframe;
@@ -471,10 +471,10 @@ static void app_update(
                         coloring.len
                     );
                     for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
-                        slice_get(coloring, v) = (uint8_t)slice_get(
-                            ctx.data.hartman.ctx.color_lists,
-                            v
-                        ).data[0];
+                        slice_get(coloring, v) = (uint8_t)get(
+                            get(ctx.data.hartman.ctx.color_lists, v),
+                            0
+                        );
                     }
                     ctx.data.colored.coloring = coloring;
                     ctx.count = 0;

@@ -57,17 +57,20 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     AvenGraphPlanePohThreadCtx ctx = {
         .graph = graph,
         .coloring = coloring,
-        .vertex_info = aven_arena_create_slice(
-            AvenGraphPlanePohVertex,
-            arena,
-            graph.len
-        ),
-        .frames = aven_arena_create_list(
-            AvenGraphPlanePohThreadFrame,
-            arena,
-            graph.len - 2
-        ),
+        .vertex_info = { .len = graph.len },
+        .frames = { .len = graph.len - 2 },
     };
+
+    ctx.vertex_info.ptr = aven_arena_create_array(
+        AvenGraphPlanePohVertex,
+        arena,
+        ctx.vertex_info.len
+    );
+    ctx.frames.ptr = aven_arena_create_array(
+        AvenGraphPlanePohThreadFrame,
+        arena,
+        ctx.frames.cap
+    );
 
     atomic_init(&ctx.frames.len, 0);
     atomic_init(&ctx.frames_active, 0);

@@ -65,12 +65,12 @@ int main(void) {
                 rng,
                 &temp_arena
             );
-            slice_get(cases, i).graph = data.graph;
+            get(cases, i).graph = data.graph;
             if (data.graph.len != n) {
                 abort();
             }
 
-            AvenGraphPlaneHartmanListProp *color_lists = &slice_get(
+            AvenGraphPlaneHartmanListProp *color_lists = &get(
                 cases,
                 i
             ).color_lists;
@@ -85,30 +85,30 @@ int main(void) {
             for (uint32_t j = 0; j < color_lists->len; j += 1) {
                 AvenGraphPlaneHartmanList list = {
                     .len = 3,
-                    .data = {
+                    .ptr = {
                         1 + aven_rng_rand_bounded(rng, MAX_COLOR),
                         1 + aven_rng_rand_bounded(rng, MAX_COLOR),
                         1 + aven_rng_rand_bounded(rng, MAX_COLOR),
                     },
                 };
 
-                while (list.data[1] == list.data[0]) {
-                    list.data[1] = 1 + aven_rng_rand_bounded(
+                while (get(list, 1) == get(list, 0)) {
+                    get(list, 1) = 1 + aven_rng_rand_bounded(
                         rng,
                         MAX_COLOR
                     );
                 }
                 while (
-                    list.data[2] == list.data[1] or
-                    list.data[2] == list.data[0]
+                    get(list, 2) == get(list, 1) or
+                    get(list, 2) == get(list, 0)
                 ) {
-                    list.data[2] = 1 + aven_rng_rand_bounded(
+                    get(list, 2) = 1 + aven_rng_rand_bounded(
                         rng,
                         MAX_COLOR
                     );
                 }
 
-                slice_get(*color_lists, j) = list;
+                get(*color_lists, j) = list;
             }
         }
 
@@ -119,8 +119,8 @@ int main(void) {
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
             aven_graph_plane_hartman(
-                slice_get(cases, i).color_lists,
-                slice_get(cases, i).graph,
+                get(cases, i).color_lists,
+                get(cases, i).graph,
                 face,
                 temp_arena
             );
@@ -136,26 +136,23 @@ int main(void) {
             AvenGraphPropUint8 coloring = { .len = n };
             coloring.ptr = aven_arena_create_array(uint8_t, &color_arena, n);
 
-            AvenGraphPlaneHartmanListProp color_lists = slice_get(
+            AvenGraphPlaneHartmanListProp color_lists = get(
                 cases,
                 i
             ).color_lists;
 
             bool valid = true;
             for (uint32_t v = 0; v < n; v += 1) {
-                if (slice_get(color_lists, v).len != 1) {
+                if (get(color_lists, v).len != 1) {
                     valid = false;
                     break;
                 }
-                slice_get(coloring, v) = (uint8_t)slice_get(
-                    color_lists,
-                    v
-                ).data[0];
+                get(coloring, v) = (uint8_t)get(get(color_lists, v), 0);
             }
 
             if (valid) {
                 valid = aven_graph_path_color_verify(
-                    slice_get(cases, i).graph,
+                    get(cases, i).graph,
                     coloring,
                     color_arena
                 );

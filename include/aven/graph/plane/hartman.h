@@ -8,7 +8,7 @@
 
 typedef struct {
     uint32_t len;
-    uint32_t data[3];
+    uint32_t ptr[3];
 } AvenGraphPlaneHartmanList;
 typedef Slice(AvenGraphPlaneHartmanList) AvenGraphPlaneHartmanListProp;
 
@@ -23,12 +23,12 @@ typedef struct {
 } AvenGraphPlaneHartmanVertex;
 
 typedef struct {
-    uint32_t v;
     uint32_t x;
     uint32_t y;
-    AvenGraphPlaneHartmanVertex v_info;
+    uint32_t z;
     AvenGraphPlaneHartmanVertex x_info;
     AvenGraphPlaneHartmanVertex y_info;
+    AvenGraphPlaneHartmanVertex z_info;
 } AvenGraphPlaneHartmanFrame;
 typedef Optional(AvenGraphPlaneHartmanFrame) AvenGraphPlaneHartmanFrameOptional;
 
@@ -51,71 +51,66 @@ static inline AvenGraphPlaneHartmanCtx aven_graph_plane_hartman_init(
         .graph = graph,
         .color_lists = color_lists,
         .vertex_info = { .len = graph.len },
-        .frames = { .cap = 2 * graph.len - 4 },
         .marks = { .len = 4 * graph.len - 6 },
+        .frames = { .cap = 2 * graph.len - 4 },
         .next_mark = 1,
     };
-
-    ctx.frames.ptr = aven_arena_create_array(
-        AvenGraphPlaneHartmanFrame,
-        arena,
-        ctx.frames.cap
-    );
 
     ctx.vertex_info.ptr = aven_arena_create_array(
         AvenGraphPlaneHartmanVertex,
         arena,
         ctx.vertex_info.len
     );
-
-    for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
-        slice_get(ctx.vertex_info, v) = (AvenGraphPlaneHartmanVertex){ 0 };
-    }
-
     ctx.marks.ptr = aven_arena_create_array(
         uint32_t,
         arena,
         ctx.marks.len
     );
+    ctx.frames.ptr = aven_arena_create_array(
+        AvenGraphPlaneHartmanFrame,
+        arena,
+        ctx.frames.cap
+    );
 
-    for (uint32_t i = 0; i < ctx.marks.len; i += 1) {
-        slice_get(ctx.marks, i) = i;
+    for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
+        get(ctx.vertex_info, v) = (AvenGraphPlaneHartmanVertex){ 0 };
     }
 
-    uint32_t face_mark = ctx.next_mark;
-    ctx.next_mark += 1;
+    for (uint32_t i = 0; i < ctx.marks.len; i += 1) {
+        get(ctx.marks, i) = i;
+    }
 
-    uint32_t u = slice_get(cwise_outer_face, cwise_outer_face.len - 1);
+    uint32_t face_mark = ctx.next_mark++;
+
+    uint32_t u = get(cwise_outer_face, cwise_outer_face.len - 1);
     for (uint32_t i = 0; i < cwise_outer_face.len; i += 1) {
-        uint32_t v = slice_get(cwise_outer_face, i);
-        AvenGraphAugAdjList v_adj = slice_get(ctx.graph, v);
+        uint32_t v = get(cwise_outer_face, i);
+        AvenGraphAugAdjList v_adj = get(ctx.graph, v);
         
         uint32_t vu_index = aven_graph_aug_neighbor_index(ctx.graph, v, u);
-        uint32_t uv_index = slice_get(v_adj, vu_index).back_index;
+        uint32_t uv_index = get(v_adj, vu_index).back_index;
         
-        slice_get(ctx.vertex_info, v).nb.first = vu_index;
-        slice_get(ctx.vertex_info, u).nb.last = uv_index;
+        get(ctx.vertex_info, v).nb.first = vu_index;
+        get(ctx.vertex_info, u).nb.last = uv_index;
 
-        slice_get(ctx.vertex_info, v).mark = face_mark;
+        get(ctx.vertex_info, v).mark = face_mark;
 
         u = v;
     }
 
-    uint32_t xyv = slice_get(cwise_outer_face, 0);
-    AvenGraphPlaneHartmanVertex *xyv_info = &slice_get(ctx.vertex_info, xyv);
-    xyv_info->mark = ctx.next_mark;
-    ctx.next_mark += 1;
+    uint32_t xyv = get(cwise_outer_face, 0);
+    AvenGraphPlaneHartmanVertex *xyv_info = &get(ctx.vertex_info, xyv);
+    xyv_info->mark = ctx.next_mark++;
 
-    AvenGraphPlaneHartmanList *xyv_colors = &slice_get(ctx.color_lists, xyv);
+    AvenGraphPlaneHartmanList *xyv_colors = &get(ctx.color_lists, xyv);
     assert(xyv_colors->len > 0);
     xyv_colors->len = 1;
 
     list_push(ctx.frames) = (AvenGraphPlaneHartmanFrame){
-        .v = xyv,
         .x = xyv,
         .y = xyv,
+        .z = xyv,
         .x_info = *xyv_info,
-        .y_info = *xyv_info,
     };
 
     return ctx;
@@ -134,11 +129,11 @@ static inline AvenGraphPlaneHartmanVertex *aven_graph_plane_hartman_vinfo(
         return &frame->y_info;
     }
 
-    if (v == frame->v) {
-        return &frame->v_info;
+    if (v == frame->z) {
+        return &frame->z_info;
     }
 
-    return &slice_get(ctx->vertex_info, v);
+    return &get(ctx->vertex_info, v);
 }
 
 static bool aven_graph_plane_hartman_has_color(
@@ -147,7 +142,7 @@ static bool aven_graph_plane_hartman_has_color(
 ) {
     assert(list->len > 0);
     for (size_t i = 0; i < list->len; i += 1) {
-        if (list->data[i] == color) {
+        if (get(*list, i) == color) {
             return true;
         }
     }
@@ -160,9 +155,9 @@ static void aven_graph_plane_hartman_remove_color(
     uint32_t color
 ) {
     for (size_t i = 0; i < list->len; i += 1) {
-        if (list->data[i] == color) {
+        if (get(*list, i) == color) {
             assert(list->len > 1);
-            list->data[i] = list->data[list->len - 1];
+            get(*list, i) = get(*list, list->len - 1);
             list->len -= 1;
             break;
         }
@@ -174,13 +169,13 @@ static void aven_graph_plane_hartman_color_differently(
     uint32_t color
 ) {
     for (size_t i = 0; i < list->len; i += 1) {
-        if (list->data[i] != color) {
-            list->data[0] = list->data[i];
+        if (get(*list, i) != color) {
+            get(*list, 0) = get(*list, i);
             list->len = 1;
             break;
         }
     }
-    assert(list->data[0] != color);
+    assert(get(*list, 0) != color);
 }
 
 static inline AvenGraphPlaneHartmanFrameOptional aven_graph_plane_hartman_next_frame(
@@ -190,202 +185,207 @@ static inline AvenGraphPlaneHartmanFrameOptional aven_graph_plane_hartman_next_f
         return (AvenGraphPlaneHartmanFrameOptional){ 0 };
     }
 
-    AvenGraphPlaneHartmanFrame *frame = &list_get(ctx->frames, ctx->frames.len - 1);
-    ctx->frames.len -= 1;
-
-    return (AvenGraphPlaneHartmanFrameOptional){ .value = *frame, .valid = true }; 
+    return (AvenGraphPlaneHartmanFrameOptional){
+        .value = list_pop(ctx->frames),
+        .valid = true
+    }; 
 }
 
 static inline bool aven_graph_plane_hartman_frame_step(
     AvenGraphPlaneHartmanCtx *ctx,
     AvenGraphPlaneHartmanFrame *frame
 ) {
-    uint32_t v = frame->v;
-    AvenGraphAugAdjList v_adj = slice_get(ctx->graph, frame->v);
-    AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_vinfo(ctx, frame, v);
-    uint32_t vu_index = aven_graph_plane_hartman_vinfo(ctx, frame, v)->nb.first;
-    AvenGraphAugAdjListNode vu = slice_get(v_adj, vu_index);
+    AvenGraphAugAdjList z_adj = get(ctx->graph, frame->z);
+    AvenGraphPlaneHartmanVertex *z_info = aven_graph_plane_hartman_vinfo(
+        ctx,
+        frame,
+        frame->z
+    );
+    AvenGraphPlaneHartmanList *z_colors = &get(ctx->color_lists, frame->z);
+    uint32_t z_color = get(*z_colors, 0);
 
-    AvenGraphPlaneHartmanList *v_colors = &slice_get(ctx->color_lists, v);
-    assert(v_colors->len == 1);
-    uint32_t v_color = v_colors->data[0];
+    uint32_t zu_index = z_info->nb.first;
+    AvenGraphAugAdjListNode zu = get(z_adj, zu_index);
 
-    bool last_neighbor = (vu_index == v_info->nb.last);
-    if (!last_neighbor) {
-        v_info->nb.first = (uint32_t)((v_info->nb.first + 1) % v_adj.len);
-    }
-
-    uint32_t u = vu.vertex;
-    AvenGraphAugAdjList u_adj = slice_get(ctx->graph, u);
-    uint32_t uv_index = vu.back_index;
+    uint32_t u = zu.vertex;
     AvenGraphPlaneHartmanVertex *u_info = aven_graph_plane_hartman_vinfo(
         ctx,
         frame,
         u
     );
-    uint32_t u_mark = slice_get(ctx->marks, u_info->mark);
 
-    AvenGraphPlaneHartmanList *u_colors = &slice_get(
-        ctx->color_lists,
-        u
-    );
-
-    bool done = false;
-
-    if (u_mark == 0) {
-        aven_graph_plane_hartman_remove_color(u_colors, v_color);
-        assert(u_colors->len > 0);
-
-        u_info->nb.first = (uint32_t)((uv_index + 1) % u_adj.len);
-        u_info->nb.last =(uint32_t)((uv_index + u_adj.len - 1) % u_adj.len);
-        u_info->mark = slice_get(ctx->marks, frame->x_info.mark);
-    } else if (u_info->nb.first == u_info->nb.last) {
-        if (u != frame->x and u != frame->y) {
-            aven_graph_plane_hartman_color_differently(u_colors, v_color);
+    if (zu_index == z_info->nb.last) {
+        if (frame->x == frame->y) {
+            assert(frame->z == frame->x);
+            aven_graph_plane_hartman_color_differently(
+                &get(ctx->color_lists, u),
+                z_color
+            );
         }
+        return true;
+    }
 
-        done = true;
-    } else if (u_mark == slice_get(ctx->marks, frame->y_info.mark)) {
-        uint32_t v_nb_old_last = v_info->nb.last;
-        uint32_t u_nb_old_first = u_info->nb.first;
+    if (u == frame->y) {
+        assert(frame->z == frame->x);
 
-        u_info->nb.first = (uint32_t)((uv_index + 1) % u_adj.len);
+        AvenGraphPlaneHartmanVertex x_info = frame->x_info;
+        frame->x_info = frame->y_info;
+        frame->y_info = x_info;
+        frame->y = frame->x;
+        frame->x = u;
 
-        if (aven_graph_plane_hartman_has_color(u_colors, v_color)) {
-            u_colors->data[0] = v_color;
-            u_colors->len = 1;
-            frame->v = u;
-            frame->v_info = *u_info;
+        AvenGraphPlaneHartmanList *u_colors = &get(ctx->color_lists, u);
+        if (aven_graph_plane_hartman_has_color(u_colors, z_color)) {
+            get(*u_colors, 0) = z_color;
+            frame->z = u;
         } else {
-            if (v != frame->x) {
-                slice_get(ctx->marks, frame->x_info.mark) =
-                    slice_get(ctx->marks, frame->y_info.mark);
-                frame->v = frame->x;
-                frame->x_info.mark = ctx->next_mark;
-                ctx->next_mark += 1;
-            }
+            aven_graph_plane_hartman_color_differently(u_colors, z_color);
         }
 
-        if (u_nb_old_first != uv_index) {
-            done = (u_info->nb.last == uv_index);
-            if (done) {
-                u_colors->len = 1;
-            }
+        frame->x_info.mark = ctx->next_mark++;
+        frame->y_info.mark = ctx->next_mark++;
 
-            uint32_t new_x_mark = ctx->next_mark;
-            ctx->next_mark += 1;
+        return false;
+    }
 
-            uint32_t new_y_mark = ctx->next_mark;
-            ctx->next_mark += 1;
+    AvenGraphAugAdjList u_adj = get(ctx->graph, u);
+    u_info->nb.last = (u_info->nb.last + (uint32_t)u_adj.len - 1) % u_adj.len;
+    z_info->nb.first = (z_info->nb.first + 1) % z_adj.len;
 
-            list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
-                .v = u,
-                .x = u,
-                .y = v,
-                .x_info = {
-                    .mark = new_x_mark,
-                    .nb = { .first = u_nb_old_first, .last = uv_index },
-                },
-                .y_info = {
-                    .mark = new_y_mark,
-                    .nb = { .first = vu_index, .last = v_nb_old_last },
-                },
-            };
-        }
-    } else if (v == frame->x) {
-        aven_graph_plane_hartman_color_differently(u_colors, v_color);
+    if (frame->z == frame->x) {
+        aven_graph_plane_hartman_color_differently(
+            &get(ctx->color_lists, u),
+            z_color
+        );
 
-        assert(uv_index == u_info->nb.last);
-
-        u_info->nb.last = (uint32_t)((uv_index + u_adj.len - 1) % u_adj.len);
-        u_info->mark = ctx->next_mark;
-        ctx->next_mark += 1;
-
-        if (v == frame->y) {
+        if (frame->z == frame->y) {
             frame->y_info = frame->x_info;
         } else {
-            frame->v_info = frame->x_info;
+            frame->z_info = frame->x_info;
         }
 
         frame->x = u;
         frame->x_info = *u_info;
-    } else if (u_mark == slice_get(ctx->marks, frame->x_info.mark)) {
-        assert(!aven_graph_plane_hartman_has_color(u_colors, v_color));
+        frame->x_info.mark = ctx->next_mark++;
 
-        if (u_info->nb.last != uv_index) {
-            AvenGraphPlaneHartmanVertex new_u_info = {
-                .mark = ctx->next_mark,
-                .nb = {
-                    .first = (uint32_t)((uv_index + 1) % u_adj.len),
-                    .last = u_info->nb.last,
+        u_info = aven_graph_plane_hartman_vinfo(ctx, frame, u);
+        z_info = aven_graph_plane_hartman_vinfo(ctx, frame, frame->z);
+    }
+
+    uint32_t zv_index = (zu_index + 1) % z_adj.len;
+    AvenGraphAugAdjListNode zv = get(z_adj, zv_index);
+
+    uint32_t v = zv.vertex;
+    AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+    AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_vinfo(
+        ctx,
+        frame,
+        v
+    );
+    AvenGraphPlaneHartmanList *v_colors = &get(ctx->color_lists, v);
+
+    if (v_info->mark == 0) {
+        *v_info = (AvenGraphPlaneHartmanVertex){
+            .mark = frame->x_info.mark,
+            .nb = {
+                .first = (zv.back_index + 1) % v_adj.len,
+                .last = zv.back_index  % v_adj.len,
+            },
+        };
+        aven_graph_plane_hartman_remove_color(v_colors, z_color);
+    } else if (v_info->mark == frame->x_info.mark) {
+        if (zv_index == z_info->nb.last) {
+            assert(frame->z == frame->y);
+            assert(v == frame->x);
+            v_info->nb.first = (zv.back_index + 1) % v_adj.len;
+            v_info->mark = ctx->next_mark++;
+            frame->y = frame->x;
+            frame->z = frame->x;
+        } else {
+            uint32_t new_mark = ctx->next_mark++;
+            list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
+                .x = v,
+                .y = v,
+                .z = v,
+                .x_info = {
+                    .mark = new_mark,
+                    .nb = {
+                        .first = (zv.back_index + 1) % v_adj.len,
+                        .last = v_info->nb.last,
+                    },
                 },
             };
-            ctx->next_mark += 1;
-            list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
-                .v = u,
-                .x = u,
-                .y = u,
-                .x_info = new_u_info,
-                .y_info = new_u_info,
-            };
-
-            u_info->nb.last = (uint32_t)(
-                (uv_index + u_adj.len - 1) % u_adj.len
-            );
-            done = last_neighbor;
-        } else {
-            u_info->nb.last = (uint32_t)(
-                (uv_index + u_adj.len - 1) % u_adj.len
-            );
+            v_info->nb.last = zv.back_index;
         }
-    } else {
-        aven_graph_plane_hartman_color_differently(u_colors, v_color);
-
-        if (u_info->nb.first != uv_index) {
-            assert(!last_neighbor);
-            u_info->mark = frame->x_info.mark;
+    } else if (get(ctx->marks, v_info->mark) == frame->y_info.mark) {
+        if (v_info->nb.first != zv.back_index) {
+            uint32_t new_mark = ctx->next_mark++;
             list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
-                .v = frame->x,
-                .x = frame->x,
-                .y = u,
+                .x = v,
+                .y = frame->z,
+                .z = v,
                 .x_info = {
-                    .nb = frame->x_info.nb,
-                    .mark = ctx->next_mark,
+                    .mark = new_mark,
+                    .nb = {
+                        .first = v_info->nb.first,
+                        .last = zv.back_index,
+                    },
                 },
                 .y_info = {
-                    .mark = u_info->mark,
+                    .mark = new_mark,
                     .nb = {
-                        .first = (uint32_t)((uv_index + 1) % u_adj.len),
-                        .last = u_info->nb.last,
+                        .first = zv_index,
+                        .last = z_info->nb.last,
+                    },
+                },
+            };
+        }
+
+        v_info->nb.first = (zv.back_index + 1) % v_adj.len;
+
+        if (aven_graph_plane_hartman_has_color(v_colors, z_color)) {
+            get(*v_colors, 0) = z_color;
+            v_colors->len = 1;
+
+            frame->z = v;
+            frame->z_info = *v_info;
+        } else {
+            get(ctx->marks, frame->x_info.mark) = frame->y_info.mark;
+            frame->z = frame->x;
+        }
+    } else {
+        aven_graph_plane_hartman_color_differently(v_colors, z_color);
+        if (v_info->nb.first != zv.back_index) {
+            list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
+                .x = frame->x,
+                .y = v,
+                .z = frame->x,
+                .x_info = frame->x_info,
+                .y_info = {
+                    .mark = frame->x_info.mark,
+                    .nb = {
+                        .first = (zv.back_index + 1) % v_adj.len,
+                        .last = v_info->nb.last,
                     },
                 },
             };
 
-            ctx->next_mark += 1;
-
-            u_info->nb.last = (uint32_t)(
-                (uv_index + u_adj.len - 1) % u_adj.len
-            );
-            u_info->mark = ctx->next_mark;
-            ctx->next_mark += 1;
-
-            frame->x = u;
-            frame->x_info = *u_info;
+            v_info->nb.last = zv.back_index;
+            frame->x = v;
+            frame->x_info = *v_info;
+            frame->x_info.mark = ctx->next_mark++;
         } else {
-            assert(last_neighbor);
-            assert(frame->y == v);
+            assert(frame->z == frame->y);
+            v_info->nb.first = (zv.back_index + 1) % v_adj.len;
+            v_info->mark = frame->x_info.mark;
+            frame->y = v;
+            frame->y_info = *v_info;
 
-            u_info->nb.first = (uint32_t)((uv_index + 1) % u_adj.len);
-            u_info->mark = frame->x_info.mark;
-
-            frame->y = u;
-            frame->y_info = *u_info;
-
-            frame->v = frame->x;
+            frame->z = frame->x;
         }
     }
 
-    return done;
+    return false;
 }
 
 static inline void aven_graph_plane_hartman(
