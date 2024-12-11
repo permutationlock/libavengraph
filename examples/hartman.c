@@ -39,7 +39,7 @@
 #define GRAPH_MAX_VERTICES (1500)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
-#define VERTEX_RADIUS 0.1f
+#define VERTEX_RADIUS 0.12f
 
 #define TIMESTEP (AVEN_TIME_NSEC_PER_SEC)
 
@@ -149,7 +149,7 @@ static void app_reset(void) {
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.2f * (ctx.radius * ctx.radius),
+        1.15f * (ctx.radius * ctx.radius),
         0.001f,
         true,
         &arena
@@ -170,7 +170,7 @@ static void app_reset(void) {
         .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
         .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
         .radius = ctx.radius,
-        .border_thickness = ctx.radius * 0.3f,
+        .border_thickness = ctx.radius * 0.25f,
         .edge_thickness = ctx.radius / 2.5f,
     };
 
@@ -186,13 +186,13 @@ static void app_reset(void) {
             .cycle_color = { 0.65f, 0.25f, 0.15f, 1.0f },
         },
         .inactive_frame = {
-            .active_color = { 0.25f, 0.25f, 0.25f, 1.0f },
+            .active_color = { 0.4f, 0.4f, 0.4f, 1.0f },
             .xp_color = { 0.4f, 0.4f, 0.4f, 1.0f },
             .py_color = { 0.4f, 0.4f, 0.4f, 1.0f },
-            .cycle_color = { 0.35f, 0.35f, 0.35f, 1.0f },
+            .cycle_color = { 0.4f, 0.4f, 0.4f, 1.0f },
         },
         .edge_thickness = ctx.radius / 2.5f,
-        .border_thickness = ctx.radius * 0.3f,
+        .border_thickness = ctx.radius * 0.25f,
         .radius = ctx.radius,
     };
 }
@@ -522,7 +522,7 @@ static void app_update(
                     ) {
                         if (ctx.autoplay and ctx.radius > 0.011f) {
                             ctx.radius -= 0.01f;
-                            ctx.timestep = 9L * (ctx.timestep / 16L);
+                            ctx.timestep = 3L * (ctx.timestep / 4L);
                         }
                         app_reset();
                     }
@@ -790,7 +790,7 @@ static void key_callback(
     }
     if (key == GLFW_KEY_EQUAL) {
         ctx.autoplay = false;
-        if (ctx.radius < 0.1f) {
+        if (ctx.radius < 0.12f) {
             ctx.radius += 0.005f;
             app_reset();
         }
