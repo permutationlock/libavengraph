@@ -1,7 +1,7 @@
 # The Aven Graph Library
 
-A simple adjacency slice graph library created to implement
-path coloring algorithms for plane graphs.
+An "adjacency slice" graph library along with implementations
+of [path coloring algorithms for plane graphs](https://github.com/implpathcol_paper).
 
 ## Building
 
@@ -22,7 +22,8 @@ To build examples:
 ```
 The resulting example animation executables will be in the `build_out` directory.
 
-To build and run benchmarks:
+To build and run benchmarks you will need a C compiler that supports C11
+atomics for thread synchronization:
 ```
 ./build bench -ccflags "-O3"
 ```
