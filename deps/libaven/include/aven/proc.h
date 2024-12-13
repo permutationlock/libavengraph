@@ -165,11 +165,11 @@ AVEN_FN AvenProcIdResult aven_proc_cmd(
         );
 
         for (size_t i = 0; i < cmd.len; i += 1) {
-            args[i] = slice_get(cmd, i).ptr;
+            args[i] = get(cmd, i).ptr;
         }
         args[cmd.len] = NULL;
 
-        int error = execvp(slice_get(cmd, 0).ptr, args);
+        int error = execvp(get(cmd, 0).ptr, args);
         if (error != 0) {
 #ifndef AVEN_SUPPRESS_LOGS
             fprintf(stderr, "execvp failed: %s\n", cmd_str.ptr);

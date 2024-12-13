@@ -106,7 +106,6 @@ static inline void aven_pool_push_free_internal(
 }
 
 #define get(s, i) (s).ptr[aven_assert_lt_internal(i, (s).len)]
-#define slice_get(s, i) get(s, i)
 #define list_get(l, i) get(l, i)
 #define list_back(l) get(l, (l).len - 1)
 #define list_pop(l) (l).ptr[aven_assert_lt_internal(--(l).len, (l).cap)]
@@ -117,13 +116,13 @@ static inline void aven_pool_push_free_internal(
         aven_pool_pop_free_internal( \
             &(p).used, \
             &(p).free, \
-            slice_get(p, (p).free - 1).parent \
+            get(p, (p).free - 1).parent \
         ) \
     )
 #define pool_delete(p, i) aven_pool_push_free_internal( \
         &(p).used, \
         &(p).free, \
-        &slice_get(p, i).parent, \
+        &get(p, i).parent, \
         i \
     )
 

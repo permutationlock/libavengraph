@@ -44,7 +44,7 @@
         queue->len -= 1;
         size_t old_front = queue->front;
         queue->front = (queue->front + 1) % queue->job_indices.len;
-        return slice_get(queue->job_indices, old_front);
+        return get(queue->job_indices, old_front);
     }
 
     static void aven_thread_pool_queue_push(
@@ -52,7 +52,7 @@
         AvenThreadPoolJob job
     ) {
         assert(queue->len < queue->job_indices.len);
-        slice_get(queue->job_indices, queue->back) = job;
+        get(queue->job_indices, queue->back) = job;
         queue->back = (queue->back + 1) % queue->job_indices.len;
         queue->len += 1;
     }
@@ -140,7 +140,7 @@
     static void aven_thread_pool_run(AvenThreadPool *thread_pool) {
         for (size_t i = 0; i < thread_pool->workers.len; i += 1) {
             int error = thrd_create(
-                &slice_get(thread_pool->workers, i),
+                &get(thread_pool->workers, i),
                 aven_thread_pool_worker_internal_fn,
                 thread_pool
             );
@@ -186,7 +186,7 @@
         aven_thread_pool_wait(thread_pool);
 
         for (size_t i = 0; i < thread_pool->workers.len; i += 1) {
-            thrd_join(slice_get(thread_pool->workers, i), NULL);
+            thrd_join(get(thread_pool->workers, i), NULL);
         }
 
         mtx_destroy(&thread_pool->lock);
@@ -233,7 +233,7 @@
         queue->len -= 1;
         size_t old_front = queue->front;
         queue->front = (queue->front + 1) % queue->job_indices.len;
-        return slice_get(queue->job_indices, old_front);
+        return get(queue->job_indices, old_front);
     }
 
     static void aven_thread_pool_queue_push(
@@ -241,7 +241,7 @@
         AvenThreadPoolJob job
     ) {
         assert(queue->len < queue->job_indices.len);
-        slice_get(queue->job_indices, queue->back) = job;
+        get(queue->job_indices, queue->back) = job;
         queue->back = (queue->back + 1) % queue->job_indices.len;
         queue->len += 1;
     }
@@ -328,7 +328,7 @@
     static void aven_thread_pool_run(AvenThreadPool *thread_pool) {
         for (size_t i = 0; i < thread_pool->workers.len; i += 1) {
             int error = pthread_create(
-                &slice_get(thread_pool->workers, i),
+                &get(thread_pool->workers, i),
                 NULL,
                 aven_thread_pool_worker_internal_fn,
                 thread_pool
@@ -375,7 +375,7 @@
         aven_thread_pool_wait(thread_pool);
 
         for (size_t i = 0; i < thread_pool->workers.len; i += 1) {
-            pthread_join(slice_get(thread_pool->workers, i), NULL);
+            pthread_join(get(thread_pool->workers, i), NULL);
         }
 
         pthread_mutex_destroy(&thread_pool->lock);

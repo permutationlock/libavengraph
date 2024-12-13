@@ -202,7 +202,7 @@ static void app_update(
         };
 
         for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
-            uint32_t parent = slice_get(ctx.bfs_ctx.parents, v);
+            uint32_t parent = get(ctx.bfs_ctx.parents, v);
             if (parent != AVEN_GRAPH_BFS_VERTEX_INVALID) {
                 aven_graph_plane_geometry_push_edge(
                     &ctx.edge_shapes.geometry,
@@ -221,9 +221,9 @@ static void app_update(
         };
 
         if (ctx.bfs_ctx.vertex != AVEN_GRAPH_BFS_VERTEX_INVALID) {
-            AvenGraphAdjList adj = slice_get(ctx.graph, ctx.bfs_ctx.vertex);
+            AvenGraphAdjList adj = get(ctx.graph, ctx.bfs_ctx.vertex);
             if (ctx.bfs_ctx.neighbor < adj.len) {
-                uint32_t neighbor = slice_get(adj, ctx.bfs_ctx.neighbor);
+                uint32_t neighbor = get(adj, ctx.bfs_ctx.neighbor);
                 aven_graph_plane_geometry_push_edge(
                     &ctx.edge_shapes.geometry,
                     ctx.embedding,

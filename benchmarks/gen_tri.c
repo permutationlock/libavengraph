@@ -64,7 +64,7 @@ int main(void) {
             assert(data.graph.len == n);
 
             for (uint32_t v = 0; v < data.graph.len; v += 1) {
-                AvenGraphAdjList v_adj = slice_get(data.graph, v);
+                AvenGraphAdjList v_adj = get(data.graph, v);
                 deg_sum += v_adj.len;
                 max_deg = max(max_deg, v_adj.len);
                 min_deg = min(min_deg, v_adj.len);

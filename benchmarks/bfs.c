@@ -64,23 +64,23 @@ int main(void) {
                 rng,
                 &temp_arena
             );
-            slice_get(cases, i).graph = data.graph;
+            get(cases, i).graph = data.graph;
             if (data.graph.len != n) {
                 abort();
             }
-            slice_get(cases, i).root = aven_rng_rand_bounded(rng, n);
+            get(cases, i).root = aven_rng_rand_bounded(rng, n);
             do {
-                slice_get(cases, i).target = aven_rng_rand_bounded(rng, n);
-            } while (slice_get(cases, i).target == slice_get(cases, i).root);
+                get(cases, i).target = aven_rng_rand_bounded(rng, n);
+            } while (get(cases, i).target == get(cases, i).root);
         }
 
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            slice_get(cases, i).path = aven_graph_bfs(
-                slice_get(cases, i).graph,
-                slice_get(cases, i).root,
-                slice_get(cases, i).target,
+            get(cases, i).path = aven_graph_bfs(
+                get(cases, i).graph,
+                get(cases, i).root,
+                get(cases, i).target,
                 &temp_arena
             );
         }
@@ -91,9 +91,9 @@ int main(void) {
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenGraphSubset path = slice_get(cases, i).path;
-            bool valid = (slice_get(path, 0) == slice_get(cases, i).target) and
-                (slice_get(path, path.len - 1) == slice_get(cases, i).root);
+            AvenGraphSubset path = get(cases, i).path;
+            bool valid = (get(path, 0) == get(cases, i).target) and
+                (get(path, path.len - 1) == get(cases, i).root);
             if (valid) {
                 nvalid += 1;
             }

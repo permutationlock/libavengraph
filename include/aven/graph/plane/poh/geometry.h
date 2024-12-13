@@ -33,20 +33,20 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
     if (maybe_frame->valid) {
         AvenGraphPlanePohFrame frame = maybe_frame->value;
     
-        AvenGraphAdjList u_adj = slice_get(ctx->graph, frame.u);
-        AvenGraphPlanePohVertex frame_u_info = slice_get(ctx->vertex_info, frame.u);
+        AvenGraphAdjList u_adj = get(ctx->graph, frame.u);
+        AvenGraphPlanePohVertex frame_u_info = get(ctx->vertex_info, frame.u);
         if (frame.edge_index < u_adj.len) {
             AvenGraphPlaneGeometryEdge active_edge_info = {
                 .thickness = info->edge_thickness + info->border_thickness,
             };
             vec4_copy(active_edge_info.color, info->active_color);
 
-            uint32_t v = slice_get(
+            uint32_t v = get(
                 u_adj,
                 (frame_u_info.first_edge + frame.edge_index) % u_adj.len
             );
 
-            if (slice_get(ctx->vertex_info, v).mark == frame.face_mark) {
+            if (get(ctx->vertex_info, v).mark == frame.face_mark) {
                 active_edge_info.thickness += info->border_thickness;
             }
 
@@ -108,7 +108,7 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
         vec4_copy(below_edge_info.color, info->below_color);
 
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            AvenGraphPlanePohVertex v_info = slice_get(ctx->vertex_info, v);
+            AvenGraphPlanePohVertex v_info = get(ctx->vertex_info, v);
             if (v_info.mark == frame.face_mark) {
                 aven_graph_plane_geometry_push_vertex(
                     rounded_geometry,
@@ -129,10 +129,10 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
                 continue;
             }
 
-            AvenGraphAdjList v_adj = slice_get(ctx->graph, v);
+            AvenGraphAdjList v_adj = get(ctx->graph, v);
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
-                uint32_t u = slice_get(v_adj, i);
-                AvenGraphPlanePohVertex u_info = slice_get(ctx->vertex_info, u);
+                uint32_t u = get(v_adj, i);
+                AvenGraphPlanePohVertex u_info = get(ctx->vertex_info, u);
                 if (u_info.mark != v_info.mark) {
                     continue;
                 } else if (u_info.mark == frame.face_mark) {
@@ -195,7 +195,7 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
     );
 
     for (size_t i = 0; i < color_node_infos.len; i += 1) {
-        AvenGraphPlaneGeometryNode *node_info = &slice_get(color_node_infos, i);
+        AvenGraphPlaneGeometryNode *node_info = &get(color_node_infos, i);
         *node_info = (AvenGraphPlaneGeometryNode){
             .mat = {
                 { info->radius - info->border_thickness, 0.0f },
@@ -221,7 +221,7 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
     );
 
     for (size_t i = 0; i < color_edge_infos.len; i += 1) {
-        AvenGraphPlaneGeometryEdge *edge_info = &slice_get(color_edge_infos, i);
+        AvenGraphPlaneGeometryEdge *edge_info = &get(color_edge_infos, i);
         *edge_info = (AvenGraphPlaneGeometryEdge){
              .thickness = info->edge_thickness,
          };

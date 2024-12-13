@@ -38,7 +38,7 @@ static inline void aven_graph_plane_geometry_push_vertex(
     AvenGraphPlaneGeometryNode *draw_info
 ) {
     Vec2 node_pos;
-    aff2_transform(node_pos, trans, slice_get(embedding, v));
+    aff2_transform(node_pos, trans, get(embedding, v));
 
     Aff2 node_trans;
     aff2_identity(node_trans);
@@ -91,10 +91,10 @@ static inline void aven_graph_plane_geometry_push_edge(
     AvenGraphPlaneGeometryEdge *draw_info
 ) {
     Vec2 p1;
-    aff2_transform(p1, trans, slice_get(embedding, u));
+    aff2_transform(p1, trans, get(embedding, u));
 
     Vec2 p2;
-    aff2_transform(p2, trans, slice_get(embedding, v));
+    aff2_transform(p2, trans, get(embedding, v));
 
     Vec2 center;
     vec2_midpoint(center, p1, p2);
@@ -127,9 +127,9 @@ static inline void aven_graph_plane_geometry_push_edges(
     AvenGraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t u = 0; u < graph.len; u += 1) {
-        AvenGraphAdjList u_neighbors = slice_get(graph, u);
+        AvenGraphAdjList u_neighbors = get(graph, u);
         for (uint32_t i = 0; i < u_neighbors.len; i += 1) {
-            uint32_t v = slice_get(u_neighbors, i);
+            uint32_t v = get(u_neighbors, i);
             if (v < u) {
                 continue;
             }
@@ -161,7 +161,7 @@ static inline void aven_graph_plane_geometry_push_label(
     AvenGlTextLine label_line = aven_gl_text_line(font, label_text, &arena);
 
     Vec2 pos;
-    aff2_transform(pos, trans, slice_get(embedding, v));
+    aff2_transform(pos, trans, get(embedding, v));
 
     Aff2 label_trans;
     aff2_identity(label_trans);
@@ -214,7 +214,7 @@ static inline void aven_graph_plane_geometry_push_subset_vertices(
     }
 
     for (size_t i = 0; i < vertices.len; i += 1) {
-        uint32_t v = slice_get(vertices, i);
+        uint32_t v = get(vertices, i);
         aven_graph_plane_geometry_push_vertex(
             geometry,
             embedding,
@@ -237,8 +237,8 @@ static inline void aven_graph_plane_geometry_push_path_edges(
     }
 
     for (size_t i = 0; i < path.len - 1; i += 1) {
-        uint32_t u = slice_get(path, i);
-        uint32_t v = slice_get(path, i + 1);
+        uint32_t u = get(path, i);
+        uint32_t v = get(path, i + 1);
 
         aven_graph_plane_geometry_push_edge(
             geometry,
@@ -274,8 +274,8 @@ static inline void aven_graph_plane_geometry_push_cycle_edges(
         aven_graph_plane_geometry_push_edge(
             geometry,
             embedding,
-            slice_get(cycle, 0),
-            slice_get(cycle, cycle.len - 1),
+            get(cycle, 0),
+            get(cycle, cycle.len - 1),
             trans,
             draw_info
         );
@@ -291,7 +291,7 @@ static inline void aven_graph_plane_geometry_push_marked_vertices(
     AvenGraphPlaneGeometryNode *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        if (slice_get(marking, v) != mark) {
+        if (get(marking, v) != mark) {
             continue;
         }
 
@@ -315,14 +315,14 @@ static inline void aven_graph_plane_geometry_push_marked_edges(
     AvenGraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t u = 0; u < graph.len; u += 1) {
-        if (slice_get(marking, u) != mark) {
+        if (get(marking, u) != mark) {
             continue;
         }
 
-        AvenGraphAdjList adj = slice_get(graph, u);
+        AvenGraphAdjList adj = get(graph, u);
         for (uint32_t i = 0; i < adj.len; i += 1) {
-            uint32_t v = slice_get(adj, i);
-            if (slice_get(marking, v) != mark) {
+            uint32_t v = get(adj, i);
+            if (get(marking, v) != mark) {
                 continue;
             }
 
@@ -347,7 +347,7 @@ static inline void aven_graph_plane_geometry_push_unmarked_vertices(
     AvenGraphPlaneGeometryNode *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        if (slice_get(marking, v) == mark) {
+        if (get(marking, v) == mark) {
             continue;
         }
 
@@ -371,14 +371,14 @@ static inline void aven_graph_plane_geometry_push_unmarked_edges(
     AvenGraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t u = 0; u < graph.len; u += 1) {
-        if (slice_get(marking, u) == mark) {
+        if (get(marking, u) == mark) {
             continue;
         }
 
-        AvenGraphAdjList adj = slice_get(graph, u);
+        AvenGraphAdjList adj = get(graph, u);
         for (uint32_t i = 0; i < adj.len; i += 1) {
-            uint32_t v = slice_get(adj, i);
-            if (slice_get(marking, v) == mark) {
+            uint32_t v = get(adj, i);
+            if (get(marking, v) == mark) {
                 continue;
             }
 
@@ -405,9 +405,9 @@ static inline void aven_graph_plane_geometry_subgraph_transform(
     Vec2 max_coord = { -1.0f, -1.0f };
 
     for (size_t i = 0; i < vertices.len; i += 1) {
-        uint32_t v = slice_get(vertices, i);
+        uint32_t v = get(vertices, i);
         Vec2 pos;
-        vec2_copy(pos, slice_get(embedding, v));
+        vec2_copy(pos, get(embedding, v));
 
         min_coord[0] = min(min_coord[0], pos[0]);
         min_coord[1] = min(min_coord[1], pos[1]);
@@ -449,7 +449,7 @@ static inline void aven_graph_plane_geometry_push_colored_vertices(
             embedding,
             v,
             trans,
-            &slice_get(draw_infos, slice_get(coloring, v))
+            &get(draw_infos, get(coloring, v))
         );
     }
 }
@@ -463,17 +463,17 @@ static inline void aven_graph_plane_geometry_push_colored_edges(
     AvenGraphPlaneGeometryEdgeSlice draw_infos
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        uint8_t v_color = slice_get(coloring, v);
+        uint8_t v_color = get(coloring, v);
         if (v_color == 0) {
             continue;
         }
-        AvenGraphAdjList v_adj = slice_get(graph, v);
+        AvenGraphAdjList v_adj = get(graph, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = slice_get(v_adj, i);
+            uint32_t u = get(v_adj, i);
             if (v < u) {
                 continue;
             }
-            if (slice_get(coloring, u) != v_color) {
+            if (get(coloring, u) != v_color) {
                 continue;
             }
             aven_graph_plane_geometry_push_edge(
@@ -482,7 +482,7 @@ static inline void aven_graph_plane_geometry_push_colored_edges(
                 v,
                 u,
                 trans,
-                &slice_get(draw_infos, v_color - 1)
+                &get(draw_infos, v_color - 1)
             );
         }
     }
@@ -497,14 +497,14 @@ static inline void aven_graph_plane_geometry_push_uncolored_edges(
     AvenGraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        uint8_t v_color = slice_get(coloring, v);
-        AvenGraphAdjList v_adj = slice_get(graph, v);
+        uint8_t v_color = get(coloring, v);
+        AvenGraphAdjList v_adj = get(graph, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = slice_get(v_adj, i);
+            uint32_t u = get(v_adj, i);
             if (v < u) {
                 continue;
             }
-            if (v_color != 0 and slice_get(coloring, u) == v_color) {
+            if (v_color != 0 and get(coloring, u) == v_color) {
                 continue;
             }
             aven_graph_plane_geometry_push_edge(

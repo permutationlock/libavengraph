@@ -64,8 +64,8 @@ static inline AvenGraphPlaneTestCtx aven_graph_plane_test_init(
     );
 
     for (uint32_t i = 0; i < graph.len; i += 1) {
-        AvenGraphPlaneTestAdjList *new_adj = &slice_get(ctx.graph, i);
-        AvenGraphAdjList old_adj = slice_get(graph, i);
+        AvenGraphPlaneTestAdjList *new_adj = &get(ctx.graph, i);
+        AvenGraphAdjList old_adj = get(graph, i);
 
         *new_adge = (AvenGraphPlaneTestAdjList){
             .neighbor_list = {
@@ -79,7 +79,7 @@ static inline AvenGraphPlaneTestCtx aven_graph_plane_test_init(
         };
 
         for (uint32_t j = 0; j < len; j += 1) {
-            list_push(new_adj->neighbor_list) = slice_get(old_adj, j);
+            list_push(new_adj->neighbor_list) = get(old_adj, j);
         }
     }
 }
@@ -92,10 +92,10 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
     uint32_t v = ctx->min_vertex;
     uint32_t deg = 0;
     for (; v < ctx->graph.len; v += 1) {
-        AvenGraphPlaneTestAdjList *adj = &slice_get(ctx->graph, v);
+        AvenGraphPlaneTestAdjList *adj = &get(ctx->graph, v);
         deg = adj->neighbor_list.len;
         while (deg < 6 and adj->maybe_next.valid) {
-            adj = &slice_get(ctx->graph, adj->maybe_next.value);
+            adj = &get(ctx->graph, adj->maybe_next.value);
             deg += (uint32_t)adj->len;
         }
 
@@ -117,7 +117,7 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
     uint32_t u = v;
     uint32_t n_index = 0;
     do {
-        AvenGraphPlaneTestAdjList *adj = slice_get(ctx->graph, u);
+        AvenGraphPlaneTestAdjList *adj = get(ctx->graph, u);
         for (uint32_t i = 0; i < adj->neighbor_list.len; i += 1) {
             face.vertices[n_index] = list_get(adj->neighbor_list, i);
             n_index += 1;
@@ -135,7 +135,7 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
         case 3:
             for (uint32_t i = 0; i < 3; i += 1) {
                 uint32_t n = face.vertices[i];
-                AvenGraphPlaneTestAdjList *n_adj = slice_get(ctx->graph, n);
+                AvenGraphPlaneTestAdjList *n_adj = get(ctx->graph, n);
             }
             break;
         case 4:
@@ -143,7 +143,7 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
         case 5:
             break;
     }
-    AvenGraphPlaneTestAdjList *v_adj = &slice_get(ctx->graph, v);
+    AvenGraphPlaneTestAdjList *v_adj = &get(ctx->graph, v);
     for (uint32_t i = 0; i < v_adj->len; i += 1) {
         
     }

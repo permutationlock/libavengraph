@@ -23,7 +23,7 @@ static inline AvenGraphPathColorVerifyCtx aven_graph_path_color_verify_init(
 
     ctx.visited.ptr = aven_arena_create_array(uint8_t, arena, ctx.visited.len);
     for (uint32_t i = 0; i < ctx.visited.len; i += 1) {
-        slice_get(ctx.visited, i) = 0;
+        get(ctx.visited, i) = 0;
     }
 
     return ctx;
@@ -40,15 +40,15 @@ static inline bool aven_graph_path_color_verify_step(
             if (v >= ctx->graph.len) {
                 return true;
             }
-        } while (slice_get(ctx->visited, v) != 0);
+        } while (get(ctx->visited, v) != 0);
 
-        uint8_t color = slice_get(ctx->coloring, v);
+        uint8_t color = get(ctx->coloring, v);
         uint32_t color_degree = 0;
 
-        AvenGraphAdjList v_adj = slice_get(ctx->graph, v);
+        AvenGraphAdjList v_adj = get(ctx->graph, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t n = slice_get(v_adj, i);
-            if (slice_get(ctx->coloring, n) == color) {
+            uint32_t n = get(v_adj, i);
+            if (get(ctx->coloring, n) == color) {
                 color_degree += 1;
                 if (color_degree > 1) {
                     break;
@@ -67,18 +67,18 @@ static inline bool aven_graph_path_color_verify_step(
     }
 
     uint32_t v = ctx->maybe_v.value;
-    uint8_t color = slice_get(ctx->coloring, v);
+    uint8_t color = get(ctx->coloring, v);
 
-    slice_get(ctx->visited, v) = 1;
+    get(ctx->visited, v) = 1;
     ctx->checked += 1;
     ctx->maybe_v.valid = false;
 
-    AvenGraphAdjList v_adj = slice_get(ctx->graph, v);
+    AvenGraphAdjList v_adj = get(ctx->graph, v);
     for (uint32_t i = 0; i < v_adj.len; i += 1) {
-        uint32_t n = slice_get(v_adj, i);
+        uint32_t n = get(v_adj, i);
         if (
-            slice_get(ctx->coloring, n) == color and
-            slice_get(ctx->visited, n) == 0
+            get(ctx->coloring, n) == color and
+            get(ctx->visited, n) == 0
         ) {
             if (ctx->maybe_v.valid) {
                 return true;

@@ -25,7 +25,7 @@ static inline bool aven_str_compare(AvenStr s1, AvenStr s2) {
         return false;
     }
     for (size_t i = 0; i < s1.len; i += 1) {
-        if (slice_get(s1, i) != slice_get(s2, i)) {
+        if (get(s1, i) != get(s2, i)) {
             return false;
         }
     }
@@ -48,7 +48,7 @@ static inline AvenStrSlice aven_str_split(
     size_t nsep = 0;
     size_t after_last_sep = 0;
     for (size_t i = 0; i <= str.len; i += 1) {
-        if (i == str.len or slice_get(str, i) == separator) {
+        if (i == str.len or get(str, i) == separator) {
             if (i - after_last_sep > 0) {
                 nsep += 1;
             }
@@ -70,12 +70,12 @@ static inline AvenStrSlice aven_str_split(
     size_t string_index = 0;
     after_last_sep = 0;
     for (size_t i = 0; i <= str.len; i += 1) {
-        if (i == str.len or slice_get(str, i) == separator) {
+        if (i == str.len or get(str, i) == separator) {
             size_t len = i - after_last_sep;
             if (len > 0) {
                 char *string_mem = aven_arena_alloc(arena, len + 1, 1, 1);
 
-                slice_get(split_strs, string_index) = (AvenStr){
+                get(split_strs, string_index) = (AvenStr){
                     .ptr = string_mem,
                     .len = len,
                 };
@@ -98,7 +98,7 @@ static inline AvenStr aven_str_concat_slice(
 ) {
     size_t total_len = 0;
     for (size_t i = 0; i < strs.len; i += 1) {
-        total_len += slice_get(strs, i).len;
+        total_len += get(strs, i).len;
     }
 
     AvenStr new_string = { .len = total_len };
@@ -106,7 +106,7 @@ static inline AvenStr aven_str_concat_slice(
 
     AvenStr rest_string = new_string;
     for (size_t i = 0; i < strs.len; i += 1) {
-        AvenStr cur_str = slice_get(strs, i);
+        AvenStr cur_str = get(strs, i);
         slice_copy(rest_string, cur_str);
         rest_string.ptr += cur_str.len;
         rest_string.len -= cur_str.len;
@@ -134,12 +134,12 @@ static inline AvenStr aven_str_join(
 ) {
     size_t len = 0;
     for (size_t i = 0; i < strings.len; i += 1) {
-        AvenStr cur_str = slice_get(strings, i);
+        AvenStr cur_str = get(strings, i);
         if (cur_str.len == 0) {
             continue;
         }
 
-        len += slice_get(strings, i).len;
+        len += get(strings, i).len;
         if ((i + 1) < strings.len) {
             len += 1;
         }
@@ -151,7 +151,7 @@ static inline AvenStr aven_str_join(
     AvenStr rest_str = new_str;
 
     for (size_t i = 0; i < strings.len; i += 1) {
-        AvenStr cur_str = slice_get(strings, i);
+        AvenStr cur_str = get(strings, i);
         if (cur_str.len == 0) {
             continue;
         }
@@ -162,7 +162,7 @@ static inline AvenStr aven_str_join(
         rest_str.len -= cur_str.len;
 
         if ((i + 1) < strings.len) {
-            slice_get(rest_str, 0) = separator;
+            get(rest_str, 0) = separator;
             rest_str.ptr += 1;
             rest_str.len -= 1;
         }
@@ -187,7 +187,7 @@ static inline AvenStr aven_str_uint_decimal(uint64_t num, AvenArena *arena) {
 
     do {
         digits -= 1;
-        slice_get(str, digits) = '0' + (char)(num % 10);
+        get(str, digits) = '0' + (char)(num % 10);
         num /= 10;
     } while (digits > 0);
 

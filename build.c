@@ -40,22 +40,22 @@ int main(int argc, char **argv) {
     args.ptr = aven_arena_create_array(AvenArg, &arena, args.len);
 
     size_t arg_index = 0;
-    slice_get(args, arg_index) = (AvenArg){
+    get(args, arg_index) = (AvenArg){
         .name = "bench",
         .description = "Build and run benchmarks",
         .type = AVEN_ARG_TYPE_BOOL,
     };
     arg_index += 1;
     for (size_t i = 0; i < libaven_args.len; i += 1) {
-        slice_get(args, arg_index) = slice_get(libaven_args, i);
+        get(args, arg_index) = get(libaven_args, i);
         arg_index += 1;
     }
     for (size_t i = 0; i < libavengl_args.len; i += 1) {
-        slice_get(args, arg_index) = slice_get(libavengl_args, i);
+        get(args, arg_index) = get(libavengl_args, i);
         arg_index += 1;
     }
     for(size_t i = 0; i < common_args.len; i += 1) {
-        slice_get(args, arg_index) = slice_get(common_args, i);
+        get(args, arg_index) = get(common_args, i);
         arg_index += 1;
     }
 
@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
     List(AvenStr) graphics_include_list = list_array(graphics_include_data);
 
     for (size_t i = 0; i < includes.len; i += 1) {
-        list_push(graphics_include_list) = slice_get(includes, i);
+        list_push(graphics_include_list) = get(includes, i);
     }
     
     list_push(graphics_include_list) = libavengl_build_include_path(

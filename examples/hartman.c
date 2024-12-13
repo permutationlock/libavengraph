@@ -29,7 +29,7 @@
 // #define SHOW_VERTEX_LABELS
 
 #ifdef SHOW_VERTEX_LABELS
-#include "font.h"
+    #include "font.h"
 #endif
 
 #define ARENA_PAGE_SIZE 4096
@@ -47,6 +47,8 @@
 
 #define COLOR_DIVISIONS 2UL
 #define MAX_COLOR (((COLOR_DIVISIONS + 2) * (COLOR_DIVISIONS + 1)) / 2UL)
+
+#define HELP_FONT_SIZE 12.0f
 
 typedef struct {
     AvenGlShapeCtx ctx;
@@ -68,6 +70,13 @@ typedef struct {
     AvenGlTextBuffer buffer;
 } VertexText;
 #endif
+
+typedef struct {
+    AvenGlTextFont font;
+    AvenGlTextCtx ctx;
+    AvenGlTextGeometry geometry;
+    AvenGlTextBuffer buffer;
+} HelpText;
 
 typedef enum {
     APP_STATE_GEN,
@@ -95,6 +104,7 @@ typedef struct {
     AvenGraphPlaneHartmanGeometryInfo hartman_geometry_info;
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
+    HelpText help_text;
 #ifdef SHOW_VERTEX_LABELS
     VertexText vertex_text;
 #endif
@@ -384,7 +394,7 @@ static void app_update(
                         countof(outer_face_data)
                     );
                     for (uint32_t i = 0; i < outer_face.len; i += 1) {
-                        slice_get(outer_face, i) = (uint32_t)(
+                        get(outer_face, i) = (uint32_t)(
                             (v1 + i) % outer_face.len
                         );
                     }
@@ -422,7 +432,7 @@ static void app_update(
                             );
                         }
 
-                        slice_get(ctx.data.hartman.color_lists, i) = list;
+                        get(ctx.data.hartman.color_lists, i) = list;
                     }
                     
                     ctx.data.hartman.ctx = aven_graph_plane_hartman_init(
@@ -471,7 +481,7 @@ static void app_update(
                                 j - 1
                             );
                             if (
-                                slice_get(
+                                get(
                                     ctx.data.hartman.ctx.color_lists,
                                     nframe->z
                                 ).len == 1
@@ -502,7 +512,7 @@ static void app_update(
                         coloring.len
                     );
                     for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
-                        slice_get(coloring, v) = (uint8_t)get(
+                        get(coloring, v) = (uint8_t)get(
                             get(ctx.data.hartman.ctx.color_lists, v),
                             0
                         );
@@ -622,11 +632,11 @@ static void app_update(
                 colored_edge_data
             );
             for (uint32_t i = 0; i < colored_edges.len; i += 1) {
-                slice_get(colored_edges, i).thickness =
+                get(colored_edges, i).thickness =
                     ctx.hartman_geometry_info.edge_thickness;
                 vec4_copy(
-                    slice_get(colored_edges, i).color,
-                    slice_get(ctx.hartman_geometry_info.colors, i + 1)
+                    get(colored_edges, i).color,
+                    get(ctx.hartman_geometry_info.colors, i + 1)
                 );
             }
             aven_graph_plane_geometry_push_colored_edges(
@@ -664,7 +674,7 @@ static void app_update(
             float radius = ctx.hartman_geometry_info.radius -
                 ctx.hartman_geometry_info.border_thickness;
             for (uint32_t i = 0; i < colored_vertices.len; i += 1) {
-                slice_get(colored_vertices, i) = (AvenGraphPlaneGeometryNode) {
+                get(colored_vertices, i) = (AvenGraphPlaneGeometryNode) {
                     .mat = {
                         { radius, 0.0f, },
                         { 0.0f, radius },
@@ -673,8 +683,8 @@ static void app_update(
                     .roundness = 1.0f,
                 };
                 vec4_copy(
-                    slice_get(colored_vertices, i).color,
-                    slice_get(ctx.hartman_geometry_info.colors, i)
+                    get(colored_vertices, i).color,
+                    get(ctx.hartman_geometry_info.colors, i)
                 );
             }
             aven_graph_plane_geometry_push_colored_vertices(

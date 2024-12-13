@@ -176,7 +176,7 @@ static void app_update(
 
             bool success = true;
             for (uint32_t i = 0; i < ctx.graph.len; i += 1) {
-                if (slice_get(ctx.graph, i).len != 5) {
+                if (get(ctx.graph, i).len != 5) {
                     success = false;
                 }
             }

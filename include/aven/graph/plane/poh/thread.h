@@ -51,8 +51,8 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     AvenGraphSubset q,
     AvenArena *arena
 ) {
-    uint32_t p1 = slice_get(p, 0);
-    uint32_t q1 = slice_get(q, 0);
+    uint32_t p1 = get(p, 0);
+    uint32_t q1 = get(q, 0);
 
     AvenGraphPlanePohThreadCtx ctx = {
         .graph = graph,
@@ -77,24 +77,24 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     atomic_init(&ctx.frames_lock, false);
 
     for (uint32_t i = 0; i < ctx.coloring.len; i += 1) {
-        slice_get(ctx.coloring, i) = 0;
+        get(ctx.coloring, i) = 0;
     }
 
-    slice_get(ctx.coloring, slice_get(p, 0)) = 1;
+    get(ctx.coloring, get(p, 0)) = 1;
 
     for (uint32_t i = 0; i < q.len; i += 1) {
-        slice_get(ctx.coloring, slice_get(q, i)) = 2;
+        get(ctx.coloring, get(q, i)) = 2;
     }
 
     for (uint32_t i = 0; i < ctx.vertex_info.len; i += 1) {
-        slice_get(ctx.vertex_info, i) = (AvenGraphPlanePohVertex){ 0 };
+        get(ctx.vertex_info, i) = (AvenGraphPlanePohVertex){ 0 };
     }
 
     for (uint32_t i = 0; i < p.len; i += 1) {
-        slice_get(ctx.vertex_info, slice_get(p, i)).mark = 1;
+        get(ctx.vertex_info, get(p, i)).mark = 1;
     }
 
-    slice_get(ctx.vertex_info, p1).first_edge = aven_graph_neighbor_index(
+    get(ctx.vertex_info, p1).first_edge = aven_graph_neighbor_index(
         graph,
         p1,
         q1
@@ -161,7 +161,7 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
 ) {
     uint8_t path_color = frame->p_color ^ frame->q_color;
 
-    AvenGraphAdjList u_adj = slice_get(ctx->graph, frame->u);
+    AvenGraphAdjList u_adj = get(ctx->graph, frame->u);
 
     if (frame->edge_index == u_adj.len) {
         if (frame->x != frame->u) {
@@ -195,15 +195,15 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
         return false;
     }
 
-    uint32_t n_index = slice_get(ctx->vertex_info, frame->u).first_edge +
+    uint32_t n_index = get(ctx->vertex_info, frame->u).first_edge +
         frame->edge_index;
     if (n_index >= u_adj.len) {
         n_index -= (uint32_t)u_adj.len;
     }
 
-    uint32_t n = slice_get(u_adj, n_index);
-    uint32_t n_color = slice_get(ctx->coloring, n);
-    AvenGraphPlanePohVertex *n_info = &slice_get(ctx->vertex_info, n);
+    uint32_t n = get(u_adj, n_index);
+    uint32_t n_color = get(ctx->coloring, n);
+    AvenGraphPlanePohVertex *n_info = &get(ctx->vertex_info, n);
 
     frame->edge_index += 1;
 
@@ -211,7 +211,7 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
         if (n_color == 0) {
             if (frame->last_colored) {
                 frame->x = n;
-                slice_get(ctx->coloring, n) = frame->q_color;
+                get(ctx->coloring, n) = frame->q_color;
                 n_info->first_edge = aven_graph_next_neighbor_index(
                     ctx->graph,
                     n,
@@ -263,7 +263,7 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
                 frame->w = frame->u;
             }
         } else if (n_info->mark == frame->face_mark) {
-            slice_get(ctx->coloring, n) = path_color;
+            get(ctx->coloring, n) = path_color;
             n_info->first_edge = aven_graph_next_neighbor_index(
                 ctx->graph,
                 n,
@@ -280,7 +280,7 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
             if (frame->w == frame->u) {
                 frame->w = n;
 
-                slice_get(ctx->coloring, n) = frame->p_color;
+                get(ctx->coloring, n) = frame->p_color;
                 n_info->first_edge = aven_graph_next_neighbor_index(
                     ctx->graph,
                     n,

@@ -41,7 +41,7 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
         };
     }
 
-    if (slice_get(path, 0) != args->start) {
+    if (get(path, 0) != args->start) {
         char fmt[] = "expected first vertex %lu, found %lu";
        
         char *buffer = aven_arena_alloc(
@@ -51,7 +51,7 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
             1
         );
 
-        int len = sprintf(buffer, fmt, args->start, slice_get(path, 0));
+        int len = sprintf(buffer, fmt, args->start, get(path, 0));
         assert(len > 0);
 
         return (AvenTestResult){
@@ -60,7 +60,7 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
         };
     }
 
-    if (slice_get(path, expected_len - 1) != args->end) {
+    if (get(path, expected_len - 1) != args->end) {
         char fmt[] = "expected last vertex %lu, found %lu";
        
         char *buffer = aven_arena_alloc(
@@ -74,7 +74,7 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
             buffer,
             fmt,
             args->end,
-            slice_get(path, expected_len - 1)
+            get(path, expected_len - 1)
         );
         assert(len > 0);
 
@@ -103,8 +103,8 @@ AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
 
     // verify start and end vertices
     if (
-        slice_get(path, 0) != args->start or
-        slice_get(path, path.len - 1) != args->end
+        get(path, 0) != args->start or
+        get(path, path.len - 1) != args->end
     ) {
         match = false;
     }
@@ -134,8 +134,8 @@ AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
     // verify path
     if (match) {
         for (size_t i = 0; i < path.len - 1; i += 1) {
-            uint32_t v = slice_get(path, i);
-            uint32_t u = slice_get(path, i + 1);
+            uint32_t v = get(path, i);
+            uint32_t u = get(path, i + 1);
             
             uint32_t xv = v % args->width;
             uint32_t yv = v / args->width;
@@ -182,7 +182,7 @@ AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
             len += (size_t)sprintf(
                 buffer + len,
                 "%u, ",
-                slice_get(path, i)
+                get(path, i)
             );
             assert(len < buffer_len);
         }

@@ -125,7 +125,7 @@ static void aven_arg_help(AvenArgSlice args, char *overview, char *usage) {
     printf("OPTIONS:\n");
     printf("    help, -h, -help, --help -- Show this message\n");
     for (size_t i = 0; i < args.len; i += 1) {
-        aven_arg_print(slice_get(args, i));
+        aven_arg_print(get(args, i));
     }
 }
 
@@ -150,7 +150,7 @@ AVEN_FN int aven_arg_parse(
 
         bool found = false;
         for (size_t j = 0; j < args.len; j += 1) {
-            AvenArg *arg = &slice_get(args, j);
+            AvenArg *arg = &get(args, j);
             if (strcmp(arg_str, arg->name) != 0) {
                 continue;
             }
@@ -204,7 +204,7 @@ AVEN_FN int aven_arg_parse(
 
     int error = 0;
     for (size_t j = 0; j < args.len; j += 1) {
-        AvenArg arg = slice_get(args, j);
+        AvenArg arg = get(args, j);
         if (!arg.optional and arg.value.type != arg.type) {
             printf("missing required argument:\n");
             aven_arg_print(arg);
@@ -220,10 +220,10 @@ AVEN_FN AvenArgOptional aven_arg_get(
     char *argname
 ) {
     for (size_t i = 0; i < arg_slice.len; i += 1) {
-        if (strcmp(argname, slice_get(arg_slice, i).name) == 0) {
+        if (strcmp(argname, get(arg_slice, i).name) == 0) {
             return (AvenArgOptional){
                 .valid = true,
-                .value = slice_get(arg_slice, i),
+                .value = get(arg_slice, i),
             };
         }
     }

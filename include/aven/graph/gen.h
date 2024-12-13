@@ -15,21 +15,21 @@ static inline AvenGraph aven_graph_gen_complete(
     };
 
     for (uint32_t v = 0; v < g.len; v += 1) {
-        slice_get(g, v).len = g.len - 1;
-        slice_get(g, v).ptr = aven_arena_create_array(
+        get(g, v).len = g.len - 1;
+        get(g, v).ptr = aven_arena_create_array(
             uint32_t,
             arena,
-            slice_get(g, v).len
+            get(g, v).len
         );
 
         size_t i = 0;
-        AvenGraphAdjList vlist = slice_get(g, v);
+        AvenGraphAdjList vlist = get(g, v);
         for (uint32_t u = 0; u < g.len; u += 1) {
             if (v == u) {
                 continue;
             }
 
-            slice_get(vlist, i) = u;
+            get(vlist, i) = u;
             i += 1;
         }
     }
@@ -46,7 +46,7 @@ static inline AvenGraph aven_graph_gen_grid(
     g.ptr = aven_arena_create_array(AvenGraphAdjList, arena, g.len);
 
     for (uint32_t v = 0; v < g.len; v += 1) {
-        AvenGraphAdjList *adj = &slice_get(g, v);
+        AvenGraphAdjList *adj = &get(g, v);
         adj->len = 4;
         adj->ptr = aven_arena_create_array(
             uint32_t,
@@ -59,19 +59,19 @@ static inline AvenGraph aven_graph_gen_grid(
 
         uint32_t i = 0;
         if (x > 0) {
-            slice_get(*adj, i) = (x - 1) + y * width;
+            get(*adj, i) = (x - 1) + y * width;
             i += 1;
         }
         if (x < width - 1) {
-            slice_get(*adj, i) = (x + 1) + y * width;
+            get(*adj, i) = (x + 1) + y * width;
             i += 1;
         }
         if (y > 0) {
-            slice_get(*adj, i) = x + (y - 1) * width;
+            get(*adj, i) = x + (y - 1) * width;
             i += 1;
         }
         if (y < height - 1) {
-            slice_get(*adj, i) = x + (y + 1) * width;
+            get(*adj, i) = x + (y + 1) * width;
             i += 1;
         }
         

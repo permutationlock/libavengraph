@@ -439,8 +439,8 @@ static inline AvenGlTextLine aven_gl_text_line(
         line.dim[0] = aven_gl_text_quad(
             font,
             line.dim[0],
-            slice_get(text, i),
-            &slice_get(line.quads, i)
+            get(text, i),
+            &get(line.quads, i)
         );
     }
 
@@ -516,7 +516,7 @@ static inline void aven_gl_text_geometry_push_line(
     for (size_t i = 0; i < line->quads.len; i += 1) {
         aven_gl_text_geometry_push_quad(
             geometry,
-            &slice_get(line->quads, i),
+            &get(line->quads, i),
             text_trans,
             color
         );

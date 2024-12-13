@@ -28,7 +28,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_grid(
     graph.ptr = aven_arena_create_array(AvenGraphAdjList, arena, graph.len);
 
     for (uint32_t v = 0; v < graph.len; v += 1) {
-        AvenGraphAdjList *adj = &slice_get(graph, v);
+        AvenGraphAdjList *adj = &get(graph, v);
         adj->len = 4;
         adj->ptr = aven_arena_create_array(
             uint32_t,
@@ -41,19 +41,19 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_grid(
 
         uint32_t i = 0;
         if (x > 0) {
-            slice_get(*adj, i) = (x - 1) + y * width;
+            get(*adj, i) = (x - 1) + y * width;
             i += 1;
         }
         if (y > 0) {
-            slice_get(*adj, i) = x + (y - 1) * width;
+            get(*adj, i) = x + (y - 1) * width;
             i += 1;
         }
         if (x < width - 1) {
-            slice_get(*adj, i) = (x + 1) + y * width;
+            get(*adj, i) = (x + 1) + y * width;
             i += 1;
         }
         if (y < height - 1) {
-            slice_get(*adj, i) = x + (y + 1) * width;
+            get(*adj, i) = x + (y + 1) * width;
             i += 1;
         }
 
@@ -76,8 +76,8 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_grid(
         uint32_t x = v % width;
         uint32_t y = v / width;
 
-        slice_get(embedding, v)[0] = -1.0f + (float)x * x_scale;
-        slice_get(embedding, v)[1] = -1.0f + (float)y * y_scale;
+        get(embedding, v)[0] = -1.0f + (float)x * x_scale;
+        get(embedding, v)[1] = -1.0f + (float)y * y_scale;
     }
 
     return (AvenGraphPlaneGenData){
@@ -150,9 +150,9 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
         }
 
         float area = vec2_triangle_area(
-            slice_get(ctx.embedding, 0),
-            slice_get(ctx.embedding, 1),
-            slice_get(ctx.embedding, 2)
+            get(ctx.embedding, 0),
+            get(ctx.embedding, 1),
+            get(ctx.embedding, 2)
         );
 
         list_push(ctx.faces) = (AvenGraphPlaneGenFace){
@@ -181,9 +181,9 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
         }
 
         float area = vec2_triangle_area(
-            slice_get(ctx.embedding, 0),
-            slice_get(ctx.embedding, 1),
-            slice_get(ctx.embedding, 2)
+            get(ctx.embedding, 0),
+            get(ctx.embedding, 1),
+            get(ctx.embedding, 2)
         );
 
         list_push(ctx.faces) = (AvenGraphPlaneGenFace){
@@ -221,9 +221,9 @@ static float aven_graph_plane_gen_tri_face_area_internal(
     uint32_t v3
 ) {
     Vec2 coords[3];
-    vec2_copy(coords[0], slice_get(ctx->embedding, v1));
-    vec2_copy(coords[1], slice_get(ctx->embedding, v2));
-    vec2_copy(coords[2], slice_get(ctx->embedding, v3));
+    vec2_copy(coords[0], get(ctx->embedding, v1));
+    vec2_copy(coords[1], get(ctx->embedding, v2));
+    vec2_copy(coords[2], get(ctx->embedding, v3));
 
     float max_side2 = 0.0f;
     for (uint32_t i = 0; i < 3; i += 1) {
@@ -288,7 +288,7 @@ static inline bool aven_graph_plane_gen_tri_step(
 
     Vec2 face_coords[3];
     for (uint32_t i = 0; i < 3; i += 1) {
-        vec2_copy(face_coords[i], slice_get(ctx->embedding, face.vertices[i]));
+        vec2_copy(face_coords[i], get(ctx->embedding, face.vertices[i]));
     }
 
     float min_coeff = max(
@@ -425,7 +425,7 @@ static inline bool aven_graph_plane_gen_tri_step(
 
         uint32_t n = neighbor->vertices[k];
 
-        float existing_area = slice_get(ctx->faces, new_face_indices[i]).area;
+        float existing_area = get(ctx->faces, new_face_indices[i]).area;
         float existing_neighbor_area = neighbor->area;
 
         float min_existing = min(existing_area, existing_neighbor_area);
@@ -573,7 +573,7 @@ static inline bool aven_graph_plane_gen_tri_step_unrestricted(
 
     Vec2 face_coords[3];
     for (uint32_t i = 0; i < 3; i += 1) {
-        vec2_copy(face_coords[i], slice_get(ctx->embedding, face.vertices[i]));
+        vec2_copy(face_coords[i], get(ctx->embedding, face.vertices[i]));
     }
 
     float coeff[3] = {
@@ -837,12 +837,12 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
 
         for (uint32_t j = 0; j < 3; j += 1) {
             uint32_t v = face->vertices[j];
-            if (slice_get(data->graph, v).len != 0) {
+            if (get(data->graph, v).len != 0) {
                 continue;
             }
 
             uint32_t adj_start = (uint32_t)data->master_adj.len;
-            slice_get(data->graph, v).ptr = &data->master_adj.ptr[adj_start];
+            get(data->graph, v).ptr = &data->master_adj.ptr[adj_start];
 
             {
                 uint32_t u = face->vertices[(j + 1) % 3];
@@ -882,7 +882,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
                 face_index = cur_face->neighbors[k];
             }
 
-            slice_get(data->graph, v).len = (uint32_t)(
+            get(data->graph, v).len = (uint32_t)(
                 data->master_adj.len - adj_start
             );
         }

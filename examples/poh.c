@@ -293,13 +293,13 @@ static void app_update(
                         .ptr = p_data,
                     };
                     for (uint32_t i = 0; i < p.len; i += 1) {
-                        slice_get(p, i) = (p1 + i) % 4;
+                        get(p, i) = (p1 + i) % 4;
                     }
 
                     uint32_t q1 = (p1 + (uint32_t)p.len) % 4;
                     AvenGraphSubset q = { .len = 4 - p.len, .ptr = q_data };
                     for (uint32_t i = 0; i < q.len; i += 1) {
-                        slice_get(q, q.len - i - 1) = (q1 + i) % 4;
+                        get(q, q.len - i - 1) = (q1 + i) % 4;
                     }
 
                     ctx.data.poh.coloring.len = ctx.graph.len;

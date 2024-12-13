@@ -73,7 +73,7 @@ int main(void) {
                 rng,
                 &temp_arena
             );
-            slice_get(cases, i).graph = data.graph;
+            get(cases, i).graph = data.graph;
             if (data.graph.len != n) {
                 abort();
             }
@@ -87,8 +87,8 @@ int main(void) {
         AvenTimeInst start_inst = aven_time_now();
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            slice_get(cases, i).coloring = aven_graph_plane_poh_thread(
-                slice_get(cases, i).graph,
+            get(cases, i).coloring = aven_graph_plane_poh_thread(
+                get(cases, i).graph,
                 p,
                 q,
                 &thread_pool,
@@ -103,8 +103,8 @@ int main(void) {
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
             bool valid = aven_graph_path_color_verify(
-                slice_get(cases, i).graph,
-                slice_get(cases, i).coloring,
+                get(cases, i).graph,
+                get(cases, i).coloring,
                 temp_arena
             );
             if (valid) {
