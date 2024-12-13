@@ -36,12 +36,14 @@
 #define GRAPH_ARENA_PAGES 2000
 #define ARENA_PAGES (GRAPH_ARENA_PAGES + 1000)
 
-#define GRAPH_MAX_VERTICES (1500)
+#define SCREEN_UPDATES 4
+
+#define GRAPH_MAX_VERTICES (1600)
 #define GRAPH_MAX_EDGES (3 * GRAPH_MAX_VERTICES - 6)
 
 #define VERTEX_RADIUS 0.12f
 
-#define TIMESTEP (AVEN_TIME_NSEC_PER_SEC)
+#define TIMESTEP (3L * (AVEN_TIME_NSEC_PER_SEC / 4L))
 
 #define COLOR_DIVISIONS 2UL
 #define MAX_COLOR (((COLOR_DIVISIONS + 2) * (COLOR_DIVISIONS + 1)) / 2UL)
@@ -111,6 +113,7 @@ typedef struct {
     size_t threads;
     int64_t count;
     float radius;
+    int updates;
     bool paused;
     bool autoplay;
     bool step;
@@ -141,15 +144,10 @@ static void app_reset(void) {
 
     Aff2 area_transform;
     aff2_identity(area_transform);
-    // aff2_stretch(
-    //     area_transform,
-    //     ctx.norm_dim,
-    //     area_transform
-    // );
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.15f * (ctx.radius * ctx.radius),
+        1.25f * (ctx.radius * ctx.radius),
         0.001f,
         true,
         &arena
@@ -356,6 +354,7 @@ static void app_update(
         bool done = false;
         switch (ctx.state) {
             case APP_STATE_GEN:
+                ctx.updates = 0;
                 done = aven_graph_plane_gen_tri_step(
                     &ctx.data.gen.ctx,
                     ctx.rng
@@ -446,6 +445,7 @@ static void app_update(
                 }
                 break;
             case APP_STATE_HARTMAN:
+                ctx.updates = 0;
                 done = true;
                 for (
                     size_t i = 0;
@@ -509,11 +509,13 @@ static void app_update(
                     }
                     ctx.data.colored.coloring = coloring;
                     ctx.count = 0;
+                    ctx.updates = 0;
                 }
                 break;
             case APP_STATE_COLORED:
                 ctx.count += 1;
                 if (ctx.count > 2L * (AVEN_TIME_NSEC_PER_SEC / ctx.timestep)) {
+                    ctx.updates = 0;
                     if (
                         aven_graph_path_color_verify(
                             ctx.graph,
@@ -521,8 +523,13 @@ static void app_update(
                         )
                     ) {
                         if (ctx.autoplay and ctx.radius > 0.011f) {
+                            float old_radius = ctx.radius;
                             ctx.radius -= 0.01f;
-                            ctx.timestep = 3L * (ctx.timestep / 4L);
+                            ctx.timestep = (int64_t)(
+                                (float)ctx.timestep *
+                                (ctx.radius / old_radius) *
+                                (ctx.radius / old_radius)
+                            );
                         }
                         app_reset();
                     }
@@ -536,6 +543,12 @@ static void app_update(
             timestep = ctx.timestep;
         }
     }
+
+    if (ctx.updates > SCREEN_UPDATES) {
+        return;
+    }
+
+    ctx.updates += 1;
 
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx.vertex_shapes.geometry);
@@ -809,7 +822,7 @@ static void key_callback(
     }
     if (key == GLFW_KEY_1) {
         ctx.autoplay = false;
-        ctx.timestep = AVEN_TIME_NSEC_PER_SEC;
+        ctx.timestep = 3 * (AVEN_TIME_NSEC_PER_SEC / 4);
     }
     if (key == GLFW_KEY_2) {
         ctx.autoplay = false;
@@ -873,12 +886,17 @@ static void key_callback(
     }
 }
 
+void on_damage(GLFWwindow *w) {
+    (void)w;
+    ctx.updates = 0;
+}
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
 void on_resize(int width, int height) {
     glfwSetWindowSize(window, width, height);
-    printf("resized!\n");
+    ctx.updates = 0;
 }
 
 void main_loop(void) {
@@ -945,6 +963,7 @@ int main(void) {
             return 1;
         }
     }
+    glfwSetWindowRefreshCallback(window, on_damage);
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 0);
