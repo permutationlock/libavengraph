@@ -28,9 +28,9 @@
 
 // #define SHOW_VERTEX_LABELS
 
-#ifdef SHOW_VERTEX_LABELS
+// #ifdef SHOW_VERTEX_LABELS
     #include "font.h"
-#endif
+// #endif
 
 #define ARENA_PAGE_SIZE 4096
 #define GRAPH_ARENA_PAGES 2000
@@ -48,7 +48,7 @@
 #define COLOR_DIVISIONS 2UL
 #define MAX_COLOR (((COLOR_DIVISIONS + 2) * (COLOR_DIVISIONS + 1)) / 2UL)
 
-#define HELP_FONT_SIZE 12.0f
+#define HELP_FONT_SIZE 36.0f
 
 typedef struct {
     AvenGlShapeCtx ctx;
@@ -273,8 +273,26 @@ static void app_init(void) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-#ifdef SHOW_VERTEX_LABELS
     ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
+    ctx.help_text.font = aven_gl_text_font_init(
+        &gl,
+        font_bytes,
+        HELP_FONT_SIZE,
+        arena
+    );
+
+    ctx.help_text.ctx = aven_gl_text_ctx_init(&gl);
+    ctx.help_text.geometry = aven_gl_text_geometry_init(
+        GRAPH_MAX_VERTICES * 10,
+        &arena
+    );
+    ctx.help_text.buffer = aven_gl_text_buffer_init(
+        &gl,
+        &ctx.help_text.geometry,
+        AVEN_GL_BUFFER_USAGE_DYNAMIC
+    );
+
+#ifdef SHOW_VERTEX_LABELS
     ctx.vertex_text.font = aven_gl_text_font_init(
         &gl,
         font_bytes,
@@ -327,6 +345,8 @@ static void app_update(
         norm_width = 1.0f;
         pixel_size = 2.0f / (float)width;
     }
+
+    float text_scale = 0.08f / HELP_FONT_SIZE;
 
     AvenTimeInst now = aven_time_now();
     int64_t elapsed = aven_time_since(now, ctx.last_update);
@@ -524,7 +544,10 @@ static void app_update(
                 break;
             case APP_STATE_COLORED:
                 ctx.count += 1;
-                if (ctx.count > 2L * (AVEN_TIME_NSEC_PER_SEC / ctx.timestep)) {
+                if (
+                    ctx.paused or
+                    ctx.count > 2L * (AVEN_TIME_NSEC_PER_SEC / ctx.timestep)
+                ) {
                     ctx.updates = 0;
                     if (
                         aven_graph_path_color_verify(
@@ -562,17 +585,45 @@ static void app_update(
 
     aven_gl_shape_geometry_clear(&ctx.edge_shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx.vertex_shapes.geometry);
+    aven_gl_text_geometry_clear(&ctx.help_text.geometry);
 #ifdef SHOW_VERTEX_LABELS
     aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
 #endif
 
+    Aff2 text_transform;
+    aff2_identity(text_transform);
+    aff2_add_vec2(text_transform, text_transform, (Vec2){ 0.0f, 0.98f });
+
+    AvenArena text_arena = arena;
+    AvenGlTextLine hello_line = aven_gl_text_line(
+        &ctx.help_text.font,
+        aven_str("Pause: <Space>  Step: <D>  Speed: <0-9>  Scale: <+/->  Threads: <T>"),
+        &text_arena
+    );
+    aven_gl_text_geometry_push_line(
+        &ctx.help_text.geometry,
+        &hello_line,
+        text_transform,
+        text_scale,
+        (Vec4){ 0.0f, 0.0f, 0.0f, 1.0f }
+    );
+
+    float border_padding = 1.5f * ctx.radius + 4.0f * pixel_size;
+    float scale = 1.0f / (1.0f + border_padding);
+
     Aff2 graph_transform;
     aff2_identity(graph_transform);
-    // aff2_stretch(
-    //     graph_transform,
-    //     (Vec2){ norm_width, norm_height },
-    //     graph_transform
-    // );
+    aff2_stretch(
+        graph_transform,
+        (Vec2){ scale, scale },
+        graph_transform
+    );
+    aff2_stretch(
+        graph_transform,
+        (Vec2){ 0.96f, 0.96f },
+        graph_transform
+    );
+    aff2_sub_vec2(graph_transform, graph_transform, (Vec2){ 0.0f, 0.04f });
 
     switch (ctx.state) {
         case APP_STATE_GEN:
@@ -719,9 +770,6 @@ static void app_update(
     assert(gl.GetError() == 0);
 
     // float camera_frac = (float)ctx->camera_time / (float)CAMERA_TIMESTEP;
-    float border_padding = 2.0f * ctx.radius;
-
-    float scale = 1.0f / (1.0f + border_padding);
 
     Aff2 cam_transform;
     aff2_camera_position(
@@ -730,7 +778,7 @@ static void app_update(
         (Vec2){ norm_width, norm_height },
         0.0f
     );
-    aff2_stretch(cam_transform, (Vec2){ scale, scale }, cam_transform);
+    //aff2_stretch(cam_transform, (Vec2){ scale, scale }, cam_transform);
 
     aven_gl_shape_buffer_update(
         &gl,
@@ -741,6 +789,11 @@ static void app_update(
         &gl,
         &ctx.vertex_shapes.buffer,
         &ctx.vertex_shapes.geometry
+    );
+    aven_gl_text_buffer_update(
+        &gl,
+        &ctx.help_text.buffer,
+        &ctx.help_text.geometry
     );
 #ifdef SHOW_VERTEX_LABELS
     aven_gl_text_buffer_update(
@@ -761,6 +814,13 @@ static void app_update(
         &ctx.vertex_shapes.ctx,
         &ctx.vertex_shapes.buffer,
         pixel_size,
+        cam_transform
+    );
+    aven_gl_text_geometry_draw(
+        &gl,
+        &ctx.help_text.ctx,
+        &ctx.help_text.buffer,
+        &ctx.help_text.font,
         cam_transform
     );
 #ifdef SHOW_VERTEX_LABELS 

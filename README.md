@@ -23,7 +23,7 @@ To build examples:
 The resulting example animation executables will be in the `build_out` directory.
 
 To build and run benchmarks you will need a C compiler that supports C11
-atomics for thread synchronization:
+atomics and the GNU `asm` inline assembly extension:
 ```
 ./build bench -ccflags "-O3"
 ```

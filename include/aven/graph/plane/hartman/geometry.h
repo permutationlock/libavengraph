@@ -46,6 +46,10 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_active(
         frame->z
     );
 
+    Vec2 z_pos;
+    vec2_copy(z_pos, get(embedding, frame->z));
+    aff2_transform(z_pos, trans, z_pos);
+
     Aff2 node_active_trans;
     aff2_identity(node_active_trans);
     aff2_stretch(
@@ -56,7 +60,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_active(
     aff2_add_vec2(
         node_active_trans,
         node_active_trans,
-        get(embedding, frame->z)
+        z_pos
     );
     aven_gl_shape_rounded_geometry_push_square(
         rounded_geometry,
@@ -131,6 +135,9 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
         uint32_t v_mark = get(ctx->marks, frame->x_info.mark);
         do {
             AvenGraphAugAdjList v_aug_adj = get(ctx->graph, v);
+            Vec2 v_pos;
+            vec2_copy(v_pos, get(embedding, v));
+            aff2_transform(v_pos, trans, v_pos);
 
             if (v == frame->z) {
                 Aff2 node_x_trans;
@@ -143,7 +150,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                 aff2_add_vec2(
                     node_x_trans,
                     node_x_trans,
-                    get(embedding, v)
+                    v_pos
                 );
                 aven_gl_shape_rounded_geometry_push_square(
                     rounded_geometry,
@@ -162,7 +169,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                 aff2_add_vec2(
                     node_x_trans,
                     node_x_trans,
-                    get(embedding, v)
+                    v_pos
                 );
                 aven_gl_shape_rounded_geometry_push_square(
                     rounded_geometry,
@@ -181,7 +188,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                 aff2_add_vec2(
                     node_y_trans,
                     node_y_trans,
-                    get(embedding, v)
+                    v_pos
                 );
                 aven_gl_shape_rounded_geometry_push_square(
                     rounded_geometry,
@@ -200,7 +207,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                 aff2_add_vec2(
                     node_face_trans,
                     node_face_trans,
-                    get(embedding, v)
+                    v_pos
                 );
                 aven_gl_shape_rounded_geometry_push_square(
                     rounded_geometry,

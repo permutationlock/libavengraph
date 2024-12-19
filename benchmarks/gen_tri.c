@@ -45,7 +45,9 @@ int main(void) {
         size_t max_deg_sum = 0;
         size_t min_deg_sum = 0;
 
+        asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
+        asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < ngraphs; i += 1) {
             AvenArena temp_arena = arena;
@@ -79,7 +81,9 @@ int main(void) {
             overall_min_deg = min(min_deg, overall_min_deg);
         }
 
+        asm volatile("" ::: "memory");
         AvenTimeInst end_inst = aven_time_now();
+        asm volatile("" ::: "memory");
 
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
 

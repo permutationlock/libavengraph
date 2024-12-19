@@ -126,7 +126,9 @@ int main(void) {
         uint32_t face_data[3] = { 0, 1, 2 };
         AvenGraphSubset face = slice_array(face_data);
 
+        __asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
+        __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
             aven_graph_plane_hartman_thread(
@@ -138,7 +140,10 @@ int main(void) {
             );
         }
 
+        __asm volatile("" ::: "memory");
         AvenTimeInst end_inst = aven_time_now();
+        __asm volatile("" ::: "memory");
+
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
 

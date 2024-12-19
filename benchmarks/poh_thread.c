@@ -84,7 +84,9 @@ int main(void) {
         AvenGraphSubset p = slice_array(p_data);
         AvenGraphSubset q = slice_array(q_data);
 
+        __asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
+        __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
             get(cases, i).coloring = aven_graph_plane_poh_thread(
@@ -96,7 +98,10 @@ int main(void) {
             );
         }
 
+        __asm volatile("" ::: "memory");
         AvenTimeInst end_inst = aven_time_now();
+        __asm volatile("" ::: "memory");
+
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
 

@@ -74,7 +74,9 @@ int main(void) {
             } while (get(cases, i).target == get(cases, i).root);
         }
 
+        __asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
+        __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
             get(cases, i).path = aven_graph_bfs(
@@ -85,7 +87,10 @@ int main(void) {
             );
         }
 
+        __asm volatile("" ::: "memory");
         AvenTimeInst end_inst = aven_time_now();
+        __asm volatile("" ::: "memory");
+
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
         double ns_per_graph = (double)elapsed_ns / (double)cases.len;
 
