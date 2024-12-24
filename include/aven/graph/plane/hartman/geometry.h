@@ -77,7 +77,10 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_active(
     AvenGraphAugAdjList z_adj = get(ctx->graph, frame->z);
 
     if (z_info.nb.last != z_info.nb.first) {
-        uint32_t v = get(z_adj, (z_info.nb.first + 1) % z_adj.len).vertex;
+        uint32_t v = get(
+            z_adj,
+            aven_graph_aug_adj_next(z_adj, z_info.nb.first)
+        ).vertex;
         aven_graph_plane_geometry_push_edge(
             geometry,
             embedding,
@@ -273,7 +276,10 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
             AvenGraphAugAdjList z_adj = get(ctx->graph, frame->z);
             uint32_t u = get(z_adj, z_info->nb.first).vertex;
             if (z_info->nb.first != z_info->nb.last) {
-                u = get(z_adj, (z_info->nb.first + 1) % z_adj.len).vertex;
+                u = get(
+                    z_adj,
+                    aven_graph_aug_adj_next(z_adj, z_info->nb.first)
+                ).vertex;
             }
 
             aven_graph_plane_geometry_push_edge(
@@ -302,7 +308,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
             for (
                 uint32_t i = v_info->nb.first;
                 i != v_info->nb.last;
-                i = (i + 1) % v_adj.len
+                i = aven_graph_aug_adj_next(v_adj, i)
             ) {
                 uint32_t u = get(v_adj, i).vertex;
                 // if (u < v) {

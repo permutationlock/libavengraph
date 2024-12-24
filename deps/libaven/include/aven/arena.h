@@ -98,6 +98,10 @@ AVEN_FN void *aven_arena_realloc(
         .ptr = aven_arena_create_array(t, a, n), \
         .cap = n, \
     }
+#define aven_arena_create_queue(t, a, n) { \
+        .ptr = aven_arena_create_array(t, a, n), \
+        .cap = n, \
+    }
 #define aven_arena_create_pool(t, a, n) { \
         .ptr = (void *)aven_arena_create_array(PoolEntry(t), a, n), \
         .cap = n, \

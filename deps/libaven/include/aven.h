@@ -44,6 +44,13 @@
 #define Result(t) struct { t payload; int error; }
 #define Slice(t) struct { t *ptr; size_t len; }
 #define List(t) struct { t *ptr; size_t len; size_t cap; }
+#define Queue(t) struct { \
+        t *ptr; \
+        size_t cap; \
+        size_t front; \
+        size_t back; \
+        size_t used; \
+    }
 
 #define PoolEntry(t) union { t data; size_t parent; }
 #define PoolExplicit(e) struct { \
@@ -67,6 +74,36 @@ typedef Slice(unsigned char) ByteSlice;
 #else
     #define aven_assert_lt_internal(a, b) a
 #endif
+
+static inline size_t aven_queue_push_internal(
+    size_t *used,
+    size_t *back,
+    size_t cap
+) {
+    assert(*used < cap);
+    *used += 1;
+    size_t index = *back;
+    *back = index + 1;
+    if (*back >= cap) {
+        *back -= cap;
+    }
+    return index;
+}
+
+static inline size_t aven_queue_pop_internal(
+    size_t *used,
+    size_t *front,
+    size_t cap
+) {
+    assert(*used > 0);
+    *used -= 1;
+    size_t index = *front;
+    *front = index + 1;
+    if (*front >= cap) {
+        *front -= cap;
+    }
+    return index;
+}
 
 static inline size_t aven_pool_next_internal(
     size_t *used,
@@ -107,9 +144,24 @@ static inline void aven_pool_push_free_internal(
 
 #define get(s, i) (s).ptr[aven_assert_lt_internal(i, (s).len)]
 #define list_get(l, i) get(l, i)
+#define list_front(l) get(l, 0)
 #define list_back(l) get(l, (l).len - 1)
 #define list_pop(l) (l).ptr[aven_assert_lt_internal(--(l).len, (l).cap)]
 #define list_push(l) (l).ptr[aven_assert_lt_internal((l).len++, (l).cap)]
+#define list_clear(l) do { (l).len = 0; } while (0)
+#define queue_front(q) (q).ptr[(q).front + aven_assert_lt_internal(0, (q).used)]
+#define queue_back(q) (q).ptr[(q).back + aven_assert_lt_internal(0, (q).used)]
+#define queue_pop(q) (q).ptr[ \
+        aven_queue_pop_internal(&(q).used, &(q).front, (q).cap) \
+    ]
+#define queue_push(q) (q).ptr[ \
+        aven_queue_push_internal(&(q).used, &(q).back, (q).cap) \
+    ]
+#define queue_clear(q) do { \
+        (q).used = 0; \
+        (q).front = 0; \
+        (q).back = 0; \
+    } while (0)
 #define pool_get(p, i) get(p, i).data
 #define pool_create(p) (((p).free == 0) ? \
         aven_pool_next_internal(&(p).used, &(p).len, (p).cap) : \
@@ -125,6 +177,11 @@ static inline void aven_pool_push_free_internal(
         &get(p, i).parent, \
         i \
     )
+#define pool_clear(p) do { \
+        (p).used = 0; \
+        (p).free = 0; \
+        (p).len = 0; \
+    } while (0)
 
 #define slice_array(a) { .ptr = a, .len = countof(a) }
 #define slice_list(l) { .ptr = (l).ptr, .len = (l).len }

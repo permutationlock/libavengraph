@@ -41,10 +41,12 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
             };
             vec4_copy(active_edge_info.color, info->active_color);
 
-            uint32_t v = get(
-                u_adj,
-                (frame_u_info.first_edge + frame.edge_index) % u_adj.len
-            );
+            uint32_t uv_index = (frame_u_info.first_edge + frame.edge_index);
+            if (uv_index > u_adj.len) {
+                uv_index -= (uint32_t)u_adj.len;
+            }
+
+            uint32_t v = get(u_adj, uv_index);
 
             if (get(ctx->vertex_info, v).mark == frame.face_mark) {
                 active_edge_info.thickness += info->border_thickness;

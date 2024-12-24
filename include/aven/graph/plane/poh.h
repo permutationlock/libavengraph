@@ -155,7 +155,7 @@ static inline bool aven_graph_plane_poh_frame_step(
             ) {
                 uint32_t l = get(
                     u_adj,
-                    (n_index + u_adj.len - 1) % u_adj.len
+                    aven_graph_adj_prev(u_adj, n_index)
                 );
 
                 get(ctx->coloring, l) = frame->q_color;

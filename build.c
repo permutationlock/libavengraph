@@ -421,6 +421,21 @@ int main(int argc, char **argv) {
     AvenBuildStep gen_tri_root_step = aven_build_step_root();
     aven_build_step_add_dep(&gen_tri_root_step, &bench_gen_tri_step, &arena);
 
+    AvenBuildStep bench_poh_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
+        &opts,
+        includes,
+        macros,
+        syslibs,
+        bench_objs,
+        aven_path(&arena, root_path.ptr, "benchmarks", "poh_bfs.c", NULL),
+        &bench_dir_step,
+        false,
+        bench_args,
+        &arena
+    );
+    AvenBuildStep poh_bfs_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&poh_bfs_root_step, &bench_poh_bfs_step, &arena);
+
     AvenBuildStep bench_poh_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
@@ -498,9 +513,10 @@ int main(int argc, char **argv) {
 
     AvenBuildStep bench_root_step = aven_build_step_root();
     // aven_build_step_add_dep(&bench_root_step, &hartman_thread_root_step, &arena);
-    aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &poh_thread_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &poh_bfs_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &bfs_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &gen_tri_root_step, &arena);
 

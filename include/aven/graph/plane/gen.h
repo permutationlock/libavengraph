@@ -967,4 +967,48 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_unrestricted(
     return aven_graph_plane_gen_tri_data(&ctx, &data);
 }
 
+typedef struct {
+    uint32_t vertices[3];
+    uint32_t neighbors[3];
+} AvenGraphPlaneGenAbsFace;
+
+static inline AvenGraph aven_graph_plane_gen_tri_abs(
+    uint32_t size,
+    AvenRng rng,
+    AvenArena *arena
+) {
+    assert(size >= 3);
+
+    Slice(uint32_t) master_adj = aven_arena_create_slice(
+        uint32_t,
+        arena,
+        6 * size - 12
+    );
+    AvenGraph graph = aven_arena_create_slice(
+        AvenGraphAdjList,
+        arena,
+        size
+    );
+
+    AvenArena temp_arena = *arena;
+
+    List(AvenGraphPlaneGenAbsFace) faces = aven_arena_create_list(
+        AvenGraphPlaneGenAbsFace,
+        arena,
+        2 * size - 4
+    );
+
+    list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        .vertices = { 0, 2, 1 },
+        .neighbors = { 1, 1, 1 },
+    };
+    list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        .vertices = { 0, 1, 2 },
+        .neighbors = { 0, 0, 0 },
+    };
+
+    uint32_t next_vertex = 3;
+}
+
+
 #endif // AVEN_GRAPH_PLANE_GEN_H

@@ -54,6 +54,50 @@ static inline uint32_t aven_graph_next_neighbor_index(
     return 0;
 }
 
+static inline uint32_t aven_graph_adj_next(
+    AvenGraphAdjList adj,
+    uint32_t i
+) {
+    if (i + 1 == adj.len) {
+        return 0;
+    }
+
+    return i + 1;
+}
+
+static inline uint32_t aven_graph_adj_prev(
+    AvenGraphAdjList adj,
+    uint32_t i
+) {
+    if (i == 0) {
+        return (uint32_t)(adj.len - 1);
+    }
+
+    return i - 1;
+}
+
+static inline uint32_t aven_graph_aug_adj_next(
+    AvenGraphAugAdjList adj,
+    uint32_t i
+) {
+    if (i + 1 == adj.len) {
+        return 0;
+    }
+
+    return i + 1;
+}
+
+static inline uint32_t aven_graph_aug_adj_prev(
+    AvenGraphAugAdjList adj,
+    uint32_t i
+) {
+    if (i == 0) {
+        return (uint32_t)(adj.len - 1);
+    }
+
+    return i - 1;
+}
+
 static inline AvenGraphAug aven_graph_aug(AvenGraph graph, AvenArena *arena) {
     AvenGraphAug aug_graph = { .len = graph.len };
     aug_graph.ptr = aven_arena_create_array(

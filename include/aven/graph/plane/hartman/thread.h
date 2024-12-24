@@ -397,7 +397,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
 
     bool last_neighbor = (zu_index == z_info->nb.last);
     if (!last_neighbor) {
-        z_info->nb.first = (uint32_t)((z_info->nb.first + 1) % z_adj.len);
+        z_info->nb.first = aven_graph_aug_adj_next(z_adj, z_info->nb.first);
     }
 
     uint32_t u = zu.vertex;
@@ -425,8 +425,8 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         aven_graph_plane_hartman_thread_remove_color(u_colors, z_color);
         assert(u_colors->len > 1);
 
-        u_info->nb.first = (uint32_t)((uz_index + 1) % u_adj.len);
-        u_info->nb.last =(uint32_t)((uz_index + u_adj.len - 1) % u_adj.len);
+        u_info->nb.first = aven_graph_aug_adj_next(u_adj, uz_index);
+        u_info->nb.last = aven_graph_aug_adj_prev(u_adj, uz_index);
         u_info->mark = frame->x_info.mark;
     } else if (u_info->nb.first == u_info->nb.last) {
         if (u != frame->x and u != frame->y) {
@@ -444,7 +444,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         uint32_t z_nb_old_last = z_info->nb.last;
         uint32_t u_nb_old_first = u_info->nb.first;
 
-        u_info->nb.first = (uint32_t)((uz_index + 1) % u_adj.len);
+        u_info->nb.first = aven_graph_aug_adj_next(u_adj, uz_index);
 
         if (aven_graph_plane_hartman_thread_has_color(u_colors, z_color)) {
             if (u_colors->len != 1) {
@@ -513,7 +513,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
 
         assert(uz_index == u_info->nb.last);
 
-        u_info->nb.last = (uint32_t)((uz_index + u_adj.len - 1) % u_adj.len);
+        u_info->nb.last = aven_graph_aug_adj_prev(u_adj, uz_index);
         u_info->mark = aven_graph_plane_hartman_thread_next_mark(
             ctx,
             mark_set
@@ -542,7 +542,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             AvenGraphPlaneHartmanVertex new_u_info = {
                 .mark = u_info->mark,
                 .nb = {
-                    .first = (uint32_t)((uz_index + 1) % u_adj.len),
+                    .first = aven_graph_aug_adj_next(u_adj, uz_index),
                     .last = u_info->nb.last,
                 },
             };
@@ -555,9 +555,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             };
             maybe_frame.valid = true;
 
-            u_info->nb.last = (uint32_t)(
-                (uz_index + u_adj.len - 1) % u_adj.len
-            );
+            u_info->nb.last = aven_graph_aug_adj_prev(u_adj, uz_index);
 
             if (u == frame->x) {
                 frame->x_info.mark = aven_graph_plane_hartman_thread_next_mark(
@@ -568,9 +566,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
 
             done = last_neighbor;
         } else {
-            u_info->nb.last = (uint32_t)(
-                (uz_index + u_adj.len - 1) % u_adj.len
-            );
+            u_info->nb.last = aven_graph_aug_adj_prev(u_adj, uz_index);
         }
     } else {
         aven_graph_plane_hartman_thread_color_differently(u_colors, z_color);
@@ -593,16 +589,14 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
                 .y_info = {
                     .mark = u_info->mark,
                     .nb = {
-                        .first = (uint32_t)((uz_index + 1) % u_adj.len),
+                        .first = aven_graph_aug_adj_next(u_adj, uz_index),
                         .last = u_info->nb.last,
                     },
                 },
             };
             maybe_frame.valid = true;
 
-            u_info->nb.last = (uint32_t)(
-                (uz_index + u_adj.len - 1) % u_adj.len
-            );
+            u_info->nb.last = aven_graph_aug_adj_prev(u_adj, uz_index);
             u_info->mark = aven_graph_plane_hartman_thread_next_mark(
                 ctx,
                 mark_set
@@ -614,7 +608,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             assert(last_neighbor);
             assert(frame->y == z);
 
-            u_info->nb.first = (uint32_t)((uz_index + 1) % u_adj.len);
+            u_info->nb.first = aven_graph_aug_adj_next(u_adj, uz_index);
             u_info->mark = frame->x_info.mark;
 
             frame->y = u;
