@@ -250,8 +250,8 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
                 aven_graph_plane_poh_thread_push_internal(
                     ctx,
                     (AvenGraphPlanePohThreadFrame){
-                        .q_color = frame->q_color,
                         .p_color = path_color,
+                        .q_color = frame->q_color,
                         .u = frame->w,
                         .w = frame->w,
                         .t = frame->w,

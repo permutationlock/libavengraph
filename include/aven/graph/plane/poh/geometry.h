@@ -42,7 +42,7 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
             vec4_copy(active_edge_info.color, info->active_color);
 
             uint32_t uv_index = (frame_u_info.first_edge + frame.edge_index);
-            if (uv_index > u_adj.len) {
+            if (uv_index >= u_adj.len) {
                 uv_index -= (uint32_t)u_adj.len;
             }
 

@@ -69,16 +69,14 @@ int main(void) {
         );
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_unrestricted(
+            AvenGraph graph = aven_graph_plane_gen_tri_abs(
                 n,
-                ident,
-                false,
                 rng,
                 &temp_arena
             );
-            get(cases, i).graph = data.graph;
-            if (data.graph.len != n) {
-                abort();
+            get(cases, i).graph = graph;
+            if (graph.len != n) {
+                aven_panic("graph generation failed");
             }
 
             AvenGraphPlaneHartmanListProp *color_lists = &get(

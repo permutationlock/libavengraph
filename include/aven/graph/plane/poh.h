@@ -10,12 +10,13 @@ typedef struct {
     uint32_t u;
     uint32_t w;
     uint32_t t;
+    uint32_t x;
     uint32_t edge_index;
     uint32_t face_mark;
     uint8_t q_color;
     uint8_t p_color;
     bool above_path;
-    bool last_uncolored;
+    bool last_colored;
 } AvenGraphPlanePohFrame;
 typedef Optional(AvenGraphPlanePohFrame) AvenGraphPlanePohFrameOptional;
 
@@ -89,6 +90,7 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
         .u = p1,
         .w = p1,
         .t = p1,
+        .x = p1,
         .face_mark = 1,
     };
 
@@ -117,6 +119,18 @@ static inline bool aven_graph_plane_poh_frame_step(
     AvenGraphAdjList u_adj = get(ctx->graph, frame->u);
 
     if (frame->edge_index == u_adj.len) {
+        if (frame->x != frame->u) {
+            list_push(ctx->frames) = (AvenGraphPlanePohFrame){
+                .q_color = path_color,
+                .p_color = frame->p_color,
+                .u = frame->x,
+                .t = frame->x,
+                .w = frame->x,
+                .x = frame->x,
+                .face_mark = frame->face_mark + 1,
+            };
+        }
+
         if (frame->t == frame->u) {
             assert(frame->w == frame->u);
             return true;
@@ -126,9 +140,10 @@ static inline bool aven_graph_plane_poh_frame_step(
             frame->w = frame->t;
         }
         frame->u = frame->t;
+        frame->x = frame->t;
         frame->edge_index = 0;
         frame->above_path = false;
-        frame->last_uncolored = false;
+        frame->last_colored = false;
         return false;
     }
 
@@ -146,46 +161,48 @@ static inline bool aven_graph_plane_poh_frame_step(
 
     if (frame->above_path) {
         if (n_color == 0) {
-            frame->last_uncolored = true;
-        } else {
-            if (
-                frame->last_uncolored and
-                n_color == frame->p_color and
-                n_info->mark == (frame->face_mark - 1)
-            ) {
-                uint32_t l = get(
-                    u_adj,
-                    aven_graph_adj_prev(u_adj, n_index)
+            if (frame->last_colored) {
+                frame->x = n;
+                get(ctx->coloring, n) = frame->q_color;
+                n_info->first_edge = aven_graph_next_neighbor_index(
+                    ctx->graph,
+                    n,
+                    frame->u
                 );
-
-                get(ctx->coloring, l) = frame->q_color;
-                get(ctx->vertex_info, l).first_edge =
-                    aven_graph_neighbor_index(ctx->graph, l, frame->u);
-
-                list_push(ctx->frames) = (AvenGraphPlanePohFrame){
-                    .q_color = path_color,
-                    .p_color = frame->p_color,
-                    .u = l,
-                    .t = l,
-                    .w = l,
-                    .face_mark = frame->face_mark,
-                };
             }
-
-            frame->last_uncolored = false;
+            n_info->mark = frame->face_mark + 1;
+            frame->last_colored = false;
+        } else {
+            frame->last_colored = true;
+            if (frame->x != frame->u) {
+                list_push(ctx->frames) = (AvenGraphPlanePohFrame){
+                    .p_color = path_color,
+                    .q_color = frame->p_color,
+                    .u = frame->x,
+                    .t = frame->x,
+                    .w = frame->x,
+                    .x = frame->x,
+                    .face_mark = frame->face_mark + 1,
+                };
+                frame->x = frame->u;
+            }
         }
     } else if (n != frame->w) {
         if (n_color != 0) {
             if (n_color == frame->p_color) {
                 frame->above_path = true;
+                if (n_color == frame->p_color) {
+                    frame->last_colored = true;
+                }
             }
             if (frame->w != frame->u) {
                 list_push(ctx->frames) = (AvenGraphPlanePohFrame){
-                    .q_color = frame->q_color,
                     .p_color = path_color,
+                    .q_color = frame->q_color,
                     .u = frame->w,
                     .w = frame->w,
                     .t = frame->w,
+                    .x = frame->w,
                     .face_mark = frame->face_mark + 1,
                 };
 

@@ -550,247 +550,6 @@ static inline bool aven_graph_plane_gen_tri_step(
     return false;
 }
 
-static inline bool aven_graph_plane_gen_tri_step_unrestricted(
-    AvenGraphPlaneGenTriCtx *ctx,
-    AvenRng rng
-) {
-    if (ctx->embedding.len == ctx->embedding.cap) {
-        return true;
-    }
-
-    if (ctx->active_face == AVEN_GRAPH_PLANE_GEN_FACE_INVALID) {
-        uint32_t valid_face_index = aven_rng_rand_bounded(
-            rng,
-            (uint32_t)ctx->valid_faces.len
-        );
-        ctx->active_face = list_get(ctx->valid_faces, valid_face_index);
-        return false;
-    }
-
-    AvenGraphPlaneGenFace face = list_get(ctx->faces, ctx->active_face);
-
-    // Generate a random vertex contained within the active face
-
-    Vec2 face_coords[3];
-    for (uint32_t i = 0; i < 3; i += 1) {
-        vec2_copy(face_coords[i], get(ctx->embedding, face.vertices[i]));
-    }
-
-    float coeff[3] = {
-        FLT_MIN,
-        FLT_MIN,
-        FLT_MIN,
-    };
-
-    float remaining = 1.0f;
-
-    for (uint32_t i = 0; i < 2; i += 1) {
-        float extra = aven_rng_randf(rng) * remaining;
-        remaining -= extra;
-        coeff[i] += extra;
-    }
-    coeff[2] += remaining;
-
-    Vec2 vpos = { 0.0f, 0.0f };
-    for (uint32_t i = 0; i < 3; i += 1) {
-        Vec2 scaled;
-        vec2_scale(scaled, coeff[i], face_coords[i]);
-        vec2_add(vpos, vpos, scaled);
-    }
-
-    uint32_t v = (uint32_t)ctx->embedding.len;
-    vec2_copy(list_push(ctx->embedding), (Vec2){ vpos[0], vpos[1] });
-
-    // Split the active face into three faces around the new vertex
-
-    uint32_t new_face_indices[3] = {
-        ctx->active_face,
-        (uint32_t)ctx->faces.len,
-        (uint32_t)ctx->faces.len + 1,
-    };
-
-    list_push(ctx->faces) = (AvenGraphPlaneGenFace){ 0 };
-    list_push(ctx->faces) = (AvenGraphPlaneGenFace){ 0 };
-
-    list_push(ctx->valid_faces) = new_face_indices[1];
-    list_push(ctx->valid_faces) = new_face_indices[2];
-
-    for (uint32_t i = 0; i < 3; i += 1) {
-        uint32_t nexti = (i + 1) % 3;
-        uint32_t previ = (i + 2) % 3;
-
-        AvenGraphPlaneGenFace *new_face = &list_get(
-            ctx->faces,
-            new_face_indices[i]
-        );
-
-        new_face->vertices[0] = v;
-        new_face->vertices[1] = face.vertices[i];
-        new_face->vertices[2] = face.vertices[nexti];
-
-        new_face->neighbors[0] = new_face_indices[previ];
-        new_face->neighbors[1] = face.neighbors[i];
-        new_face->neighbors[2] = new_face_indices[nexti];
-    }
-
-    for (uint32_t i = 0; i < 3; i += 1) {
-        AvenGraphPlaneGenFace *neighbor = &list_get(
-            ctx->faces,
-            face.neighbors[i]
-        );
-        uint32_t end_vertex = face.vertices[(i + 1) % 3];
-
-        uint32_t j = 0;
-        for (; j < 3; j += 1) {
-            if (neighbor->vertices[j] == end_vertex) {
-                break;
-            }
-        }
-        assert(j < 3);
-
-        neighbor->neighbors[j] = new_face_indices[i];
-    }
-
-    // Determine if any faces neighboring the active face are valid for edge
-    // flips with v
-
-    typedef struct {
-        uint32_t neighbor_index;
-        uint32_t vertex_index;
-    } AvenGraphPlaneGenNeighbor;
-    AvenGraphPlaneGenNeighbor neighbor_data[3];
-    List(AvenGraphPlaneGenNeighbor) valid_neighbors = list_array(neighbor_data);
-
-    uint32_t flips = aven_rng_rand_bounded(rng, 10);
-    if (flips > 4) {
-        flips = 2;
-    } else if (flips > 1) {
-        flips = 1;
-    } else {
-        flips = 0;
-    }
-    uint32_t offset = aven_rng_rand_bounded(rng, 3);
-
-    for (uint32_t n_index = 0; n_index < 3; n_index += 1) {
-        uint32_t i = (n_index + offset) % 3;
-        uint32_t j = (i + 1) % 3;
-
-        AvenGraphPlaneGenFace *neighbor = &list_get(
-            ctx->faces,
-            face.neighbors[i]
-        );
-
-        uint32_t f1 = face.vertices[i];
-        uint32_t f2 = face.vertices[j];
-
-        Vec2 f1pos;
-        vec2_copy(f1pos, list_get(ctx->embedding, f1));
-
-        Vec2 f2pos;
-        vec2_copy(f2pos, list_get(ctx->embedding, f2));
-
-        uint32_t k = 0;
-        for (; k < 3; k += 1) {
-            if (neighbor->vertices[k] != f1 and neighbor->vertices[k] != f2) {
-                break;
-            }
-        }
-        assert(k < 3);
-
-        uint32_t n = neighbor->vertices[k];
-
-        Vec2 npos;
-        vec2_copy(npos, list_get(ctx->embedding, n));
-
-        Vec2 vn;
-        vec2_sub(vn, npos, vpos);
-
-        Vec2 vf1;
-        vec2_sub(vf1, f1pos, vpos);
-        Vec2 perp1;
-        vec2_copy(perp1, (Vec2){ vf1[1], -vf1[0] });
-
-        Vec2 vf2;
-        vec2_sub(vf2, f2pos, vpos);
-
-        Vec2 perp2;
-        vec2_copy(perp2, (Vec2){ -vf2[1], vf2[0] });
-
-        float test1 = vec2_dot(vn, perp1);
-        float test2 = vec2_dot(vn, perp2);
-
-        if (test1 > 0.0f and test2 > 0.0f and flips > 0) {
-            list_push(valid_neighbors) = (AvenGraphPlaneGenNeighbor){
-                .neighbor_index = i,
-                .vertex_index = k,
-            };
-            flips -= 1;
-        }
-    }
-
-    // Flip selected valid edges around the newly split active face
-
-    for (uint32_t i = 0; i < valid_neighbors.len; i += 1) {
-        AvenGraphPlaneGenNeighbor *neighbor = &list_get(valid_neighbors, i);
-
-        uint32_t new_face_index = new_face_indices[neighbor->neighbor_index];
-        AvenGraphPlaneGenFace *new_face = &list_get(ctx->faces, new_face_index);
-
-        uint32_t neighbor_face_index = new_face->neighbors[1];
-        AvenGraphPlaneGenFace *neighbor_face = &list_get(
-            ctx->faces,
-            neighbor_face_index
-        );
-
-        uint32_t ncur = neighbor->vertex_index;
-        uint32_t nnext = (ncur + 1) % 3;
-        uint32_t nprev = (ncur + 2) % 3;
-
-        AvenGraphPlaneGenFace old_neighbor_face = *neighbor_face;
-
-        neighbor_face->neighbors[nprev] = new_face_index;
-        neighbor_face->neighbors[nnext] = new_face->neighbors[2];
-        neighbor_face->vertices[nprev] = new_face->vertices[0];
-
-        new_face->neighbors[2] = new_face->neighbors[1];
-        new_face->neighbors[1] = old_neighbor_face.neighbors[nprev];
-        new_face->vertices[2] = old_neighbor_face.vertices[ncur];
-
-        AvenGraphPlaneGenFace *neighbor_prev_neighbor = &list_get(
-            ctx->faces,
-            new_face->neighbors[1]
-        );
-
-        uint32_t j = 0;
-        for (; j < 3; j += 1) {
-            if (neighbor_prev_neighbor->vertices[j] == new_face->vertices[2]) {
-                break;
-            }
-        }
-        assert(j < 3);
-
-        neighbor_prev_neighbor->neighbors[j] = new_face_index;
-
-        AvenGraphPlaneGenFace *new_face_next_neighbor = &list_get(
-            ctx->faces,
-            neighbor_face->neighbors[nnext]
-        );
-
-        for (j = 0; j < 3; j += 1) {
-            if (new_face_next_neighbor->vertices[j] == new_face->vertices[0]) {
-                break;
-            }
-        }
-        assert(j < 3);
-
-        new_face_next_neighbor->neighbors[j] = neighbor_face_index;
-    }
-
-    ctx->active_face = AVEN_GRAPH_PLANE_GEN_FACE_INVALID;
-
-    return false;
-}
-
 typedef struct {
     List(AvenGraphAdjList) graph;
     List(uint32_t) master_adj;
@@ -851,7 +610,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
                 } else {
                     if ((u != 1 or v != 3) and (u != 3 or v != 1)) {
                         list_push(data->master_adj) = u;
-                    }
+                }
                 }
             }
 
@@ -933,40 +692,6 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
     return aven_graph_plane_gen_tri_data(&ctx, &data);
 }
 
-static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_unrestricted(
-    uint32_t size,
-    Aff2 trans,
-    bool square,
-    AvenRng rng,
-    AvenArena *arena    
-) {
-    assert(size >= 3);
-
-    AvenGraphPlaneGenTriData data = aven_graph_plane_gen_tri_data_alloc(
-        size,
-        arena
-    );
-    AvenGraphPlaneEmbedding embedding = { .len = size };
-    embedding.ptr = aven_arena_create_array(
-        Vec2,
-        arena,
-        embedding.len
-    );
-
-    AvenArena temp_arena = *arena;
-    AvenGraphPlaneGenTriCtx ctx = aven_graph_plane_gen_tri_init(
-        embedding,
-        trans,
-        0.0f,
-        0.0f,
-        square,
-        &temp_arena
-    );
-    while (!aven_graph_plane_gen_tri_step_unrestricted(&ctx, rng)) {}
-
-    return aven_graph_plane_gen_tri_data(&ctx, &data);
-}
-
 typedef struct {
     uint32_t vertices[3];
     uint32_t neighbors[3];
@@ -979,7 +704,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
 ) {
     assert(size >= 3);
 
-    Slice(uint32_t) master_adj = aven_arena_create_slice(
+    List(uint32_t) master_adj = aven_arena_create_list(
         uint32_t,
         arena,
         6 * size - 12
@@ -990,25 +715,212 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
         size
     );
 
+    for (uint32_t v = 0; v < graph.len; v += 1) {
+        get(graph, v) = (AvenGraphAdjList){ .len = 0, .ptr = NULL };
+    }
+
     AvenArena temp_arena = *arena;
 
     List(AvenGraphPlaneGenAbsFace) faces = aven_arena_create_list(
         AvenGraphPlaneGenAbsFace,
-        arena,
+        &temp_arena,
         2 * size - 4
     );
 
-    list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+    list_push(faces) = (AvenGraphPlaneGenAbsFace){
         .vertices = { 0, 2, 1 },
         .neighbors = { 1, 1, 1 },
     };
-    list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+    list_push(faces) = (AvenGraphPlaneGenAbsFace){
         .vertices = { 0, 1, 2 },
         .neighbors = { 0, 0, 0 },
     };
 
-    uint32_t next_vertex = 3;
-}
+    for (uint32_t v = 3; v < size; v += 1) {
+        uint32_t face_index = 1 + aven_rng_rand_bounded(
+            rng,
+            (uint32_t)(faces.len - 1)
+        );
+        uint32_t edge_flips = aven_rng_rand_bounded(rng, 3);
+        uint32_t flip_start = aven_rng_rand_bounded(rng, 3);
 
+        AvenGraphPlaneGenAbsFace og_face = get(faces, face_index);
+
+        uint32_t face_indices[3] = {
+            face_index,
+            (uint32_t)faces.len,
+            (uint32_t)(faces.len + 1)
+        };
+        faces.len += 2;
+
+        AvenGraphPlaneGenAbsFace *new_faces[3];
+        for (size_t i = 0; i < 3; i += 1) {
+            new_faces[i] = &get(faces, face_indices[i]);
+            *(new_faces[i]) = (AvenGraphPlaneGenAbsFace){
+                .vertices = {
+                    v,
+                    og_face.vertices[i],
+                    og_face.vertices[(i + 1) % 3],
+                },
+                .neighbors = {
+                    face_indices[(i + 2) % 3],
+                    og_face.neighbors[i],
+                    face_indices[(i + 1) % 3],
+                },
+            };
+        }
+
+        AvenGraphPlaneGenAbsFace *neighbor_faces[3];
+        uint32_t neighbor_edge_indices[3];
+        uint32_t neighbor_opposite_vertices[3];
+        for (size_t i = 0; i < 3; i += 1) {
+            uint32_t u = og_face.vertices[(i + 1) % 3];
+            neighbor_faces[i] = &get(faces, og_face.neighbors[i]);
+            uint32_t j = 0;
+            for (; j < 3; j += 1) {
+                if (neighbor_faces[i]->vertices[j] == u) {
+                    neighbor_edge_indices[i] = j;
+                    neighbor_opposite_vertices[i] =
+                        neighbor_faces[i]->vertices[(j + 2) % 3];
+                    neighbor_faces[i]->neighbors[j] = face_indices[i];
+                    break;
+                }
+            }
+            assert(j < 3);
+        }
+
+        if (
+            edge_flips == 2 and
+            neighbor_opposite_vertices[flip_start] ==
+                neighbor_opposite_vertices[(flip_start + 1) % 3]
+        ) {
+            if (
+                neighbor_opposite_vertices[flip_start] ==
+                    neighbor_opposite_vertices[(flip_start + 2) % 3]
+            ) {
+                edge_flips -= 1;
+            } else {
+                flip_start += 1 + aven_rng_rand_bounded(rng, 1);
+            }
+        }
+
+        for (uint32_t i = 0; i < edge_flips; i += 1) {
+            uint32_t flip_index = (flip_start + i) % 3;
+            if (og_face.neighbors[flip_index] == 0) {
+                // never flip an edge of the outer triangle
+                continue;
+            }
+
+            uint32_t nflip_index = neighbor_edge_indices[flip_index];
+
+            AvenGraphPlaneGenAbsFace *face = new_faces[flip_index];           
+            AvenGraphPlaneGenAbsFace *neighbor = neighbor_faces[flip_index];
+
+            {
+                AvenGraphPlaneGenAbsFace *face_next_neighbor =
+                    new_faces[(flip_index + 1) % 3];
+                uint32_t j = 0;
+                for (; j < 3; j += 1) {
+                    if (face_next_neighbor->vertices[j] == v) {
+                        break;
+                    }
+                }
+                assert(j < 3);
+                face_next_neighbor->neighbors[j] =
+                    og_face.neighbors[flip_index];
+            }
+            {
+                AvenGraphPlaneGenAbsFace *neighbor_prev_neighbor = &get(
+                    faces,
+                    neighbor->neighbors[(nflip_index + 1) % 3]
+                );
+                uint32_t j = 0;
+                for (; j < 3; j += 1) {
+                    if (
+                        neighbor_prev_neighbor->vertices[j] ==
+                            neighbor_opposite_vertices[flip_index]
+                    ) {
+                        break;
+                    }
+                }
+                assert(j < 3);
+                neighbor_prev_neighbor->neighbors[j] = face_indices[flip_index];
+            }
+
+            face->vertices[2] = neighbor->vertices[(nflip_index + 2) % 3];
+            neighbor->vertices[(nflip_index + 1) % 3] = v;
+
+            face->neighbors[1] = neighbor->neighbors[(nflip_index + 1) % 3];
+            face->neighbors[2] = og_face.neighbors[flip_index];
+
+            neighbor->neighbors[nflip_index] =
+                face_indices[(flip_index + 1) % 3];
+            neighbor->neighbors[(nflip_index + 1) % 3] =
+                face_indices[flip_index];
+        }
+    }
+
+    Slice(uint32_t) labels = aven_arena_create_slice(
+        uint32_t,
+        &temp_arena,
+        size
+    );
+
+    for (uint32_t v = 0; v < labels.len; v += 1) {
+        get(labels, v) = v;
+    }
+
+    for (uint32_t i = (uint32_t)labels.len; i > 4; i -= 1) {
+        uint32_t j = 3 + aven_rng_rand_bounded(rng, i - 4);
+        uint32_t tmp = get(labels, i - 1);
+        get(labels, i - 1) = get(labels, j);
+        get(labels, j) = tmp;
+    }
+
+    for (uint32_t i = 0; i < faces.len; i += 1) {
+        AvenGraphPlaneGenAbsFace *face = &get(faces, i);
+
+        for (uint32_t j = 0; j < 3; j += 1) {
+            uint32_t v = face->vertices[j];
+            uint32_t vl = get(labels, v);
+            if (get(graph, vl).len != 0) {
+                continue;
+            }
+            
+            size_t adj_start = master_adj.len;
+
+            list_push(master_adj) = get(
+                labels,
+                face->vertices[(j + 1) % 3]
+            );
+            get(graph, vl).ptr = &list_back(master_adj);
+
+            uint32_t face_index = face->neighbors[j];
+            while (face_index != i) {
+                AvenGraphPlaneGenAbsFace *cur_face = &get(faces, face_index);
+
+                uint32_t k = 0;
+                for (; k < 3; k += 1) {
+                    if (cur_face->vertices[k] == v) {
+                        break;
+                    }
+                }
+                assert(k < 3);
+
+                list_push(master_adj) = get(
+                    labels,
+                    cur_face->vertices[(k + 1) % 3]
+                );
+                face_index = cur_face->neighbors[k];
+            }
+
+            get(graph, vl).len = master_adj.len - adj_start;
+        }
+    }
+
+    assert(master_adj.len == master_adj.cap);
+
+    return graph;
+}
 
 #endif // AVEN_GRAPH_PLANE_GEN_H

@@ -45,9 +45,9 @@ int main(void) {
         size_t max_deg_sum = 0;
         size_t min_deg_sum = 0;
 
-        asm volatile("" ::: "memory");
+        __asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
-        asm volatile("" ::: "memory");
+        __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < ngraphs; i += 1) {
             AvenArena temp_arena = arena;
@@ -56,17 +56,15 @@ int main(void) {
             size_t max_deg = 0;
             size_t min_deg = MAX_VERTICES;
 
-            AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_unrestricted(
+            AvenGraph graph = aven_graph_plane_gen_tri_abs(
                 n,
-                ident,
-                false,
                 rng,
                 &temp_arena
             );
-            assert(data.graph.len == n);
+            assert(graph.len == n);
 
-            for (uint32_t v = 0; v < data.graph.len; v += 1) {
-                AvenGraphAdjList v_adj = get(data.graph, v);
+            for (uint32_t v = 0; v < graph.len; v += 1) {
+                AvenGraphAdjList v_adj = get(graph, v);
                 deg_sum += v_adj.len;
                 max_deg = max(max_deg, v_adj.len);
                 min_deg = min(min_deg, v_adj.len);
@@ -81,9 +79,9 @@ int main(void) {
             overall_min_deg = min(min_deg, overall_min_deg);
         }
 
-        asm volatile("" ::: "memory");
+        __asm volatile("" ::: "memory");
         AvenTimeInst end_inst = aven_time_now();
-        asm volatile("" ::: "memory");
+        __asm volatile("" ::: "memory");
 
         int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
 
