@@ -13,6 +13,7 @@
 #include <aven/graph/plane.h>
 #include <aven/graph/plane/hartman.h>
 #include <aven/graph/plane/hartman/geometry.h>
+#include <aven/graph/plane/hartman/tikz.h>
 #include <aven/graph/plane/gen.h>
 #include <aven/graph/plane/gen/geometry.h>
 #include <aven/graph/plane/geometry.h>
@@ -464,6 +465,12 @@ static void app_update(
                     ctx.data.hartman.frames[0] = aven_graph_plane_hartman_next_frame(
                         &ctx.data.hartman.ctx
                     );
+                    aven_graph_plane_hartman_tikz(
+                        ctx.embedding,
+                        &ctx.data.hartman.ctx,
+                        &ctx.data.hartman.frames[0].value,
+                        (Vec2){ 10.0f, 10.0f }
+                    );
                     for (
                         size_t i = 1;
                         i < countof(ctx.data.hartman.frames);
@@ -518,6 +525,12 @@ static void app_update(
                         }
                     }
 
+                    aven_graph_plane_hartman_tikz(
+                        ctx.embedding,
+                        &ctx.data.hartman.ctx,
+                        &frame->value,
+                        (Vec2){ 10.0f, 10.0f }
+                    );
                     if (frame->valid) {
                         done = false;
                     }
