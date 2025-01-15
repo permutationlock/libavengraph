@@ -178,6 +178,50 @@ static inline float vec2_triangle_area(Vec2 p1, Vec2 p2, Vec2 p3) {
     );
 }
 
+static inline bool vec2_point_in_rect(
+    Vec2 pos,
+    Vec2 dim,
+    Vec2 point
+) {
+    Vec2 opp;
+    vec2_add(opp, pos, dim);
+
+    return (point[0] >= pos[0] and point[0] <= opp[0]) and
+        (point[1] >= pos[1] and point[1] <= opp[1]);
+}
+
+static inline bool vec2_rect_intersect(
+    Vec2 pos1,
+    Vec2 dim1,
+    Vec2 pos2,
+    Vec2 dim2
+) {
+    Vec2 pdiff;
+    vec2_sub(pdiff, pos1, pos2);
+
+    Vec2 pos1_opp;
+    vec2_add(pos1_opp, pos1, dim1);
+
+    Vec2 pos2_opp;
+    vec2_add(pos2_opp, pos2, dim2);
+
+    bool x_overlap;
+    if (pdiff[0] < 0) {
+        x_overlap = pos1_opp[0] >= pos2[0];
+    } else {
+        x_overlap = pos2_opp[0] >= pos1[0];
+    }
+
+    bool y_overlap;
+    if (pdiff[1] < 0) {
+        y_overlap = pos1_opp[1] >= pos2[1];
+    } else {
+        y_overlap = pos2_opp[1] >= pos1[1];
+    }
+
+    return x_overlap and y_overlap;
+}
+
 static inline void mat2_copy(Mat2 dst, Mat2 m) {
 #ifdef AVEN_MATH_SIMD
     *(Vec4SIMD *)dst = *(Vec4SIMD *)m;

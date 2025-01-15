@@ -50,31 +50,36 @@ typedef struct {
     AvenGlShapeCtx ctx;
     AvenGlShapeGeometry geometry;
     AvenGlShapeBuffer buffer;
+    Vec4 color;
 } AvenGlUiShape;
 
 typedef struct {
-    AvenGlTextFont *font;
+    ByteSlice font_bytes;
+    AvenArena font_arena;
+    AvenGlTextFont font;
     AvenGlTextCtx ctx;
     AvenGlTextGeometry geometry;
     AvenGlTextBuffer buffer;
+    Vec4 color;
+    float norm_height;
 } AvenGlUiText;
 
 typedef struct {
-    float x;
-    float y;
+    Vec2 pos;
     enum {
-        AVEN_GL_UI_IO_MOUSE_NONE = 0,
-        AVEN_GL_UI_IO_MOUSE_DOWN,
-        AVEN_GL_UI_IO_MOUSE_UP,
+        AVEN_GL_UI_MOUSE_NONE = 0,
+        AVEN_GL_UI_MOUSE_DOWN,
+        AVEN_GL_UI_MOUSE_UP,
     } event;
 } AvenGlUiIoMouse;
 
 typedef struct {
     enum {
-        AVEN_GL_UI_IO_KEYBOARD_NONE = 0,
-        AVEN_GL_UI_IO_KEYBOARD_DOWN,
-        AVEN_GL_UI_IO_KEYBOARD_UP,
+        AVEN_GL_UI_KEYBOARD_NONE = 0,
+        AVEN_GL_UI_KEYBOARD_DOWN,
+        AVEN_GL_UI_KEYBOARD_UP,
     } keys[AVEN_GL_UI_KEYBOARD_MAX];
+    bool captured;
 } AvenGlUiIoKeyboard;
 
 typedef struct {
@@ -84,14 +89,19 @@ typedef struct {
     AvenGlUiIoKeyboard keyboard;
     AvenGlUiId active_id;
     AvenGlUiId hot_id;
-    uint32_t count;
+    Vec2 dim;
+    float pixel_size;
 } AvenGlUiCtx;
 
 static inline aven_gl_ui_ctx_init(
     AvenGl *gl,
-    AvenGlTextFont *font,
     size_t max_elems,
     size_t max_chars,
+    Vec4 background_color,
+    Vec4 text_color,
+    Vec2 dim,
+    float pixel_size,
+    float text_height,
     AvenArena *arena
 ) {
     AvenGlUiCtx ctx = { 0 };
@@ -118,7 +128,13 @@ static inline aven_gl_ui_ctx_init(
         &ctx.text.geometry,
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
-    ctx.text.font = *font;
+
+    vec2_copy(ctx.background_color, background_color);
+    vec2_copy(ctx.text_color, text_color);
+    ctx.padding_pixels = padding_pixels;
+    
+    vec2_copy(ctx.dim, dim);
+    ctx.pixel_size = pixel_size;
 
     return ctx;
 }
@@ -133,21 +149,56 @@ static inline void aven_gl_ui_ctx_deinit(AvenGl *gl, AvenGlUiCtx *ctx) {
     aven_gl_shape_ctx_deinit(gl, &ctx.shape.ctx);
 }
 
+static inline void aven_gl_ui_ctx_resize(
+    AvenGlUiCtx *ctx,
+    Vec2 dim,
+    float pixel_size
+) {
+    vec2_copy(ctx->dim, dim);
+    ctx->pixel_size = pixel_size;
+}
+
 static inline bool aven_gl_ui_button_internal(
     AvenGlUiCtx *ctx,
     AvenGlUiId id,
-    AvenStr name,
-    Vec2 pos
+    AvenGlTextLine *label_line,
+    Vec2 pos,
+    AvenArena *arena
 ) {
-    if (aven_gl_ui_id_eq(id, ctx->active_id)) {
-        if (ctx->mouse.pos)
+    Vec2 dim;
+    vec2_copy(dim, label_line->dim);
+    vec_add(
+        dim,
+        dim,
+        (Vec2){
+            ctx->padding_pixels * pixel_size,
+            ctx->padding_pixels * pixel_size
+        }
+    );
+
+    bool hovered = vec2_point_in_rect(pos, dim, ctx->pos.pos);
+
+    if (hovered and ctx->mouse.event == AVEN_GL_UI_MOUSE_DOWN) {
+        ctx->active_id = id;
     }
+
+    bool clicked = aven_gl_ui_id_eq(id, ctx->active_id);
+
+    if (clicked) {
+        
+    } else if (hovered) {
+        
+    } else {
+        
+    }
+
+    return clicked and hovered and (ctx->mouse.event == AVEN_GL_UI_MOUSE_UP);
 }
 
-#define aven_gl_ui_button(ctx, name) aven_gl_ui_button_internal( \
+#define aven_gl_ui_button(ctx, label_line, arena) aven_gl_ui_button_internal( \
         ctx, \
-        aven_gl_ui_id_internal(__FILE__, (name).ptr, __LINE__), \
-        name, \
+        aven_gl_ui_id_internal(__FILE__, label_line, __LINE__), \
+        label_line, \
         pos \
     )
 
