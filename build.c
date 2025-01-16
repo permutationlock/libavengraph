@@ -346,12 +346,47 @@ int main(int argc, char **argv) {
         &arena
     );
 
+    AvenBuildStep hartman_tikz_obj_step = aven_build_common_step_cc_ex(
+        &opts,
+        includes,
+        macros,
+        aven_path(&arena, root_path.ptr, "examples", "hartman_tikz.c", NULL),
+        &work_dir_step,
+        &arena
+    );
+
+    AvenBuildStep *hartman_tikz_obj_data[2];
+    List(AvenBuildStep *) hartman_tikz_obj_list = list_array(
+        hartman_tikz_obj_data
+    );
+
+    list_push(hartman_tikz_obj_list) = &hartman_tikz_obj_step;
+    
+    if (winutf8_obj_step.valid) {
+        list_push(hartman_tikz_obj_list) = &winutf8_obj_step.value;
+    }
+
+    AvenBuildStepPtrSlice hartman_tikz_objs = slice_list(
+        hartman_tikz_obj_list
+    );
+
+    AvenBuildStep hartman_tikz_exe_step = aven_build_common_step_ld_exe_ex(
+        &opts,
+        libavengl_opts.syslibs,
+        hartman_tikz_objs,
+        &out_dir_step,
+        aven_str("hartman_tikz"),
+        true,
+        &arena
+    );
+
     AvenBuildStep root_step = aven_build_step_root();
-    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
     // aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
     // (void)gen_tri_exe_step;
-    aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
-    aven_build_step_add_dep(&root_step, &hartman_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &hartman_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &hartman_tikz_exe_step, &arena);
     // (void)hartman_exe_step;
 
     // Build steps for tests

@@ -233,7 +233,13 @@ static inline bool aven_graph_plane_hartman_frame_step(
         frame->y_info = x_info;
         frame->y = frame->x;
         frame->x = u;
-        frame->z = u;
+
+        if (
+            get(get(ctx->color_lists, frame->x), 0) ==
+            get(get(ctx->color_lists, frame->y), 0)
+        ) {
+            frame->z = u;
+        }
 
         frame->x_info.mark = ctx->next_mark++;
         frame->y_info.mark = ctx->next_mark++;
@@ -349,24 +355,46 @@ static inline bool aven_graph_plane_hartman_frame_step(
     } else {
         aven_graph_plane_hartman_color_differently(v_colors, z_color);
         if (v_info->nb.first != zv.back_index) {
+            //list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
+            //    .x = frame->x,
+            //    .y = v,
+            //    .z = frame->x,
+            //    .x_info = frame->x_info,
+            //    .y_info = {
+            //        .mark = frame->x_info.mark,
+            //        .nb = {
+            //            .first = aven_graph_aug_adj_next(v_adj, zv.back_index),
+            //            .last = v_info->nb.last,
+            //        },
+            //    },
+            //};
+
+            //v_info->nb.last = zv.back_index;
+            //frame->x = v;
+            //frame->x_info = *v_info;
+            //frame->x_info.mark = ctx->next_mark++;
+
             list_push(ctx->frames) = (AvenGraphPlaneHartmanFrame){
-                .x = frame->x,
-                .y = v,
-                .z = frame->x,
-                .x_info = frame->x_info,
-                .y_info = {
-                    .mark = frame->x_info.mark,
+                .x = v,
+                .y = frame->y,
+                .z = frame->z,
+                .x_info = {
+                    .mark = ctx->next_mark++,
                     .nb = {
-                        .first = aven_graph_aug_adj_next(v_adj, zv.back_index),
-                        .last = v_info->nb.last,
+                        .first = v_info->nb.first,
+                        .last = zv.back_index,
                     },
                 },
+                .y_info = frame->y_info,
+                .z_info = frame->z_info,
             };
 
-            v_info->nb.last = zv.back_index;
-            frame->x = v;
-            frame->x_info = *v_info;
-            frame->x_info.mark = ctx->next_mark++;
+            v_info->mark = frame->x_info.mark;
+            v_info->nb.first = aven_graph_aug_adj_next(v_adj, zv.back_index);
+
+            frame->z = frame->x;
+            frame->y = v;
+            frame->y_info = *v_info;
         } else {
             assert(frame->z == frame->y);
             v_info->nb.first = aven_graph_aug_adj_next(v_adj, zv.back_index),
@@ -402,6 +430,107 @@ static inline void aven_graph_plane_hartman(
         while (!aven_graph_plane_hartman_frame_step(&ctx, &frame.value)) {}
         frame = aven_graph_plane_hartman_next_frame(&ctx);
     } while (frame.valid);
+}
+
+typedef enum {
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_BASE = 0,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_1,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_2,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_1,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_1_A,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_1_B,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_2_A,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_2_B,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_1_A,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_1_B,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_2_A,
+    AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_2_B,
+} AvenGraphPlaneHartmanCase;
+
+static inline AvenGraphPlaneHartmanCase aven_graph_plane_hartman_frame_case(
+    AvenGraphPlaneHartmanCtx *ctx,
+    AvenGraphPlaneHartmanFrame *frame
+) {
+    AvenGraphAugAdjList z_adj = get(ctx->graph, frame->z);
+    AvenGraphPlaneHartmanVertex *z_info = aven_graph_plane_hartman_vinfo(
+        ctx,
+        frame,
+        frame->z
+    );
+    AvenGraphPlaneHartmanList *z_colors = &get(ctx->color_lists, frame->z);
+    uint32_t z_color = get(*z_colors, 0);
+
+    uint32_t zu_index = z_info->nb.first;
+    AvenGraphAugAdjListNode zu = get(z_adj, zu_index);
+
+    uint32_t u = zu.vertex;
+
+    if (zu_index == z_info->nb.last) {
+        return AVEN_GRAPH_PLANE_HARTMAN_CASE_BASE;
+    }
+
+    if (u == frame->y) {
+        return AVEN_GRAPH_PLANE_HARTMAN_CASE_1;
+    }
+
+    if (frame->z == frame->x) {
+        return AVEN_GRAPH_PLANE_HARTMAN_CASE_2;
+    }
+
+    uint32_t zv_index = aven_graph_aug_adj_next(z_adj, zu_index);
+    AvenGraphAugAdjListNode zv = get(z_adj, zv_index);
+
+    uint32_t v = zv.vertex;
+    AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_vinfo(
+        ctx,
+        frame,
+        v
+    );
+    AvenGraphPlaneHartmanList *v_colors = &get(ctx->color_lists, v);
+
+    if (v_info->mark == 0) {
+        return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_1;
+    } else if (v_info->mark == frame->x_info.mark) {
+        if (
+            zv.back_index == v_info->nb.first or
+            zv.back_index == v_info->nb.last
+        ) {
+            return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_1_A;
+        } else {
+            return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_1_B;
+        }
+    } else if (get(ctx->marks, v_info->mark) == frame->y_info.mark) {
+        if (aven_graph_plane_hartman_has_color(v_colors, z_color)) {
+            if (
+                zv.back_index == v_info->nb.first or
+                zv.back_index == v_info->nb.last
+            ) {
+                return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_1_A;
+            } else {
+                return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_1_B;
+            }
+        } else {
+            if (
+                zv.back_index == v_info->nb.first or
+                zv.back_index == v_info->nb.last
+            ) {
+                return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_2_A;
+            } else {
+                return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_3_2_B;
+            }        }
+    } else {
+        if (
+            zv.back_index == v_info->nb.first or
+            zv.back_index == v_info->nb.last
+        ) {
+            return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_2_A;
+        } else {
+            return AVEN_GRAPH_PLANE_HARTMAN_CASE_3_2_2_B;
+        }
+    }
+
+    assert(false);
+    return AVEN_GRAPH_PLANE_HARTMAN_CASE_BASE;
 }
 
 #endif // AVEN_GRAPH_PLANE_HARTMAN_H

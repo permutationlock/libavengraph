@@ -94,6 +94,7 @@ typedef union {
         AvenGraphPlaneHartmanCtx ctx;
         AvenGraphPlaneHartmanFrameOptional frames[3];
         AvenGraphPlaneHartmanListProp color_lists;
+        bool cases_satisfied[12];
     } hartman;
     struct {
         AvenGraphPropUint8 coloring;
@@ -123,6 +124,7 @@ typedef struct {
     int64_t timestep;
     size_t threads;
     int64_t count;
+    int tikz_count;
     float radius;
     int updates;
     bool paused;
@@ -158,7 +160,7 @@ static void app_reset(void) {
     ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
-        1.25f * (ctx.radius * ctx.radius),
+        2.0f * (ctx.radius * ctx.radius),
         0.001f,
         true,
         &arena
@@ -465,12 +467,21 @@ static void app_update(
                     ctx.data.hartman.frames[0] = aven_graph_plane_hartman_next_frame(
                         &ctx.data.hartman.ctx
                     );
+                    for (
+                        size_t j = 0;
+                        j < countof(ctx.data.hartman.cases_satisfied);
+                        j += 1
+                    ) {
+                        ctx.data.hartman.cases_satisfied[j] = 0;
+                    }
                     aven_graph_plane_hartman_tikz(
                         ctx.embedding,
                         &ctx.data.hartman.ctx,
                         &ctx.data.hartman.frames[0].value,
-                        (Vec2){ 10.0f, 10.0f }
+                        (Vec2){ 4.5f, 4.0f },
+                        arena
                     );
+                    ctx.tikz_count += 1;
                     for (
                         size_t i = 1;
                         i < countof(ctx.data.hartman.frames);
@@ -492,6 +503,12 @@ static void app_update(
                     AvenGraphPlaneHartmanFrameOptional *frame =
                         &ctx.data.hartman.frames[i];
                     if (frame->valid) {
+                        ctx.data.hartman.cases_satisfied[
+                            aven_graph_plane_hartman_frame_case(
+                                &ctx.data.hartman.ctx,
+                                &frame->value
+                            )
+                        ] = true;
                         frame->valid = !aven_graph_plane_hartman_frame_step(
                             &ctx.data.hartman.ctx,
                             &frame->value
@@ -529,14 +546,36 @@ static void app_update(
                         ctx.embedding,
                         &ctx.data.hartman.ctx,
                         &frame->value,
-                        (Vec2){ 10.0f, 10.0f }
+                        (Vec2){ 4.5f, 4.0f },
+                        arena
                     );
+                    ctx.tikz_count += 1;
+                    if (ctx.tikz_count % 2 == 0) {
+                        printf("\n");
+                    } else {
+                        printf("$\\qquad$");
+                    }
                     if (frame->valid) {
                         done = false;
                     }
                 }
                 // }
                 if (done) {
+                    int ncases = 0;
+                    for (
+                        size_t j = 0;
+                        j < countof(ctx.data.hartman.cases_satisfied);
+                        j += 1
+                    ) {
+                        if (ctx.data.hartman.cases_satisfied[j]) {
+                            ncases += 1;
+                        }
+                    }
+
+                    if (ncases > 8) {
+                        while (1);
+                    }
+
                     ctx.state = APP_STATE_COLORED;
                     AvenGraphPropUint8 coloring = { .len = ctx.graph.len };
                     coloring.ptr = aven_arena_create_array(
@@ -559,7 +598,7 @@ static void app_update(
                 ctx.count += 1;
                 if (
                     ctx.paused or
-                    ctx.count > 2L * (AVEN_TIME_NSEC_PER_SEC / ctx.timestep)
+                    ctx.count > 0L * (AVEN_TIME_NSEC_PER_SEC / ctx.timestep)
                 ) {
                     ctx.updates = 0;
                     if (
