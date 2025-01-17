@@ -126,9 +126,11 @@ int main(void) {
     AvenRngPcg last_state;
 
     int satisfied = 0;
-    while (satisfied < 10) {
+    int steps = 0;
+    while (satisfied < 10 or steps > 16) {
         last_state = pcg_ctx;
         satisfied = 0;
+        steps = 0;
         AvenArena temp_arena = arena;
 
         TestCase test_case = gen_test_case(
@@ -153,6 +155,7 @@ int main(void) {
                         &frame.value
                     )
                 ] = true;
+                steps += 1;
             } while (
                 !aven_graph_plane_hartman_frame_step(
                     &test_case.ctx,

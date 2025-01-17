@@ -234,12 +234,12 @@ static inline bool aven_graph_plane_hartman_frame_step(
         frame->y = frame->x;
         frame->x = u;
 
-        if (
-            get(get(ctx->color_lists, frame->x), 0) ==
-            get(get(ctx->color_lists, frame->y), 0)
-        ) {
-            frame->z = u;
-        }
+        //if (
+        //    get(get(ctx->color_lists, frame->x), 0) ==
+        //    get(get(ctx->color_lists, frame->y), 0)
+        //) {
+        //    frame->z = u;
+        //}
 
         frame->x_info.mark = ctx->next_mark++;
         frame->y_info.mark = ctx->next_mark++;
