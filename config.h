@@ -2,11 +2,12 @@
 
 #if !defined(_WIN32) && defined(__GNUC__)
     #define AVEN_BUILD_COMMON_DEFAULT_CCFLAGS \
-        "-DAVEN_UNREACHABLE_ASSERT " \
-        "-std=c11 -pedantic -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
+        "-DAVEN_THREAD_POOL_USE_PTHREADS " \
+        "-std=c11 -pedantic -fstrict-aliasing -O1 -g3 -Werror -Wall -Wextra " \
         "-Wshadow -Wconversion -Wdouble-promotion -Winit-self " \
         "-Wcast-align -Wstrict-prototypes -Wold-style-definition " \
-        "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"
+        "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined " \
+        "-fsanitize=thread"
     #define LIBAVENGL_DEFAULT_GLFW_CCFLAGS \
         "-std=c11 -pedantic -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
         "-Wstrict-prototypes -Wold-style-definition -Winit-self " \

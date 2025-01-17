@@ -25,6 +25,7 @@ typedef struct {
     AvenGraphPropUint8 coloring;
     Slice(int32_t) marks;
     AvenGraphPlanePohThreadFrameList frames;
+    atomic_int threads_active;
     atomic_int frames_active;
     atomic_bool frames_lock;
 } AvenGraphPlanePohThreadCtx;
@@ -58,6 +59,7 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     atomic_init(&ctx.frames.len, 0);
     atomic_init(&ctx.frames_active, 0);
     atomic_init(&ctx.frames_lock, false);
+    atomic_init(&ctx.threads_active, 0);
 
     for (uint32_t i = 0; i < ctx.marks.len; i += 1) {
         get(ctx.marks, i) = 0;
@@ -338,6 +340,7 @@ static void aven_graph_poh_thread_worker_internal(void *args) {
     AvenGraphPohThreadWorkerArgs *wargs = args;
     AvenGraphPlanePohThreadCtx *ctx = wargs->ctx;
 
+    atomic_fetch_add_explicit(&ctx->threads_active, 1, memory_order_relaxed);
     atomic_fetch_add_explicit(&ctx->frames_active, 1, memory_order_relaxed);
 
     AvenGraphPlanePohFrameOptional cur_frame =
@@ -349,6 +352,25 @@ static void aven_graph_poh_thread_worker_internal(void *args) {
         ) {}
 
         cur_frame = aven_graph_plane_poh_pop_internal(ctx);
+    }
+
+
+    atomic_fetch_sub_explicit(&ctx->threads_active, 1, memory_order_release);
+
+    for (;;) {
+        int threads_active = atomic_load_explicit(
+            &ctx->threads_active,
+            memory_order_acquire
+        );
+        if (threads_active == 0) {
+            break;
+        }
+        while (threads_active != 0) {
+            threads_active = atomic_load_explicit(
+                &ctx->threads_active,
+                memory_order_relaxed
+            );
+        }
     }
 
     for (uint32_t v = wargs->start_vertex; v != wargs->end_vertex; v += 1) {
