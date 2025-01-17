@@ -34,21 +34,20 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
         AvenGraphPlanePohFrame frame = maybe_frame->value;
     
         AvenGraphAdjList u_adj = get(ctx->graph, frame.u);
-        AvenGraphPlanePohVertex frame_u_info = get(ctx->vertex_info, frame.u);
         if (frame.edge_index < u_adj.len) {
             AvenGraphPlaneGeometryEdge active_edge_info = {
                 .thickness = info->edge_thickness + info->border_thickness,
             };
             vec4_copy(active_edge_info.color, info->active_color);
 
-            uint32_t uv_index = (frame_u_info.first_edge + frame.edge_index);
+            uint32_t uv_index = (frame.u_nb_first + frame.edge_index);
             if (uv_index >= u_adj.len) {
                 uv_index -= (uint32_t)u_adj.len;
             }
 
             uint32_t v = get(u_adj, uv_index);
 
-            if (get(ctx->vertex_info, v).mark == frame.face_mark) {
+            if (get(ctx->marks, v) == frame.face_mark) {
                 active_edge_info.thickness += info->border_thickness;
             }
 
@@ -110,8 +109,8 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
         vec4_copy(below_edge_info.color, info->below_color);
 
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            AvenGraphPlanePohVertex v_info = get(ctx->vertex_info, v);
-            if (v_info.mark == frame.face_mark) {
+            int32_t v_mark = get(ctx->marks, v);
+            if (v_mark == frame.face_mark) {
                 aven_graph_plane_geometry_push_vertex(
                     rounded_geometry,
                     embedding,
@@ -119,7 +118,7 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
                     trans,
                     &face_node_info
                 );
-            } else if (v_info.mark == (frame.face_mark + 1)) {
+            } else if (v_mark == (frame.face_mark + 1)) {
                 aven_graph_plane_geometry_push_vertex(
                     rounded_geometry,
                     embedding,
@@ -134,10 +133,10 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
             AvenGraphAdjList v_adj = get(ctx->graph, v);
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i);
-                AvenGraphPlanePohVertex u_info = get(ctx->vertex_info, u);
-                if (u_info.mark != v_info.mark) {
+                int32_t u_mark = get(ctx->marks, u);
+                if (u_mark != v_mark) {
                     continue;
-                } else if (u_info.mark == frame.face_mark) {
+                } else if (u_mark == frame.face_mark) {
                     aven_graph_plane_geometry_push_edge(
                         geometry,
                         embedding,
@@ -146,7 +145,7 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
                         trans,
                         &face_edge_info
                     );
-                } else if (u_info.mark == (frame.face_mark + 1)) {
+                } else if (u_mark == (frame.face_mark + 1)) {
                     aven_graph_plane_geometry_push_edge(
                         geometry,
                         embedding,
@@ -165,14 +164,26 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
     };
     vec4_copy(simple_edge_info.color, info->outline_color);
 
-    aven_graph_plane_geometry_push_uncolored_edges(
-        geometry,
-        ctx->graph,
-        embedding,
-        ctx->coloring,
-        trans,
-        &simple_edge_info
-    );
+    for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
+        int32_t v_mark = get(ctx->marks, v);
+
+        AvenGraphAdjList v_adj = get(ctx->graph, v);
+        for (uint32_t i = 0; i < v_adj.len; i += 1) {
+            uint32_t u = get(v_adj, i);
+            if (u < v or (v_mark > 0 and get(ctx->marks, u) == v_mark)) {
+                continue;
+            }
+
+            aven_graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &simple_edge_info
+            );
+        }
+    }
 
     AvenGraphPlaneGeometryNode outline_node_info = {
         .mat = {
@@ -209,13 +220,19 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
         vec4_copy(node_info->color, info->colors[i]);
     }
 
-    aven_graph_plane_geometry_push_colored_vertices(
-        rounded_geometry,
-        embedding,
-        ctx->coloring,
-        trans,
-        color_node_infos
-    );
+    for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
+        uint32_t v_color = 0;
+        if (get(ctx->marks, v) >= 0) {
+            v_color = (uint32_t)get(ctx->marks, v);
+        }
+        aven_graph_plane_geometry_push_vertex(
+            rounded_geometry,
+            embedding,
+            v,
+            trans,
+            &get(color_node_infos, v_color)
+        );
+    }
 
     AvenGraphPlaneGeometryEdge color_edge_info_data[3];
     AvenGraphPlaneGeometryEdgeSlice color_edge_infos = slice_array(
@@ -230,14 +247,30 @@ static inline void aven_graph_plane_poh_geometry_push_ctx(
          vec4_copy(edge_info->color, info->colors[i + 1]);
     }
 
-    aven_graph_plane_geometry_push_colored_edges(
-        geometry,
-        ctx->graph,
-        embedding,
-        ctx->coloring,
-        trans,
-        color_edge_infos
-    );
+    for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
+        int32_t v_mark = get(ctx->marks, v);
+
+        if (v_mark <= 0) {
+            continue;
+        }
+
+        AvenGraphAdjList v_adj = get(ctx->graph, v);
+        for (uint32_t i = 0; i < v_adj.len; i += 1) {
+            uint32_t u = get(v_adj, i);
+            if (u < v or get(ctx->marks, u) != v_mark) {
+                continue;
+            }
+
+            aven_graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &get(color_edge_infos, (size_t)(v_mark - 1))
+            );
+        }
+    }
 }
 
 #endif // AVEN_GRAPH_PLANE_POH_GEOMETRY_H

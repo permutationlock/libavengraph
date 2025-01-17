@@ -79,7 +79,6 @@ typedef union {
     struct {
         AvenGraphPlanePohCtx ctx;
         AvenGraphPlanePohFrameOptional active_frames[1];
-        AvenGraphPropUint8 coloring;
     } poh;
 } AppData;
 
@@ -302,14 +301,7 @@ static void app_update(
                         get(q, q.len - i - 1) = (q1 + i) % 4;
                     }
 
-                    ctx.data.poh.coloring.len = ctx.graph.len;
-                    ctx.data.poh.coloring.ptr = aven_arena_create_array(
-                        uint8_t,
-                        &arena,
-                        ctx.data.poh.coloring.len
-                    );
                     ctx.data.poh.ctx = aven_graph_plane_poh_init(
-                        ctx.data.poh.coloring,
                         ctx.graph,
                         p,
                         q,
