@@ -354,7 +354,7 @@ static void aven_graph_poh_thread_worker_internal(void *args) {
         cur_frame = aven_graph_plane_poh_pop_internal(ctx);
     }
 
-
+    // synchronize all threads writes to the marks array
     atomic_fetch_sub_explicit(&ctx->threads_active, 1, memory_order_release);
 
     for (;;) {
