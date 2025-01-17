@@ -9,10 +9,10 @@
 typedef struct {
     uint32_t u;
     uint32_t u_nb_first;
-    uint32_t w;
-    uint32_t w_nb_first;
-    uint32_t t;
     uint32_t x;
+    uint32_t x_nb_first;
+    uint32_t y;
+    uint32_t z;
     uint32_t edge_index;
     int32_t face_mark;
     uint8_t q_color;
@@ -77,9 +77,9 @@ static inline AvenGraphPlanePohCtx aven_graph_plane_poh_init(
             p1,
             q1
         ),
-        .w = p1,
-        .t = p1,
         .x = p1,
+        .y = p1,
+        .z = p1,
         .face_mark = -1,
     };
 
@@ -108,34 +108,34 @@ static inline bool aven_graph_plane_poh_frame_step(
     AvenGraphAdjList u_adj = get(ctx->graph, frame->u);
 
     if (frame->edge_index == u_adj.len) {
-        if (frame->x != frame->u) {
+        if (frame->z != frame->u) {
             list_push(ctx->frames) = (AvenGraphPlanePohFrame){
                 .q_color = path_color,
                 .p_color = frame->p_color,
-                .u = frame->x,
-                .t = frame->x,
-                .w = frame->x,
-                .x = frame->x,
+                .u = frame->z,
+                .x = frame->z,
+                .y = frame->z,
+                .z = frame->z,
                 .face_mark = frame->face_mark - 1,
             };
         }
 
-        if (frame->t == frame->u) {
-            assert(frame->w == frame->u);
+        if (frame->y == frame->u) {
+            assert(frame->x == frame->u);
             return true;
         }
 
-        if (frame->w == frame->u) {
-            frame->w = frame->t;
+        if (frame->x == frame->u) {
+            frame->x = frame->y;
         }
 
         frame->u_nb_first = aven_graph_next_neighbor_index(
             ctx->graph,
-            frame->t,
+            frame->y,
             frame->u
         );
-        frame->u = frame->t;
-        frame->x = frame->t;
+        frame->u = frame->y;
+        frame->z = frame->y;
         frame->edge_index = 0;
         frame->above_path = false;
         frame->last_colored = false;
@@ -155,7 +155,7 @@ static inline bool aven_graph_plane_poh_frame_step(
     if (frame->above_path) {
         if (n_mark <= 0) {
             if (frame->last_colored) {
-                frame->x = n;
+                frame->z = n;
                 get(ctx->marks, n) = (int32_t)frame->q_color;
             } else {
                 get(ctx->marks, n) = frame->face_mark - 1;
@@ -163,56 +163,56 @@ static inline bool aven_graph_plane_poh_frame_step(
             frame->last_colored = false;
         } else {
             frame->last_colored = true;
-            if (frame->x != frame->u) {
+            if (frame->z != frame->u) {
                 list_push(ctx->frames) = (AvenGraphPlanePohFrame){
                     .p_color = path_color,
                     .q_color = frame->p_color,
-                    .u = frame->x,
+                    .u = frame->z,
                     .u_nb_first = aven_graph_next_neighbor_index(
                         ctx->graph,
-                        frame->x,
+                        frame->z,
                         frame->u
                     ),
-                    .t = frame->x,
-                    .w = frame->x,
-                    .x = frame->x,
+                    .x = frame->z,
+                    .y = frame->z,
+                    .z = frame->z,
                     .face_mark = frame->face_mark - 1,
                 };
-                frame->x = frame->u;
+                frame->z = frame->u;
             }
         }
-    } else if (n != frame->w) {
+    } else if (n != frame->x) {
         if (n_mark > 0) {
             if (n_mark == (int32_t)frame->p_color) {
                 frame->above_path = true;
                 frame->last_colored = true;
             }
-            if (frame->w != frame->u) {
+            if (frame->x != frame->u) {
                 list_push(ctx->frames) = (AvenGraphPlanePohFrame){
                     .p_color = path_color,
                     .q_color = frame->q_color,
-                    .u = frame->w,
-                    .u_nb_first = frame->w_nb_first,
-                    .w = frame->w,
-                    .t = frame->w,
-                    .x = frame->w,
+                    .u = frame->x,
+                    .u_nb_first = frame->x_nb_first,
+                    .x = frame->x,
+                    .y = frame->x,
+                    .z = frame->x,
                     .face_mark = frame->face_mark - 1,
                 };
 
-                frame->w = frame->u;
+                frame->x = frame->u;
             }
         } else if (n_mark == frame->face_mark) {
             get(ctx->marks, n) = (int32_t)path_color;
-            frame->t = n;
+            frame->y = n;
             frame->above_path = true;
         } else {
             if (n_mark <= 0) {
                 get(ctx->marks, n) = frame->face_mark - 1;
             }
 
-            if (frame->w == frame->u) {
-                frame->w = n;
-                frame->w_nb_first = aven_graph_next_neighbor_index(
+            if (frame->x == frame->u) {
+                frame->x = n;
+                frame->x_nb_first = aven_graph_next_neighbor_index(
                     ctx->graph,
                     n,
                     frame->u
