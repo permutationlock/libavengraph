@@ -144,20 +144,7 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
     AvenGraphAdjList u_adj = get(ctx->graph, frame->u);
 
     if (frame->edge_index == u_adj.len) {
-        if (frame->z != frame->u) {
-            aven_graph_plane_poh_thread_push_internal(
-                ctx,
-                (AvenGraphPlanePohFrame){
-                    .q_color = path_color,
-                    .p_color = frame->p_color,
-                    .u = frame->z,
-                    .x = frame->z,
-                    .y = frame->z,
-                    .z = frame->z,
-                    .face_mark = frame->face_mark - 1,
-                }
-            );
-        }
+        assert(frame->z == frame->u);
 
         if (frame->y == frame->u) {
             assert(frame->x == frame->u);
