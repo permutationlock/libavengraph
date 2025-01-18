@@ -22,14 +22,7 @@
     } AvenThreadPoolJob;
 
     typedef struct {
-        Slice(AvenThreadPoolJob) job_indices;
-        size_t front;
-        size_t back;
-        size_t len;
-    } AvenThreadPoolQueue;
-
-    typedef struct {
-        AvenThreadPoolQueue job_queue;
+        Queue(AvenThreadPoolJob) job_queue;
         Slice(thrd_t) workers;
         cnd_t job_cond;
         cnd_t done_cond;
@@ -38,24 +31,6 @@
         size_t active_threads;
         bool done;
     } AvenThreadPool;
-
-    static AvenThreadPoolJob aven_thread_pool_queue_pop(AvenThreadPoolQueue *queue) {
-        assert(queue->len > 0);
-        queue->len -= 1;
-        size_t old_front = queue->front;
-        queue->front = (queue->front + 1) % queue->job_indices.len;
-        return get(queue->job_indices, old_front);
-    }
-
-    static void aven_thread_pool_queue_push(
-        AvenThreadPoolQueue *queue,
-        AvenThreadPoolJob job
-    ) {
-        assert(queue->len < queue->job_indices.len);
-        get(queue->job_indices, queue->back) = job;
-        queue->back = (queue->back + 1) % queue->job_indices.len;
-        queue->len += 1;
-    }
 
     static int aven_thread_pool_worker_internal_fn(void *args) {
         AvenThreadPool *thread_pool = args;
@@ -66,16 +41,14 @@
 
         for (;;) {
             mtx_lock(&thread_pool->lock);
-            while (thread_pool->job_queue.len == 0 and !thread_pool->done) {
+            while (thread_pool->job_queue.used == 0 and !thread_pool->done) {
                 cnd_wait(&thread_pool->job_cond, &thread_pool->lock);
             }
             if (thread_pool->done) {
                 break;
             }
             thread_pool->jobs_in_progress += 1;
-            AvenThreadPoolJob job = aven_thread_pool_queue_pop(
-                &thread_pool->job_queue
-            );
+            AvenThreadPoolJob job = queue_pop(thread_pool->job_queue);
             mtx_unlock(&thread_pool->lock);
         
             job.fn(job.args);
@@ -85,7 +58,7 @@
             if (
                 !thread_pool->done and
                 thread_pool->jobs_in_progress == 0 and
-                thread_pool->job_queue.len == 0
+                thread_pool->job_queue.used == 0
             ) {
                 cnd_signal(&thread_pool->done_cond);
             }
@@ -105,19 +78,20 @@
         AvenArena *arena
     ) {
         AvenThreadPool thread_pool = {
-            .job_queue = {
-                .job_indices = aven_arena_create_slice(
-                    AvenThreadPoolJob,
-                    arena,
-                    njobs
-                ),
-            },
-            .workers = aven_arena_create_slice(
-                thrd_t,
-                arena,
-                nthreads
-            ),
+            .job_queue = { .cap = njobs },
+            .workers = { .len = nthreads },
         };
+
+        thread_pool.job_queue.ptr = aven_arena_create_array(
+            AvenThreadPoolJob,
+            arena,
+            thread_pool.job_queue.cap
+        );
+        thread_pool.workers.ptr = aven_arena_create_array(
+            thrd_t,
+            arena,
+            thread_pool.workers.len
+        );
 
         int error = mtx_init(&thread_pool.lock, 0);
         if (error != 0) {
@@ -156,10 +130,10 @@
         void *args
     ) {
         mtx_lock(&thread_pool->lock);
-        aven_thread_pool_queue_push(
-            &thread_pool->job_queue,
-            (AvenThreadPoolJob){ .fn = fn, .args = args }
-        );
+        queue_push(thread_pool->job_queue) = (AvenThreadPoolJob){
+            .fn = fn,
+            .args = args,
+        };
         cnd_broadcast(&thread_pool->job_cond);
         mtx_unlock(&thread_pool->lock);
     }
@@ -167,7 +141,7 @@
     static void aven_thread_pool_wait(AvenThreadPool *thread_pool) {
         mtx_lock(&thread_pool->lock);
         while (
-            thread_pool->job_queue.len > 0 or
+            thread_pool->job_queue.used > 0 or
             (!thread_pool->done and thread_pool->jobs_in_progress > 0) or
             (thread_pool->done and thread_pool->active_threads > 0)
         ) {
@@ -179,7 +153,9 @@
     static void aven_thread_pool_halt_and_destroy(AvenThreadPool *thread_pool) {
         mtx_lock(&thread_pool->lock);
         thread_pool->done = true;
-        thread_pool->job_queue = (AvenThreadPoolQueue){ 0 };
+        queue_clear(thread_pool->job_queue);
+        thread_pool->job_queue.ptr = NULL;
+        thread_pool->job_queue.cap = 0;
         cnd_broadcast(&thread_pool->job_cond);
         mtx_unlock(&thread_pool->lock);
 
@@ -211,14 +187,7 @@
     } AvenThreadPoolJob;
 
     typedef struct {
-        Slice(AvenThreadPoolJob) job_indices;
-        size_t front;
-        size_t back;
-        size_t len;
-    } AvenThreadPoolQueue;
-
-    typedef struct {
-        AvenThreadPoolQueue job_queue;
+        Queue(AvenThreadPoolJob) job_queue;
         Slice(pthread_t) workers;
         pthread_cond_t job_cond;
         pthread_cond_t done_cond;
@@ -227,24 +196,6 @@
         size_t active_threads;
         bool done;
     } AvenThreadPool;
-
-    static AvenThreadPoolJob aven_thread_pool_queue_pop(AvenThreadPoolQueue *queue) {
-        assert(queue->len > 0);
-        queue->len -= 1;
-        size_t old_front = queue->front;
-        queue->front = (queue->front + 1) % queue->job_indices.len;
-        return get(queue->job_indices, old_front);
-    }
-
-    static void aven_thread_pool_queue_push(
-        AvenThreadPoolQueue *queue,
-        AvenThreadPoolJob job
-    ) {
-        assert(queue->len < queue->job_indices.len);
-        get(queue->job_indices, queue->back) = job;
-        queue->back = (queue->back + 1) % queue->job_indices.len;
-        queue->len += 1;
-    }
 
     static void *aven_thread_pool_worker_internal_fn(void *args) {
         AvenThreadPool *thread_pool = args;
@@ -255,16 +206,14 @@
 
         for (;;) {
             pthread_mutex_lock(&thread_pool->lock);
-            while (thread_pool->job_queue.len == 0 and !thread_pool->done) {
+            while (thread_pool->job_queue.used == 0 and !thread_pool->done) {
                 pthread_cond_wait(&thread_pool->job_cond, &thread_pool->lock);
             }
             if (thread_pool->done) {
                 break;
             }
             thread_pool->jobs_in_progress += 1;
-            AvenThreadPoolJob job = aven_thread_pool_queue_pop(
-                &thread_pool->job_queue
-            );
+            AvenThreadPoolJob job = queue_pop(thread_pool->job_queue);
             pthread_mutex_unlock(&thread_pool->lock);
         
             job.fn(job.args);
@@ -274,7 +223,7 @@
             if (
                 !thread_pool->done and
                 thread_pool->jobs_in_progress == 0 and
-                thread_pool->job_queue.len == 0
+                thread_pool->job_queue.used == 0
             ) {
                 pthread_cond_signal(&thread_pool->done_cond);
             }
@@ -292,20 +241,22 @@
         size_t njobs,
         AvenArena *arena
     ) {
+
         AvenThreadPool thread_pool = {
-            .job_queue = {
-                .job_indices = aven_arena_create_slice(
-                    AvenThreadPoolJob,
-                    arena,
-                    njobs
-                ),
-            },
-            .workers = aven_arena_create_slice(
-                pthread_t,
-                arena,
-                nthreads
-            ),
+            .job_queue = { .cap = njobs },
+            .workers = { .len = nthreads },
         };
+
+        thread_pool.job_queue.ptr = aven_arena_create_array(
+            AvenThreadPoolJob,
+            arena,
+            thread_pool.job_queue.cap
+        );
+        thread_pool.workers.ptr = aven_arena_create_array(
+            pthread_t,
+            arena,
+            thread_pool.workers.len
+        );
 
         int error = pthread_mutex_init(&thread_pool.lock, NULL);
         if (error != 0) {
@@ -345,10 +296,10 @@
         void *args
     ) {
         pthread_mutex_lock(&thread_pool->lock);
-        aven_thread_pool_queue_push(
-            &thread_pool->job_queue,
-            (AvenThreadPoolJob){ .fn = fn, .args = args }
-        );
+        queue_push(thread_pool->job_queue) = (AvenThreadPoolJob){
+            .fn = fn,
+            .args = args,
+        };
         pthread_cond_broadcast(&thread_pool->job_cond);
         pthread_mutex_unlock(&thread_pool->lock);
     }
@@ -356,7 +307,7 @@
     static void aven_thread_pool_wait(AvenThreadPool *thread_pool) {
         pthread_mutex_lock(&thread_pool->lock);
         while (
-            thread_pool->job_queue.len > 0 or
+            thread_pool->job_queue.used > 0 or
             (!thread_pool->done and thread_pool->jobs_in_progress > 0) or
             (thread_pool->done and thread_pool->active_threads > 0)
         ) {
@@ -368,7 +319,9 @@
     static void aven_thread_pool_halt_and_destroy(AvenThreadPool *thread_pool) {
         pthread_mutex_lock(&thread_pool->lock);
         thread_pool->done = true;
-        thread_pool->job_queue = (AvenThreadPoolQueue){ 0 };
+        queue_clear(thread_pool->job_queue);
+        thread_pool->job_queue.ptr = NULL;
+        thread_pool->job_queue.cap = 0;
         pthread_cond_broadcast(&thread_pool->job_cond);
         pthread_mutex_unlock(&thread_pool->lock);
 
