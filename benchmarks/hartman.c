@@ -26,7 +26,7 @@
 #define NGRAPHS 3
 #define MAX_VERTICES 10000001
 
-#define MAX_COLOR 127
+#define MAX_COLOR 12
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -48,6 +48,7 @@ int main(void) {
         typedef struct {
             AvenGraph graph;
             AvenGraphPlaneHartmanListProp color_lists;
+            AvenGraphPropUint8 coloring;
         } CaseData;
 
         Slice(CaseData) cases = { .len = NGRAPHS * (MAX_VERTICES / n) };
@@ -81,28 +82,28 @@ int main(void) {
             );
 
             for (uint32_t j = 0; j < color_lists->len; j += 1) {
-                AvenGraphPlaneHartmanList list = {
-                    .len = 3,
-                    .ptr = {
-                        1 + aven_rng_rand_bounded(rng, MAX_COLOR),
-                        1 + aven_rng_rand_bounded(rng, MAX_COLOR),
-                        1 + aven_rng_rand_bounded(rng, MAX_COLOR),
-                    },
-                };
+                AvenGraphPlaneHartmanList list = { .len = 3 };
+                get(list, 0) = (uint8_t)(
+                    1 + aven_rng_rand_bounded(rng, MAX_COLOR)
+                );
+                get(list, 1) = (uint8_t)(
+                    1 + aven_rng_rand_bounded(rng, MAX_COLOR)
+                );
+                get(list, 2) = (uint8_t)(
+                    1 + aven_rng_rand_bounded(rng, MAX_COLOR)
+                );
 
                 while (get(list, 1) == get(list, 0)) {
-                    get(list, 1) = 1 + aven_rng_rand_bounded(
-                        rng,
-                        MAX_COLOR
+                    get(list, 1) = (uint8_t)(
+                        1 + aven_rng_rand_bounded(rng, MAX_COLOR)
                     );
                 }
                 while (
                     get(list, 2) == get(list, 1) or
                     get(list, 2) == get(list, 0)
                 ) {
-                    get(list, 2) = 1 + aven_rng_rand_bounded(
-                        rng,
-                        MAX_COLOR
+                    get(list, 2) = (uint8_t)(
+                        1 + aven_rng_rand_bounded(rng, MAX_COLOR)
                     );
                 }
 
@@ -118,11 +119,11 @@ int main(void) {
         __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            aven_graph_plane_hartman(
-                get(cases, i).color_lists,
+            get(cases, i).coloring = aven_graph_plane_hartman(
                 get(cases, i).graph,
+                get(cases, i).color_lists,
                 face,
-                temp_arena
+                &temp_arena
             );
         }
 
@@ -135,29 +136,38 @@ int main(void) {
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenArena color_arena = temp_arena;
-            AvenGraphPropUint8 coloring = { .len = n };
-            coloring.ptr = aven_arena_create_array(uint8_t, &color_arena, n);
-
+            bool valid = true;
+            
             AvenGraphPlaneHartmanListProp color_lists = get(
                 cases,
                 i
             ).color_lists;
+            AvenGraphPropUint8 coloring = get(cases, i).coloring;
 
-            bool valid = true;
-            for (uint32_t v = 0; v < n; v += 1) {
-                if (get(color_lists, v).len != 1) {
+            // verify coloring is a list-coloring
+            for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
+                uint8_t v_color = get(coloring, v);
+                AvenGraphPlaneHartmanList v_colors = get(color_lists, v);
+
+                bool found = false;
+                for (uint32_t j = 0; j < v_colors.len; j += 1) {
+                    if (get(v_colors, j) == v_color) {
+                        found = true;
+                    }
+                }
+
+                if (!found) {
                     valid = false;
                     break;
                 }
-                get(coloring, v) = (uint8_t)get(get(color_lists, v), 0);
             }
 
+            // verify coloring is a path coloring
             if (valid) {
                 valid = aven_graph_path_color_verify(
                     get(cases, i).graph,
-                    coloring,
-                    color_arena
+                    get(cases, i).coloring,
+                    temp_arena
                 );
             }
 

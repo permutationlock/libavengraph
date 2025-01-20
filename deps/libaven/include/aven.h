@@ -41,6 +41,7 @@
 #define countof(array) (sizeof(array) / sizeof(*array))
 
 #define Optional(t) struct { t value; bool valid; }
+#define OptPtr(t) union { t *value; t *valid; }
 #define Result(t) struct { t payload; int error; }
 #define Slice(t) struct { t *ptr; size_t len; }
 #define List(t) struct { t *ptr; size_t len; size_t cap; }

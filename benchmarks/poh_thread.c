@@ -24,8 +24,8 @@
 
 #define ARENA_SIZE (4096UL * 1200000UL)
 
-#define NGRAPHS 3
-#define MAX_VERTICES 10000001
+#define NGRAPHS 1
+#define MAX_VERTICES 100000001
 
 #define NTHREADS 3
 
@@ -50,7 +50,7 @@ int main(void) {
     Aff2 ident;
     aff2_identity(ident);
 
-    for (uint32_t n = 10; n < MAX_VERTICES; n *= 10) {
+    for (uint32_t n = 100000000; n < MAX_VERTICES; n *= 10) {
         AvenArena temp_arena = arena;
 
         typedef struct {

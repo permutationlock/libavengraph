@@ -23,12 +23,10 @@ typedef struct{
 typedef Slice(AvenGraphAugAdjListNode) AvenGraphAugAdjList;
 typedef Slice(AvenGraphAugAdjList) AvenGraphAug;
 
-static inline uint32_t aven_graph_neighbor_index(
-    AvenGraph graph,
-    uint32_t vertex,
+static inline uint32_t aven_graph_adj_neighbor_index(
+    AvenGraphAdjList adj,
     uint32_t neighbor
 ) {
-    AvenGraphAdjList adj = get(graph, vertex);
     for (uint32_t i = 0; i < adj.len; i += 1) {
         if (get(adj, i) == neighbor) {
             return i;
@@ -38,12 +36,10 @@ static inline uint32_t aven_graph_neighbor_index(
     return 0xffffffff;
 }
 
-static inline uint32_t aven_graph_next_neighbor_index(
-    AvenGraph graph,
-    uint32_t vertex,
+static inline uint32_t aven_graph_adj_next_neighbor_index(
+    AvenGraphAdjList adj,
     uint32_t neighbor
 ) {
-    AvenGraphAdjList adj = get(graph, vertex);
     for (uint32_t i = 0; i + 1 < adj.len; i += 1) {
         if (get(adj, i) == neighbor) {
             return i + 1;
@@ -74,6 +70,19 @@ static inline uint32_t aven_graph_adj_prev(
     }
 
     return i - 1;
+}
+
+static inline uint32_t aven_graph_aug_adj_neighbor_index(
+    AvenGraphAugAdjList adj,
+    uint32_t neighbor
+) {
+    for (uint32_t i = 0; i < adj.len; i += 1) {
+        if (get(adj, i).vertex == neighbor) {
+            return i;
+        }
+    }
+    assert(false);
+    return 0xffffffff;
 }
 
 static inline uint32_t aven_graph_aug_adj_next(
@@ -198,21 +207,6 @@ static inline AvenGraphAug aven_graph_aug(AvenGraph graph, AvenArena *arena) {
     }
 
     return aug_graph;
-}
-
-static inline uint32_t aven_graph_aug_neighbor_index(
-    AvenGraphAug graph,
-    uint32_t vertex,
-    uint32_t neighbor
-) {
-    AvenGraphAugAdjList adj = get(graph, vertex);
-    for (uint32_t i = 0; i < adj.len; i += 1) {
-        if (get(adj, i).vertex == neighbor) {
-            return i;
-        }
-    }
-    assert(false);
-    return 0xffffffff;
 }
 
 #endif // AVEN_GRAPH_H
