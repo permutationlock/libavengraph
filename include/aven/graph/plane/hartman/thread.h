@@ -245,40 +245,19 @@ aven_graph_plane_hartman_thread_next_frame(
 static inline void aven_graph_plane_hartman_thread_push_entries(
     AvenGraphPlaneHartmanThreadCtx *ctx,
     uint32_t v,
-    AvenGraphPlaneHartmanFrameOptional *maybe_frame,
-    uint32_t u
+    AvenGraphPlaneHartmanFrameOptional *maybe_frame
 ) {
     AvenGraphPlaneHartmanThreadVertex *v_info = &get(ctx->vertex_info, v);
-    AvenGraphPlaneHartmanThreadVertex *u_info = &get(ctx->vertex_info, u);
     if (!maybe_frame->valid) {
-        bool done = true;
-        if (v_info->entry_index != 0 and v_info->colors.len == 1) {
-            done = false;
+        if (v_info->entry_index == 0) {
+            return;
         }
-        if (u_info->entry_index != 0 and u_info->colors.len == 1) {
-            done = false;
-        }
-        if (done) {
+        if (v_info->colors.len != 1) {
             return;
         }
     }
 
     aven_graph_plane_hartman_thread_lock(ctx);
-    if (u_info->entry_index != 0 and u_info->colors.len == 1) {
-        do {
-            assert(ctx->valid_entries.len < ctx->valid_entries.cap);
-            atomic_fetch_add_explicit(
-                &ctx->valid_entries.len,
-                1,
-                memory_order_relaxed
-            );
-            list_back(ctx->valid_entries) = u_info->entry_index - 1;
-            u_info->entry_index = pool_get(
-                ctx->entry_pool,
-                u_info->entry_index - 1
-            ).parent;
-        } while (u_info->entry_index != 0);
-    }
     if (v_info->entry_index != 0 and v_info->colors.len == 1) {
         do {
             assert(ctx->valid_entries.len < ctx->valid_entries.cap);
@@ -392,8 +371,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
             aven_graph_plane_hartman_thread_push_entries(
                 ctx,
                 u,
-                &(AvenGraphPlaneHartmanFrameOptional){ 0 },
-                u
+                &(AvenGraphPlaneHartmanFrameOptional){ 0 }
             );
         }
         return true;
@@ -428,14 +406,16 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
     u_loc->nb.last = aven_graph_aug_adj_prev(u_adj, u_loc->nb.last);
     z_loc->nb.first = aven_graph_aug_adj_next(z_adj, z_loc->nb.first);
 
-    bool u_colored = false;
-
     if (frame->z == frame->x) {
         aven_graph_plane_hartman_color_differently(
             &get(ctx->vertex_info, u).colors,
             z_color
         );
-        u_colored = true;
+        aven_graph_plane_hartman_thread_push_entries(
+            ctx,
+            u,
+            &(AvenGraphPlaneHartmanFrameOptional){ 0 }
+        );
 
         if (frame->z == frame->y) {
             frame->y_loc = frame->x_loc;
@@ -593,8 +573,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
     aven_graph_plane_hartman_thread_push_entries(
         ctx,
         v,
-        &maybe_frame,
-        u_colored ? u : v
+        &maybe_frame
     );
 
     return false;
