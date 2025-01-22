@@ -39,7 +39,7 @@ int main(void) {
     Aff2 ident;
     aff2_identity(ident);
 
-    for (uint32_t n = 10; n < MAX_VERTICES; n *= 10) {
+    for (uint32_t n = 1000; n < MAX_VERTICES; n *= 10) {
         AvenArena temp_arena = arena;
 
         typedef struct {

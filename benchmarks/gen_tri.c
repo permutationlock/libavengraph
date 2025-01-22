@@ -18,9 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 400000UL)
+#define ARENA_SIZE (4096UL * 1200000UL)
 
-#define NGRAPHS 3
+#define NGRAPHS 10
 #define MAX_VERTICES 10000001
 
 int main(void) {
@@ -37,7 +37,7 @@ int main(void) {
     Aff2 ident;
     aff2_identity(ident);
 
-    for (uint32_t n = 10; n < MAX_VERTICES; n *= 10) {
+    for (uint32_t n = 1000; n < MAX_VERTICES; n *= 10) {
         uint32_t ngraphs = NGRAPHS * (MAX_VERTICES / n);
         double avg_deg_sum = 0;
         size_t overall_max_deg = 0;

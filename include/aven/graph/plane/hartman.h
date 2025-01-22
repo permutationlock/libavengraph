@@ -422,16 +422,15 @@ static inline bool aven_graph_plane_hartman_frame_step(
 }
 
 static inline AvenGraphPropUint8 aven_graph_plane_hartman(
-    AvenGraph graph,
+    AvenGraphAug aug_graph,
     AvenGraphPlaneHartmanListProp color_lists,
     AvenGraphSubset outer_face,
     AvenArena *arena
 ) {
-    AvenGraphPropUint8 coloring = { .len = graph.len };
+    AvenGraphPropUint8 coloring = { .len = aug_graph.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
-    AvenGraphAug aug_graph = aven_graph_aug(graph, &temp_arena);
     AvenGraphPlaneHartmanCtx ctx = aven_graph_plane_hartman_init(
         aug_graph,
         color_lists,

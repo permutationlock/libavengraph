@@ -546,8 +546,24 @@ int main(int argc, char **argv) {
     AvenBuildStep bfs_root_step = aven_build_step_root();
     aven_build_step_add_dep(&bfs_root_step, &bench_bfs_step, &arena);
 
+    AvenBuildStep bench_all_step = aven_build_common_step_cc_ld_run_exe_ex(
+        &opts,
+        includes,
+        macros,
+        syslibs,
+        bench_objs,
+        aven_path(&arena, root_path.ptr, "benchmarks", "all.c", NULL),
+        &bench_dir_step,
+        false,
+        bench_args,
+        &arena
+    );
+    AvenBuildStep all_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&all_root_step, &bench_all_step, &arena);
+
     AvenBuildStep bench_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&bench_root_step, &hartman_thread_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &all_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &hartman_thread_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &poh_thread_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);

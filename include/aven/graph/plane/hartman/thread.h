@@ -682,17 +682,16 @@ static inline void aven_graph_plane_hartman_thread_worker(void *args) {
 }
 
 static inline AvenGraphPropUint8 aven_graph_plane_hartman_thread(
-    AvenGraph graph,
+    AvenGraphAug aug_graph,
     AvenGraphPlaneHartmanListProp color_lists,
     AvenGraphSubset outer_face,
     AvenThreadPool *thread_pool,
     AvenArena *arena
 ) {
-    AvenGraphPropUint8 coloring = { .len = graph.len };
+    AvenGraphPropUint8 coloring = { .len = aug_graph.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
-    AvenGraphAug aug_graph = aven_graph_aug(graph, &temp_arena);
     AvenGraphPlaneHartmanThreadCtx ctx = aven_graph_plane_hartman_thread_init(
         aug_graph,
         color_lists,
@@ -707,12 +706,12 @@ static inline AvenGraphPropUint8 aven_graph_plane_hartman_thread(
         thread_pool->workers.len + 1
     );
 
-    uint32_t chunk_size = (uint32_t)(graph.len / workers.len);
+    uint32_t chunk_size = (uint32_t)(aug_graph.len / workers.len);
     for (uint32_t i = 0; i < workers.len; i += 1) {
         uint32_t start_vertex = i * chunk_size;
         uint32_t end_vertex = (i + 1) * chunk_size;
         if (i + 1 == workers.len) {
-            end_vertex = (uint32_t)graph.len;
+            end_vertex = (uint32_t)aug_graph.len;
         }
 
         get(workers, i) = (AvenGraphPlaneHartmanThreadWorker) {
