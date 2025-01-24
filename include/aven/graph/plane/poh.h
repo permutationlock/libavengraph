@@ -266,4 +266,77 @@ static inline AvenGraphPropUint8 aven_graph_plane_poh(
     return coloring;
 }
 
+typedef enum {
+    AVEN_GRAPH_PLANE_POH_CASE_1_A = 0,
+    AVEN_GRAPH_PLANE_POH_CASE_1_B,
+    AVEN_GRAPH_PLANE_POH_CASE_2_A,
+    AVEN_GRAPH_PLANE_POH_CASE_2_B,
+    AVEN_GRAPH_PLANE_POH_CASE_2_C,
+    AVEN_GRAPH_PLANE_POH_CASE_2_D,
+    AVEN_GRAPH_PLANE_POH_CASE_2_E,
+    AVEN_GRAPH_PLANE_POH_CASE_2_F,
+    AVEN_GRAPH_PLANE_POH_CASE_3_A,
+    AVEN_GRAPH_PLANE_POH_CASE_3_B,
+    AVEN_GRAPH_PLANE_POH_CASE_3_C,
+    AVEN_GRAPH_PLANE_POH_CASE_MAX,
+} AvenGraphPlanePohCase;
+
+static inline AvenGraphPlanePohCase aven_graph_plane_poh_frame_case(
+    AvenGraphPlanePohCtx *ctx,
+    AvenGraphPlanePohFrame *frame
+) {
+    AvenGraphPlanePohVertex u_info = get(ctx->vertex_info, frame->u);
+
+    if (frame->edge_index == u_info.len) {
+        assert(frame->z == frame->u);
+
+        if (frame->y == frame->u) {
+            assert(frame->x == frame->u);
+            return AVEN_GRAPH_PLANE_POH_CASE_1_A;
+        }
+
+        return AVEN_GRAPH_PLANE_POH_CASE_1_B;
+    }
+
+    uint32_t n_index = frame->u_nb_first + frame->edge_index;
+    if (n_index >= u_info.len) {
+        n_index -= u_info.len;
+    }
+
+    uint32_t n = get(u_info, n_index);
+    AvenGraphPlanePohVertex n_info = get(ctx->vertex_info, n);
+
+    if (frame->above_path) {
+        if (n_info.mark <= 0) {
+            if (frame->last_colored) {
+                return AVEN_GRAPH_PLANE_POH_CASE_3_A;
+            } else {
+                return AVEN_GRAPH_PLANE_POH_CASE_3_B;
+            }
+        } else {
+            if (frame->z != frame->u) {
+                return AVEN_GRAPH_PLANE_POH_CASE_3_C;
+            }
+        }
+    } else if (n != frame->x) {
+        if (n_info.mark > 0) {
+            if (n_info.mark == (int32_t)frame->p_color) {
+                return AVEN_GRAPH_PLANE_POH_CASE_2_A;
+            }
+            if (frame->x != frame->u) {
+                return AVEN_GRAPH_PLANE_POH_CASE_2_B;
+            }
+        } else if (n_info.mark == frame->face_mark) {
+            return AVEN_GRAPH_PLANE_POH_CASE_2_C;
+        } else {
+            if (frame->x == frame->u) {
+                return AVEN_GRAPH_PLANE_POH_CASE_2_D;
+            }
+            return AVEN_GRAPH_PLANE_POH_CASE_2_E;
+        }
+    }
+
+    return AVEN_GRAPH_PLANE_POH_CASE_2_F;
+}
+
 #endif // AVEN_GRAPH_PLANE_POH_H

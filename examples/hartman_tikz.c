@@ -71,37 +71,34 @@ static TestCase gen_test_case(
     );
 
     for (uint32_t i = 0; i < color_lists.len; i += 1) {
-        AvenGraphPlaneHartmanList list = {
-            .len = 3,
-            .ptr = {
-                1 + aven_rng_rand_bounded(rng, max_color),
-                1 + aven_rng_rand_bounded(rng, max_color),
-                1 + aven_rng_rand_bounded(rng, max_color),
-            },
-        };
+        AvenGraphPlaneHartmanList list = { .len = 3 };
+
+        for (uint8_t j = 0; j < list.len; j += 1) {
+            get(list, j) = (uint8_t)(1 + aven_rng_rand_bounded(rng, max_color));
+        }
 
         while (get(list, 1) == get(list, 0)) {
-            get(list, 1) = 1 + aven_rng_rand_bounded(
+            get(list, 1) = (uint8_t)(1 + aven_rng_rand_bounded(
                 rng,
                 max_color
-            );
+            ));
         }
         while (
             get(list, 2) == get(list, 1) or
             get(list, 2) == get(list, 0)
         ) {
-            get(list, 2) = 1 + aven_rng_rand_bounded(
+            get(list, 2) = (uint8_t)(1 + aven_rng_rand_bounded(
                 rng,
                 max_color
-            );
+            ));
         }
 
         get(color_lists, i) = list;
     }
     
     test_case.ctx = aven_graph_plane_hartman_init(
-        color_lists,
         test_case.graph,
+        color_lists,
         outer_face,
         arena
     );

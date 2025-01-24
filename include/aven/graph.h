@@ -202,10 +202,6 @@ static inline AvenGraphAug aven_graph_aug(AvenGraph graph, AvenArena *arena) {
         v_work_list->len = 0;
     }
 
-    for (uint32_t v = 0; v < graph.len; v += 1) {
-        assert(get(work_lists, v).len == 0);
-    }
-
     return aug_graph;
 }
 

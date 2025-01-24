@@ -1,6 +1,13 @@
 #ifndef AVEN_GRAPH_PLANE_HARTMAN_TIKZ_H
 #define AVEN_GRAPH_PLANE_HARTMAN_TIKZ_H
 
+#include <aven.h>
+#include <aven/arena.h>
+#include <aven/math.h>
+
+#include "../../../graph.h"
+#include "../hartman.h"
+
 #include <stdio.h>
 
 static inline void aven_graph_plane_hartman_tikz(
@@ -47,7 +54,7 @@ static inline void aven_graph_plane_hartman_tikz(
         float dir_score[8] = { 0 };
         float dir_bonus[8] = { 0 };
 
-        AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+        AvenGraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
             uint32_t u = get(v_adj, i).vertex;
 
@@ -82,7 +89,7 @@ static inline void aven_graph_plane_hartman_tikz(
             }
         }
 
-        uint32_t v_mark = aven_graph_plane_hartman_vinfo(ctx, frame, v)->mark;
+        uint32_t v_mark = aven_graph_plane_hartman_vloc(ctx, frame, v)->mark;
         printf(
             "\t\\node (v%u) [label=%s:{%u,\\{",
             (unsigned int)v,
@@ -90,8 +97,8 @@ static inline void aven_graph_plane_hartman_tikz(
             (unsigned int)v_mark
         );
 
-        AvenGraphPlaneHartmanList v_colors = get(ctx->color_lists, v);
-        for (uint32_t i = 0; i < v_colors.len - 1; i += 1) {
+        AvenGraphPlaneHartmanList v_colors = get(ctx->vertex_info, v).colors;
+        for (uint8_t i = 0; i < v_colors.len - 1; i += 1) {
             printf("%u,", get(v_colors, i));
         }
         printf(
@@ -158,11 +165,11 @@ static inline void aven_graph_plane_hartman_tikz(
     AvenGraphPlaneHartmanTikzDrawGraph draw_graph = aven_arena_create_slice(
         AvenGraphPlaneHartmanTikzDrawSlice,
         &temp_arena,
-        ctx->graph.len
+        ctx->vertex_info.len
     );
 
-    for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-        get(draw_graph, v).len = get(ctx->graph, v).len;
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        get(draw_graph, v).len = get(ctx->vertex_info, v).adj.len;
         get(draw_graph, v).ptr = aven_arena_create_array(
             bool,
             &temp_arena,
@@ -175,6 +182,35 @@ static inline void aven_graph_plane_hartman_tikz(
     }
 
     printf("\t\\begin{pgfonlayer}{bg}\n"); 
+
+    {
+        AvenGraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
+        AvenGraphPlaneHartmanTikzDrawSlice z_drawn = get(draw_graph, frame->z);
+        AvenGraphPlaneHartmanVertexLoc *z_loc =
+            aven_graph_plane_hartman_vloc(ctx, frame, frame->z);
+        uint32_t zv_index = z_loc->nb.first;
+        if (zv_index != z_loc->nb.last) {
+            zv_index = aven_graph_aug_adj_next(z_adj, zv_index);
+        }
+        AvenGraphAugAdjListNode zv = get(z_adj, zv_index);
+
+        if (zv.vertex > frame->z) {
+            get(z_drawn, zv_index) = true;
+            printf(
+                "\t\t\\draw (v%u) edge [double, very thick] (v%u);\n",
+                (unsigned int)frame->z,
+                (unsigned int)zv.vertex
+            );
+        } else {
+            get(get(draw_graph, zv.vertex), zv.back_index) = true;
+            printf(
+                "\t\t\\draw (v%u) edge [double, very thick] (v%u);\n",
+                (unsigned int)zv.vertex,
+                (unsigned int)frame->z
+            );
+        }
+    }
+
     AvenGraphPlaneHartmanFrame *cur_frame = frame;
     size_t frame_index = (size_t)0 - (size_t)1;
     do {
@@ -183,10 +219,10 @@ static inline void aven_graph_plane_hartman_tikz(
         uint32_t v = cur_frame->z;
 
         do {
-            AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+            AvenGraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
             AvenGraphPlaneHartmanTikzDrawSlice v_drawn = get(draw_graph, v);
-            AvenGraphPlaneHartmanVertex *v_info =
-                aven_graph_plane_hartman_vinfo(ctx, cur_frame, v);
+            AvenGraphPlaneHartmanVertexLoc *v_info =
+                aven_graph_plane_hartman_vloc(ctx, cur_frame, v);
 
             for (
                 uint32_t i = v_info->nb.first;
@@ -222,15 +258,15 @@ static inline void aven_graph_plane_hartman_tikz(
         }
     } while (frame_index < ctx->frames.len);
 
-    for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-        AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        AvenGraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
         AvenGraphPlaneHartmanTikzDrawSlice v_drawn = get(draw_graph, v);
 
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
             uint32_t u = get(v_adj, i).vertex;
             if (u > v and !get(v_drawn, i)) {
                 get(v_drawn, i) = true;
-                if (get(ctx->vertex_info, v).mark == 0) {
+                if (get(ctx->vertex_info, v).loc.mark == 0) {
                     printf(
                         "\t\t\\draw (v%u) edge (v%u);\n",
                         (unsigned int)v,
