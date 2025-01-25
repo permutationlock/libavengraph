@@ -25,7 +25,7 @@
 
 #define ARENA_SIZE (4096UL * 1200000UL)
 
-#define NGRAPHS 10
+#define NGRAPHS 1
 #define MAX_VERTICES 10000001
 
 #define MAX_COLOR 8
@@ -53,11 +53,12 @@ int main(void) {
     Aff2 ident;
     aff2_identity(ident);
 
-    for (uint32_t n = 1000; n < MAX_VERTICES; n *= 10) {
+    for (uint32_t n = 10; n < MAX_VERTICES; n *= 10) {
         AvenArena temp_arena = arena;
 
         typedef struct {
             AvenGraph graph;
+            AvenGraphAug aug_graph;
             AvenGraphPlaneHartmanListProp color_lists;
             AvenGraphPropUint8 coloring;
         } CaseData;
@@ -79,6 +80,8 @@ int main(void) {
             if (graph.len != n) {
                 aven_panic("graph generation failed");
             }
+
+            get(cases, i).aug_graph = aven_graph_aug(graph, &temp_arena);
 
             AvenGraphPlaneHartmanListProp *color_lists = &get(
                 cases,
@@ -131,10 +134,11 @@ int main(void) {
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
             get(cases, i).coloring = aven_graph_plane_hartman_thread(
-                get(cases, i).graph,
+                get(cases, i).aug_graph,
                 get(cases, i).color_lists,
                 face,
                 &thread_pool,
+                NTHREADS,
                 &temp_arena
             );
         }

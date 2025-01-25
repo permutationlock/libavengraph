@@ -22,12 +22,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 1200000UL)
+#define ARENA_SIZE (4096UL * 4000000UL)
 
-#define NGRAPHS 6
+#define NGRAPHS 10
 #define MAX_VERTICES 10000001
+#define START_VERTICES 1000
 
-#define NTHREADS 2
+#define NTHREADS 3
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -50,7 +51,7 @@ int main(void) {
     Aff2 ident;
     aff2_identity(ident);
 
-    for (uint32_t n = 1000; n < MAX_VERTICES; n *= 10) {
+    for (uint32_t n = START_VERTICES; n < MAX_VERTICES; n *= 10) {
         AvenArena temp_arena = arena;
 
         typedef struct {

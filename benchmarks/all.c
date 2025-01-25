@@ -35,7 +35,7 @@
 
 #define MAX_COLOR 32
 
-#define NTHREADS 2
+#define NTHREADS 4
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -45,7 +45,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x12345679, 0xdef12345);
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x93201321, 0x8657190f);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     AvenThreadPool thread_pool = aven_thread_pool_init(
@@ -262,52 +262,52 @@ int main(void) {
                 ns_per_graph / (double)(6 * n - 12)
             );
         }
-        {
-            AvenArena temp_arena = loop_arena;
-            __asm volatile("" ::: "memory");
-            AvenTimeInst start_inst = aven_time_now();
-            __asm volatile("" ::: "memory");
+        // {
+        //     AvenArena temp_arena = loop_arena;
+        //     __asm volatile("" ::: "memory");
+        //     AvenTimeInst start_inst = aven_time_now();
+        //     __asm volatile("" ::: "memory");
 
-            for (uint32_t i = 0; i < cases.len; i += 1) {
-                get(cases, i).coloring = aven_graph_plane_poh_bfs(
-                    get(cases, i).graph,
-                    p,
-                    q,
-                    &temp_arena
-                );
-            }
+        //     for (uint32_t i = 0; i < cases.len; i += 1) {
+        //         get(cases, i).coloring = aven_graph_plane_poh_bfs(
+        //             get(cases, i).graph,
+        //             p,
+        //             q,
+        //             &temp_arena
+        //         );
+        //     }
 
-            __asm volatile("" ::: "memory");
-            AvenTimeInst end_inst = aven_time_now();
-            __asm volatile("" ::: "memory");
+        //     __asm volatile("" ::: "memory");
+        //     AvenTimeInst end_inst = aven_time_now();
+        //     __asm volatile("" ::: "memory");
 
-            int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-            double ns_per_graph = (double)elapsed_ns / (double)cases.len;
+        //     int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
+        //     double ns_per_graph = (double)elapsed_ns / (double)cases.len;
 
-            uint32_t nvalid = 0;
-            for (uint32_t i = 0; i < cases.len; i += 1) {
-                bool valid = aven_graph_path_color_verify(
-                    get(cases, i).graph,
-                    get(cases, i).coloring,
-                    temp_arena
-                );
-                if (valid) {
-                    nvalid += 1;
-                }
-            }
+        //     uint32_t nvalid = 0;
+        //     for (uint32_t i = 0; i < cases.len; i += 1) {
+        //         bool valid = aven_graph_path_color_verify(
+        //             get(cases, i).graph,
+        //             get(cases, i).coloring,
+        //             temp_arena
+        //         );
+        //         if (valid) {
+        //             nvalid += 1;
+        //         }
+        //     }
 
-            printf(
-                "path 3-coloring (bfs) %lu graph(s) with %lu vertices:\n"
-                "\tvalid 3-colorings: %lu\n"
-                "\ttime per graph: %fns\n"
-                "\ttime per half-edge: %fns\n",
-                (unsigned long)cases.len,
-                (unsigned long)n,
-                (unsigned long)nvalid,
-                ns_per_graph,
-                ns_per_graph / (double)(6 * n - 12)
-            );
-        }
+        //     printf(
+        //         "path 3-coloring (bfs) %lu graph(s) with %lu vertices:\n"
+        //         "\tvalid 3-colorings: %lu\n"
+        //         "\ttime per graph: %fns\n"
+        //         "\ttime per half-edge: %fns\n",
+        //         (unsigned long)cases.len,
+        //         (unsigned long)n,
+        //         (unsigned long)nvalid,
+        //         ns_per_graph,
+        //         ns_per_graph / (double)(6 * n - 12)
+        //     );
+        // }
         {
             AvenArena temp_arena = loop_arena;
             __asm volatile("" ::: "memory");
@@ -354,7 +354,7 @@ int main(void) {
                 ns_per_graph / (double)(6 * n - 12)
             );
         }
-        {
+        for (size_t nthreads = 2; nthreads <= NTHREADS; nthreads += 1){
             AvenArena temp_arena = loop_arena;
             __asm volatile("" ::: "memory");
             AvenTimeInst start_inst = aven_time_now();
@@ -366,6 +366,7 @@ int main(void) {
                     p,
                     q,
                     &thread_pool,
+                    nthreads,
                     &temp_arena
                 );
             }
@@ -390,11 +391,11 @@ int main(void) {
             }
 
             printf(
-                "path 3-coloring (%d threads) %lu graph(s) with %lu vertices:\n"
+                "path 3-coloring (%lu threads) %lu graph(s) with %lu vertices:\n"
                 "\tvalid 3-colorings: %lu\n"
                 "\ttime per graph: %fns\n"
                 "\ttime per half-edge: %fns\n",
-                NTHREADS,
+                (unsigned long)nthreads,
                 (unsigned long)cases.len,
                 (unsigned long)n,
                 (unsigned long)nvalid,
@@ -478,7 +479,7 @@ int main(void) {
                 ns_per_graph / (double)(6 * n - 12)
             );
         }
-        {
+        for (size_t nthreads = 2; nthreads <= NTHREADS; nthreads += 1){
             AvenArena temp_arena = loop_arena;
             __asm volatile("" ::: "memory");
             AvenTimeInst start_inst = aven_time_now();
@@ -490,6 +491,7 @@ int main(void) {
                     get(cases, i).color_lists,
                     face,
                     &thread_pool,
+                    nthreads,
                     &temp_arena
                 );
             }
@@ -544,11 +546,11 @@ int main(void) {
             }
 
             printf(
-                "path 3-choosing (%d threads) %lu graph(s) with %lu vertices:\n"
+                "path 3-choosing (%lu threads) %lu graph(s) with %lu vertices:\n"
                 "\tvalid 3-choosings: %lu\n"
                 "\ttime per graph: %fns\n"
                 "\ttime per half-edge: %fns\n",
-                NTHREADS,
+                (unsigned long)nthreads,
                 (unsigned long)cases.len,
                 (unsigned long)n,
                 (unsigned long)nvalid,
