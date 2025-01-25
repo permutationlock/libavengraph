@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 4000000UL)
+#define ARENA_SIZE (4096UL * 1200000UL)
 
 #define NGRAPHS 10
 #define MAX_VERTICES 10000001
@@ -93,6 +93,7 @@ int main(void) {
                 p,
                 q,
                 &thread_pool,
+                NTHREADS,
                 &temp_arena
             );
         }
