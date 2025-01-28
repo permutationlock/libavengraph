@@ -247,10 +247,7 @@ static inline bool aven_graph_plane_hartman_frame_step(
         frame->y_loc = x_loc;
         frame->y = frame->x;
         frame->x = u;
-
-        if (get(get(ctx->vertex_info, u).colors, 0) == z_color) {
-            frame->z = u;
-        }
+        frame->z = u;
 
         frame->x_loc.mark = ctx->next_mark++;
         frame->y_loc.mark = ctx->next_mark++;

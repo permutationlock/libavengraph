@@ -430,10 +430,7 @@ static inline bool aven_graph_plane_hartman_thread_frame_step(
         frame->y_loc = x_loc;
         frame->y = frame->x;
         frame->x = u;
-
-        if (get(get(ctx->vertex_info, u).colors, 0) == z_color) {
-            frame->z = u;
-        }
+        frame->z = u;
 
         frame->x_loc.mark = aven_graph_plane_hartman_thread_next_mark(
             ctx,
@@ -654,7 +651,7 @@ static inline void aven_graph_plane_hartman_thread_worker(void *args) {
 
     AvenGraphPlaneHartmanThreadMarkSet mark_set = {
         .block_size = min(
-            2048,
+            256,
             (uint32_t)ctx->vertex_info.len
         ),
     };

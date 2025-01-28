@@ -21,9 +21,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 1200000UL)
+#define ARENA_SIZE (4096UL * 2400000UL)
 
-#define NGRAPHS 10
+#define NGRAPHS 3
 #define MAX_VERTICES 10000001
 
 #define MAX_COLOR 8
@@ -47,6 +47,7 @@ int main(void) {
 
         typedef struct {
             AvenGraph graph;
+            AvenGraphAug aug_graph;
             AvenGraphPlaneHartmanListProp color_lists;
             AvenGraphPropUint8 coloring;
         } CaseData;
@@ -59,15 +60,18 @@ int main(void) {
         );
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenGraph graph = aven_graph_plane_gen_tri_abs(
+            get(cases, i).graph = aven_graph_plane_gen_tri_abs(
                 n,
                 rng,
                 &temp_arena
             );
-            get(cases, i).graph = graph;
-            if (graph.len != n) {
+            if (get(cases, i).graph.len != n) {
                 aven_panic("graph generation failed");
             }
+            get(cases, i).aug_graph = aven_graph_aug(
+                get(cases, i).graph,
+                &temp_arena
+            );
 
             AvenGraphPlaneHartmanListProp *color_lists = &get(
                 cases,
@@ -120,7 +124,7 @@ int main(void) {
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
             get(cases, i).coloring = aven_graph_plane_hartman(
-                get(cases, i).graph,
+                get(cases, i).aug_graph,
                 get(cases, i).color_lists,
                 face,
                 &temp_arena
