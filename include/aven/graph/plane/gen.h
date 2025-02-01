@@ -429,7 +429,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         float existing_neighbor_area = neighbor->area;
 
         float min_existing = min(existing_area, existing_neighbor_area);
-        
+
         float new_area = aven_graph_plane_gen_tri_face_area_internal(
             ctx,
             v,
@@ -663,7 +663,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
     float min_coeff,
     bool square,
     AvenRng rng,
-    AvenArena *arena    
+    AvenArena *arena
 ) {
     assert(size >= 3);
 
@@ -813,7 +813,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
 
             uint32_t nflip_index = neighbor_edge_indices[flip_index];
 
-            AvenGraphPlaneGenAbsFace *face = new_faces[flip_index];           
+            AvenGraphPlaneGenAbsFace *face = new_faces[flip_index];
             AvenGraphPlaneGenAbsFace *neighbor = neighbor_faces[flip_index];
 
             {
@@ -886,7 +886,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
             if (get(graph, vl).len != 0) {
                 continue;
             }
-            
+
             size_t adj_start = master_adj.len;
 
             list_push(master_adj) = get(
@@ -919,6 +919,142 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
     }
 
     assert(master_adj.len == master_adj.cap);
+
+    return graph;
+}
+
+static uint32_t aven_graph_plane_gen_pyramid_coord(
+    uint32_t k,
+    uint32_t x,
+    uint32_t y
+) {
+    assert(x < k - y);
+    assert(y < k);
+//    return ((2 * k - (y - 1)) * y) / 2 + x + 3;
+    return k * y - ((y * (y - 1)) / 2) + x + 3;
+}
+
+static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
+    uint32_t k,
+    AvenArena *arena
+) {
+    assert(k > 0);
+
+    AvenGraph graph = { .len = ((k * (k + 1)) / 2) + 3 };
+    graph.ptr = aven_arena_create_array(AvenGraphAdjList, arena, graph.len);
+
+    {
+        List(uint32_t) adj_list = aven_arena_create_list(
+            uint32_t,
+            arena,
+            2 + 2 * k - 1
+        );
+
+        list_push(adj_list) = 2;
+
+        for (uint32_t y = 0; y < k; y += 1) {
+            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, 0, y);
+            list_push(adj_list) = u;
+        }
+
+        for (uint32_t x = 1; x < k; x += 1) {
+            uint32_t y = (k - x) - 1;
+            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x, y);
+            list_push(adj_list) = u;
+        }
+
+        list_push(adj_list) = 1;
+
+        assert(adj_list.len == adj_list.cap);
+        get(graph, 0) = (AvenGraphAdjList)slice_list(adj_list);
+    }
+
+    {
+        List(uint32_t) adj_list = aven_arena_create_list(
+            uint32_t,
+            arena,
+            3
+        );
+
+        list_push(adj_list) = 0;
+
+        {
+            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, k - 1, 0);
+            list_push(adj_list) = u;
+        }
+
+        list_push(adj_list) = 2;
+
+        assert(adj_list.len == adj_list.cap);
+        get(graph, 1) = (AvenGraphAdjList)slice_list(adj_list);
+    }
+
+    {
+        List(uint32_t) adj_list = aven_arena_create_list(
+            uint32_t,
+            arena,
+            2 + k
+        );
+
+        list_push(adj_list) = 1;
+
+        for (uint32_t x = k; x > 0; x -= 1) {
+            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x - 1, 0);
+            list_push(adj_list) = u;
+        }
+
+        list_push(adj_list) = 0;
+
+        assert(adj_list.len == adj_list.cap);
+        get(graph, 2) = (AvenGraphAdjList)slice_list(adj_list);
+    }
+
+    for (uint32_t y = 0; y < k; y += 1) {
+        uint32_t width = k - y;
+        for (uint32_t x = 0; x < width; x += 1) {
+            uint32_t v = aven_graph_plane_gen_pyramid_coord(k, x, y);
+
+            uint32_t adj_list_data[6];
+            List(uint32_t) adj_list = list_array(adj_list_data);
+
+            if (x > 0) {
+                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x - 1, y);
+                list_push(adj_list) = u;
+            }
+            if (y > 0) {
+                list_push(adj_list) = aven_graph_plane_gen_pyramid_coord(k, x, y - 1);
+                list_push(adj_list) = aven_graph_plane_gen_pyramid_coord(k, x + 1, y - 1);
+            } else {
+                list_push(adj_list) = 2;
+                if (x == width - 1) {
+                    list_push(adj_list) = 1;
+                }
+            }
+            if (x < (width - 1)) {
+                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x + 1, y);
+                list_push(adj_list) = u;
+            } else if ((width - 1) != 0) {
+                list_push(adj_list) = 0;
+            }
+            if (y < (k - 1) and x < width - 1) {
+                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x, y + 1);
+                list_push(adj_list) = u;
+            }
+            if (x == 0) {
+                list_push(adj_list) = 0;
+            } else if (y < (k - 1)) {
+                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x - 1, y + 1);
+                list_push(adj_list) = u;
+            }
+
+            AvenGraphAdjList *v_adj = &get(graph, v);
+            v_adj->len = adj_list.len;
+            v_adj->ptr = aven_arena_create_array(uint32_t, arena, v_adj->len);
+            for (size_t i = 0; i < adj_list.len; i += 1) {
+                get(*v_adj, i) = get(adj_list, i);
+            }
+        }
+    }
 
     return graph;
 }
