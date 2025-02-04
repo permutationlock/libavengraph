@@ -1,5 +1,5 @@
-#ifndef GRAPH_PLANE_HARTMAN_THREAD_H
-#define GRAPH_PLANE_HARTMAN_THREAD_H
+#ifndef GRAPH_PLANE_P3CHOOSE_THREAD_H
+#define GRAPH_PLANE_P3CHOOSE_THREAD_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -12,57 +12,57 @@
 #include <stdatomic.h>
 
 #include "../../../graph.h"
-#include "../hartman.h"
+#include "../p3choose.h"
+
+#define GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE 64
 
 typedef struct {
     GraphAugAdjList adj;
-    GraphPlaneHartmanVertexLoc loc;
-    GraphPlaneHartmanList colors;
+    GraphPlaneP3ChooseVertexLoc loc;
+    GraphPlaneP3ChooseList colors;
     uint32_t entry_index;
-} GraphPlaneHartmanThreadVertex;
+} GraphPlaneP3ChooseThreadVertex;
 
-typedef List(GraphPlaneHartmanFrame)
-    GraphPlaneHartmanThreadFrameList;
+typedef List(GraphPlaneP3ChooseFrame)
+    GraphPlaneP3ChooseThreadFrameList;
 
 typedef struct {
-    GraphPlaneHartmanFrame frame;
+    GraphPlaneP3ChooseFrame frame;
     uint32_t parent;
-} GraphPlaneHartmanThreadEntry;
+} GraphPlaneP3ChooseThreadEntry;
 
 typedef struct {
     uint32_t *ptr;
     atomic_size_t len;
     size_t cap;
-} GraphPlaneHartmanThreadUint32List;
+} GraphPlaneP3ChooseThreadUint32List;
 
 typedef struct {
-    Slice(GraphPlaneHartmanThreadVertex) vertex_info;
+    Slice(GraphPlaneP3ChooseThreadVertex) vertex_info;
     Slice(uint32_t) marks;
-    GraphPlaneHartmanThreadUint32List valid_entries;
-    Pool(GraphPlaneHartmanThreadEntry) entry_pool;
+    GraphPlaneP3ChooseThreadUint32List valid_entries;
+    Pool(GraphPlaneP3ChooseThreadEntry) entry_pool;
     size_t nthreads;
     atomic_int threads_active;
     atomic_int frames_active;
     atomic_uint_least32_t next_mark;
     atomic_bool lock;
-} GraphPlaneHartmanThreadCtx;
+} GraphPlaneP3ChooseThreadCtx;
 
-static inline GraphPlaneHartmanThreadCtx
-graph_plane_hartman_thread_init(
+static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
     GraphAug graph,
-    GraphPlaneHartmanListProp color_lists,
+    GraphPlaneP3ChooseListProp color_lists,
     GraphSubset cwise_outer_face,
     size_t nthreads,
     AvenArena *arena
 ) {
-   GraphPlaneHartmanThreadCtx ctx = {
+   GraphPlaneP3ChooseThreadCtx ctx = {
         .vertex_info = { .len = graph.len },
-        // Each vertex receives a new unique mark at most 4 times:
-        //  - when added to the outer face
-        //  - when assigned to be the new x
-        //  - when assigned to be the new y
-        //  - when swapped x to y or y to x (removed afterwards so happens once)
-        .marks = { .len = nthreads * 4 * graph.len },
+        // Each vertex v receives a new unique mark at most deg(v) times:
+        .marks = {
+            .len = nthreads * GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE +
+                   (6 * graph.len - 12) + 1
+        },
         // A new frame only occurs when splitting across an edge
         .entry_pool = { .cap = 3 * graph.len - 6 },
         .valid_entries = { .cap = 3 * graph.len - 6 },
@@ -71,7 +71,7 @@ graph_plane_hartman_thread_init(
     };
 
     ctx.vertex_info.ptr = aven_arena_create_array(
-        GraphPlaneHartmanThreadVertex,
+        GraphPlaneP3ChooseThreadVertex,
         arena,
         ctx.vertex_info.len
     );
@@ -81,7 +81,7 @@ graph_plane_hartman_thread_init(
         ctx.marks.len
     );
     ctx.entry_pool.ptr = (void *)aven_arena_create_array(
-        PoolEntry(GraphPlaneHartmanThreadEntry),
+        PoolEntry(GraphPlaneP3ChooseThreadEntry),
         arena,
         ctx.entry_pool.cap
     );
@@ -98,7 +98,7 @@ graph_plane_hartman_thread_init(
     atomic_init(&ctx.lock, false);
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
-        get(ctx.vertex_info, v) = (GraphPlaneHartmanThreadVertex){
+        get(ctx.vertex_info, v) = (GraphPlaneP3ChooseThreadVertex){
             .adj = get(graph, v),
             .colors = get(color_lists, v),
         };
@@ -127,15 +127,15 @@ graph_plane_hartman_thread_init(
     }
 
     uint32_t xyv = get(cwise_outer_face, 0);
-    GraphPlaneHartmanVertexLoc *xyv_loc = &get(ctx.vertex_info, xyv).loc;
+    GraphPlaneP3ChooseVertexLoc *xyv_loc = &get(ctx.vertex_info, xyv).loc;
     xyv_loc->mark = ctx.next_mark++;
 
-    GraphPlaneHartmanList *xyv_colors = &get(ctx.vertex_info, xyv).colors;
+    GraphPlaneP3ChooseList *xyv_colors = &get(ctx.vertex_info, xyv).colors;
     assert(xyv_colors->len > 0);
     xyv_colors->len = 1;
 
     uint32_t entry_index = (uint32_t)pool_create(ctx.entry_pool);
-    pool_get(ctx.entry_pool, entry_index) = (GraphPlaneHartmanThreadEntry){
+    pool_get(ctx.entry_pool, entry_index) = (GraphPlaneP3ChooseThreadEntry){
         .frame = {
             .z = xyv,
             .x = xyv,
@@ -148,8 +148,8 @@ graph_plane_hartman_thread_init(
     return ctx;
 }
 
-static inline void graph_plane_hartman_thread_lock(
-    GraphPlaneHartmanThreadCtx *thread_ctx
+static inline void graph_plane_p3choose_thread_lock(
+    GraphPlaneP3ChooseThreadCtx *thread_ctx
 ) {    
     for (;;) {
         if (
@@ -169,15 +169,15 @@ static inline void graph_plane_hartman_thread_lock(
     }
 }
 
-static inline void graph_plane_hartman_thread_unlock(
-    GraphPlaneHartmanThreadCtx *thread_ctx
+static inline void graph_plane_p3choose_thread_unlock(
+    GraphPlaneP3ChooseThreadCtx *thread_ctx
 ) {
     atomic_store_explicit(&thread_ctx->lock, false, memory_order_release);
 }
 
-static inline void graph_plane_hartman_thread_pop_internal(
-    GraphPlaneHartmanThreadCtx *ctx,
-    GraphPlaneHartmanThreadFrameList *local_frames
+static inline void graph_plane_p3choose_thread_pop_internal(
+    GraphPlaneP3ChooseThreadCtx *ctx,
+    GraphPlaneP3ChooseThreadFrameList *local_frames
 ) {
     int frames_active = atomic_fetch_sub_explicit(
         &ctx->frames_active,
@@ -191,7 +191,7 @@ static inline void graph_plane_hartman_thread_pop_internal(
             memory_order_relaxed
         );
         if (available_entries > 0 or frames_active == 0) {
-            graph_plane_hartman_thread_lock(ctx);
+            graph_plane_p3choose_thread_lock(ctx);
             available_entries = atomic_load_explicit(
                 &ctx->valid_entries.len,
                 memory_order_relaxed
@@ -221,7 +221,7 @@ static inline void graph_plane_hartman_thread_pop_internal(
                     1,
                     memory_order_relaxed
                 );
-                graph_plane_hartman_thread_unlock(ctx);
+                graph_plane_p3choose_thread_unlock(ctx);
 
                 return;
             }
@@ -231,11 +231,11 @@ static inline void graph_plane_hartman_thread_pop_internal(
             );
 
             if (ctx->entry_pool.used == 0 and frames_active == 0) {
-                graph_plane_hartman_thread_unlock(ctx);
+                graph_plane_p3choose_thread_unlock(ctx);
                 return;
             }
 
-            graph_plane_hartman_thread_unlock(ctx);
+            graph_plane_p3choose_thread_unlock(ctx);
         }
 
 #if __has_builtin(__builtin_ia32_pause)
@@ -248,15 +248,15 @@ static inline void graph_plane_hartman_thread_pop_internal(
     }
 }
 
-static inline void graph_plane_hartman_thread_push_entries(
-    GraphPlaneHartmanThreadCtx *ctx,
-    GraphPlaneHartmanThreadFrameList *local_frames,
+static inline void graph_plane_p3choose_thread_push_entries(
+    GraphPlaneP3ChooseThreadCtx *ctx,
+    GraphPlaneP3ChooseThreadFrameList *local_frames,
     uint32_t v,
-    GraphPlaneHartmanFrameOptional *maybe_frame,
+    GraphPlaneP3ChooseFrameOptional *maybe_frame,
     uint32_t u
 ) {
-    GraphPlaneHartmanThreadVertex *v_info = &get(ctx->vertex_info, v);
-    GraphPlaneHartmanThreadVertex *u_info = &get(ctx->vertex_info, u);
+    GraphPlaneP3ChooseThreadVertex *v_info = &get(ctx->vertex_info, v);
+    GraphPlaneP3ChooseThreadVertex *u_info = &get(ctx->vertex_info, u);
     bool v_push = (v_info->entry_index != 0) and (v_info->colors.len == 1);
     bool u_push = (v != u) and
         (u_info->entry_index != 0) and
@@ -269,7 +269,7 @@ static inline void graph_plane_hartman_thread_push_entries(
         frame_wait or
         local_frames->len == local_frames->cap
     ) {
-        graph_plane_hartman_thread_lock(ctx);
+        graph_plane_p3choose_thread_lock(ctx);
         if (local_frames->len > (local_frames->cap / 2)) {
             size_t frames_over = local_frames->len - (local_frames->cap / 2);
             size_t len = atomic_fetch_add_explicit(
@@ -285,7 +285,7 @@ static inline void graph_plane_hartman_thread_push_entries(
             ) {
                 uint32_t entry_index = (uint32_t)pool_create(ctx->entry_pool);
                 pool_get(ctx->entry_pool, entry_index) =
-                    (GraphPlaneHartmanThreadEntry){
+                    (GraphPlaneP3ChooseThreadEntry){
                         .frame = list_pop(*local_frames),
                     };
                 ctx->valid_entries.ptr[len + i] = entry_index;
@@ -324,23 +324,22 @@ static inline void graph_plane_hartman_thread_push_entries(
         if (frame_wait) {
             uint32_t entry_index = (uint32_t)pool_create(ctx->entry_pool);
             pool_get(ctx->entry_pool, entry_index) =
-                (GraphPlaneHartmanThreadEntry){
+                (GraphPlaneP3ChooseThreadEntry){
                     .frame = maybe_frame->value,
                     .parent = v_info->entry_index,
                 };
             v_info->entry_index = entry_index + 1;
         }
-        graph_plane_hartman_thread_unlock(ctx);
+        graph_plane_p3choose_thread_unlock(ctx);
     }
     if (maybe_frame->valid and !frame_wait) {
         list_push(*local_frames) = maybe_frame->value;
     }
 }
 
-static inline GraphPlaneHartmanVertexLoc *
-graph_plane_hartman_thread_vloc(
-    GraphPlaneHartmanThreadCtx *ctx,
-    GraphPlaneHartmanFrame *frame,
+static inline GraphPlaneP3ChooseVertexLoc *graph_plane_p3choose_thread_vloc(
+    GraphPlaneP3ChooseThreadCtx *ctx,
+    GraphPlaneP3ChooseFrame *frame,
     uint32_t v
 ) {
     if (v == frame->x) {
@@ -362,11 +361,11 @@ typedef struct {
     uint32_t next_mark;
     uint32_t final_mark;
     uint32_t block_size;
-} GraphPlaneHartmanThreadMarkSet;
+} GraphPlaneP3ChooseThreadMarkSet;
 
-static inline uint32_t graph_plane_hartman_thread_next_mark(
-    GraphPlaneHartmanThreadCtx *ctx,
-    GraphPlaneHartmanThreadMarkSet *mark_set
+static inline uint32_t graph_plane_p3choose_thread_next_mark(
+    GraphPlaneP3ChooseThreadCtx *ctx,
+    GraphPlaneP3ChooseThreadMarkSet *mark_set
 ) {
     if (mark_set->next_mark == mark_set->final_mark) {
         mark_set->next_mark = (uint32_t)atomic_fetch_add_explicit(
@@ -382,16 +381,16 @@ static inline uint32_t graph_plane_hartman_thread_next_mark(
     return next_mark;
 }
 
-static inline bool graph_plane_hartman_thread_frame_step(
-    GraphPlaneHartmanThreadCtx *ctx,
-    GraphPlaneHartmanThreadFrameList *local_frames,
-    GraphPlaneHartmanThreadMarkSet *mark_set,
-    GraphPlaneHartmanFrame *frame
+static inline bool graph_plane_p3choose_thread_frame_step(
+    GraphPlaneP3ChooseThreadCtx *ctx,
+    GraphPlaneP3ChooseThreadFrameList *local_frames,
+    GraphPlaneP3ChooseThreadMarkSet *mark_set,
+    GraphPlaneP3ChooseFrame *frame
 ) {
     GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
-    GraphPlaneHartmanVertexLoc *z_loc =
-        graph_plane_hartman_thread_vloc(ctx, frame, frame->z);
-    GraphPlaneHartmanList *z_colors = &get(
+    GraphPlaneP3ChooseVertexLoc *z_loc =
+        graph_plane_p3choose_thread_vloc(ctx, frame, frame->z);
+    GraphPlaneP3ChooseList *z_colors = &get(
         ctx->vertex_info,
         frame->z
     ).colors;
@@ -401,21 +400,21 @@ static inline bool graph_plane_hartman_thread_frame_step(
     GraphAugAdjListNode zu = get(z_adj, zu_index);
 
     uint32_t u = zu.vertex;
-    GraphPlaneHartmanVertexLoc *u_loc =
-        graph_plane_hartman_thread_vloc(ctx, frame, u);
+    GraphPlaneP3ChooseVertexLoc *u_loc =
+        graph_plane_p3choose_thread_vloc(ctx, frame, u);
 
     if (zu_index == z_loc->nb.last) {
         if (frame->x == frame->y) {
             assert(frame->z == frame->x);
-            graph_plane_hartman_color_differently(
+            graph_plane_p3choose_color_differently(
                 &get(ctx->vertex_info, u).colors,
                 z_color
             );
-            graph_plane_hartman_thread_push_entries(
+            graph_plane_p3choose_thread_push_entries(
                 ctx,
                 local_frames,
                 u,
-                &(GraphPlaneHartmanFrameOptional){ 0 },
+                &(GraphPlaneP3ChooseFrameOptional){ 0 },
                 u
             );
         }
@@ -425,18 +424,18 @@ static inline bool graph_plane_hartman_thread_frame_step(
     if (u == frame->y) {
         assert(frame->z == frame->x);
 
-        GraphPlaneHartmanVertexLoc x_loc = frame->x_loc;
+        GraphPlaneP3ChooseVertexLoc x_loc = frame->x_loc;
         frame->x_loc = frame->y_loc;
         frame->y_loc = x_loc;
         frame->y = frame->x;
         frame->x = u;
         frame->z = u;
 
-        frame->x_loc.mark = graph_plane_hartman_thread_next_mark(
+        frame->x_loc.mark = graph_plane_p3choose_thread_next_mark(
             ctx,
             mark_set
         );
-        frame->y_loc.mark = graph_plane_hartman_thread_next_mark(
+        frame->y_loc.mark = graph_plane_p3choose_thread_next_mark(
             ctx,
             mark_set
         );
@@ -451,7 +450,7 @@ static inline bool graph_plane_hartman_thread_frame_step(
     bool u_colored = false;
 
     if (frame->z == frame->x) {
-        graph_plane_hartman_color_differently(
+        graph_plane_p3choose_color_differently(
             &get(ctx->vertex_info, u).colors,
             z_color
         );
@@ -465,13 +464,13 @@ static inline bool graph_plane_hartman_thread_frame_step(
 
         frame->x = u;
         frame->x_loc = *u_loc;
-        frame->x_loc.mark = graph_plane_hartman_thread_next_mark(
+        frame->x_loc.mark = graph_plane_p3choose_thread_next_mark(
             ctx,
             mark_set
         );
 
-        u_loc = graph_plane_hartman_thread_vloc(ctx, frame, u);
-        z_loc = graph_plane_hartman_thread_vloc(ctx, frame, frame->z);
+        u_loc = graph_plane_p3choose_thread_vloc(ctx, frame, u);
+        z_loc = graph_plane_p3choose_thread_vloc(ctx, frame, frame->z);
     }
 
     uint32_t zv_index = graph_aug_adj_next(z_adj, zu_index);
@@ -479,39 +478,39 @@ static inline bool graph_plane_hartman_thread_frame_step(
 
     uint32_t v = zv.vertex;
     GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
-    GraphPlaneHartmanVertexLoc *v_loc =
-        graph_plane_hartman_thread_vloc(ctx, frame, v);
-    GraphPlaneHartmanList *v_colors = &get(ctx->vertex_info, v).colors;
+    GraphPlaneP3ChooseVertexLoc *v_loc =
+        graph_plane_p3choose_thread_vloc(ctx, frame, v);
+    GraphPlaneP3ChooseList *v_colors = &get(ctx->vertex_info, v).colors;
 
-    GraphPlaneHartmanFrameOptional maybe_frame = { 0 };
+    GraphPlaneP3ChooseFrameOptional maybe_frame = { 0 };
 
     if (v_loc->mark == 0) {
-        *v_loc = (GraphPlaneHartmanVertexLoc){
+        *v_loc = (GraphPlaneP3ChooseVertexLoc){
             .mark = frame->x_loc.mark,
             .nb = {
                 .first = graph_aug_adj_next(v_adj, zv.back_index),
                 .last = zv.back_index,
             },
         };
-        graph_plane_hartman_remove_color(v_colors, z_color);
+        graph_plane_p3choose_remove_color(v_colors, z_color);
     } else if (v_loc->mark == frame->x_loc.mark) {
         if (zv_index == z_loc->nb.last) {
             assert(frame->z == frame->y);
             assert(v == frame->x);
             v_loc->nb.first = graph_aug_adj_next(v_adj, zv.back_index),
-            v_loc->mark = graph_plane_hartman_thread_next_mark(
+            v_loc->mark = graph_plane_p3choose_thread_next_mark(
                 ctx,
                 mark_set
             );
             frame->y = frame->x;
             frame->z = frame->x;
         } else {
-            uint32_t new_mark = graph_plane_hartman_thread_next_mark(
+            uint32_t new_mark = graph_plane_p3choose_thread_next_mark(
                 ctx,
                 mark_set
             );
             maybe_frame.valid = true;
-            maybe_frame.value = (GraphPlaneHartmanFrame){
+            maybe_frame.value = (GraphPlaneP3ChooseFrame){
                 .x = v,
                 .y = v,
                 .z = v,
@@ -526,7 +525,7 @@ static inline bool graph_plane_hartman_thread_frame_step(
             v_loc->nb.last = zv.back_index;
 
             if (v == frame->x) {
-                v_loc->mark = graph_plane_hartman_thread_next_mark(
+                v_loc->mark = graph_plane_p3choose_thread_next_mark(
                     ctx,
                     mark_set
                 );
@@ -534,12 +533,12 @@ static inline bool graph_plane_hartman_thread_frame_step(
         }
     } else if (get(ctx->marks, v_loc->mark) == frame->y_loc.mark) {
         if (v_loc->nb.first != zv.back_index) {
-            uint32_t new_mark = graph_plane_hartman_thread_next_mark(
+            uint32_t new_mark = graph_plane_p3choose_thread_next_mark(
                 ctx,
                 mark_set
             );
             maybe_frame.valid = true;
-            maybe_frame.value = (GraphPlaneHartmanFrame){
+            maybe_frame.value = (GraphPlaneP3ChooseFrame){
                 .x = v,
                 .y = frame->z,
                 .z = v,
@@ -562,7 +561,7 @@ static inline bool graph_plane_hartman_thread_frame_step(
 
         v_loc->nb.first = graph_aug_adj_next(v_adj, zv.back_index);
 
-        if (graph_plane_hartman_has_color(v_colors, z_color)) {
+        if (graph_plane_p3choose_has_color(v_colors, z_color)) {
             if (v_colors->len > 1) {
                 get(*v_colors, 0) = z_color;
                 v_colors->len = 1;
@@ -575,10 +574,10 @@ static inline bool graph_plane_hartman_thread_frame_step(
             frame->z = frame->x;
         }
     } else {
-        graph_plane_hartman_color_differently(v_colors, z_color);
+        graph_plane_p3choose_color_differently(v_colors, z_color);
         if (v_loc->nb.first != zv.back_index) {
             maybe_frame.valid = true;
-            maybe_frame.value = (GraphPlaneHartmanFrame){
+            maybe_frame.value = (GraphPlaneP3ChooseFrame){
                 .x = frame->x,
                 .y = v,
                 .z = frame->x,
@@ -595,7 +594,7 @@ static inline bool graph_plane_hartman_thread_frame_step(
             v_loc->nb.last = zv.back_index;
             frame->x = v;
             frame->x_loc = *v_loc;
-            frame->x_loc.mark = graph_plane_hartman_thread_next_mark(
+            frame->x_loc.mark = graph_plane_p3choose_thread_next_mark(
                 ctx,
                 mark_set
             );
@@ -610,7 +609,7 @@ static inline bool graph_plane_hartman_thread_frame_step(
         }
     }
 
-    graph_plane_hartman_thread_push_entries(
+    graph_plane_p3choose_thread_push_entries(
         ctx,
         local_frames,
         v,
@@ -623,15 +622,15 @@ static inline bool graph_plane_hartman_thread_frame_step(
 
 typedef struct {
     GraphPropUint8 coloring;
-    GraphPlaneHartmanThreadCtx *thread_ctx;
+    GraphPlaneP3ChooseThreadCtx *thread_ctx;
     uint32_t start_vertex;
     uint32_t end_vertex;
     uint32_t thread_index;
-} GraphPlaneHartmanThreadWorker;
+} GraphPlaneP3ChooseThreadWorker;
 
-static inline void graph_plane_hartman_thread_worker(void *args) {
-    GraphPlaneHartmanThreadWorker *worker = args;
-    GraphPlaneHartmanThreadCtx *ctx = worker->thread_ctx;
+static inline void graph_plane_p3choose_thread_worker(void *args) {
+    GraphPlaneP3ChooseThreadWorker *worker = args;
+    GraphPlaneP3ChooseThreadCtx *ctx = worker->thread_ctx;
 
     atomic_fetch_add_explicit(
         &ctx->threads_active,
@@ -644,24 +643,21 @@ static inline void graph_plane_hartman_thread_worker(void *args) {
         memory_order_relaxed
     );
 
-    GraphPlaneHartmanFrame local_frame_data[16];
-    GraphPlaneHartmanThreadFrameList local_frames = list_array(
+    GraphPlaneP3ChooseFrame local_frame_data[16];
+    GraphPlaneP3ChooseThreadFrameList local_frames = list_array(
         local_frame_data
     );
 
-    GraphPlaneHartmanThreadMarkSet mark_set = {
-        .block_size = min(
-            256,
-            (uint32_t)ctx->vertex_info.len
-        ),
+    GraphPlaneP3ChooseThreadMarkSet mark_set = {
+        .block_size = GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE,
     };
 
-    graph_plane_hartman_thread_pop_internal(ctx, &local_frames);
+    graph_plane_p3choose_thread_pop_internal(ctx, &local_frames);
 
     while (local_frames.len > 0) {
-        GraphPlaneHartmanFrame cur_frame = list_pop(local_frames);
+        GraphPlaneP3ChooseFrame cur_frame = list_pop(local_frames);
         while (
-            !graph_plane_hartman_thread_frame_step(
+            !graph_plane_p3choose_thread_frame_step(
                 ctx,
                 &local_frames,
                 &mark_set,
@@ -670,7 +666,7 @@ static inline void graph_plane_hartman_thread_worker(void *args) {
         ) {}
 
         if (local_frames.len == 0) {
-            graph_plane_hartman_thread_pop_internal(ctx, &local_frames);
+            graph_plane_p3choose_thread_pop_internal(ctx, &local_frames);
         }
     }
 
@@ -706,9 +702,9 @@ static inline void graph_plane_hartman_thread_worker(void *args) {
     }
 }
 
-static inline GraphPropUint8 graph_plane_hartman_thread(
+static inline GraphPropUint8 graph_plane_p3choose_thread(
     GraphAug aug_graph,
-    GraphPlaneHartmanListProp color_lists,
+    GraphPlaneP3ChooseListProp color_lists,
     GraphSubset outer_face,
     AvenThreadPool *thread_pool,
     size_t nthreads,
@@ -718,7 +714,7 @@ static inline GraphPropUint8 graph_plane_hartman_thread(
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
-    GraphPlaneHartmanThreadCtx ctx = graph_plane_hartman_thread_init(
+    GraphPlaneP3ChooseThreadCtx ctx = graph_plane_p3choose_thread_init(
         aug_graph,
         color_lists,
         outer_face,
@@ -726,8 +722,8 @@ static inline GraphPropUint8 graph_plane_hartman_thread(
         &temp_arena
     );
 
-    Slice(GraphPlaneHartmanThreadWorker) workers = aven_arena_create_slice(
-        GraphPlaneHartmanThreadWorker,
+    Slice(GraphPlaneP3ChooseThreadWorker) workers = aven_arena_create_slice(
+        GraphPlaneP3ChooseThreadWorker,
         &temp_arena,
         nthreads
     );
@@ -740,7 +736,7 @@ static inline GraphPropUint8 graph_plane_hartman_thread(
             end_vertex = (uint32_t)aug_graph.len;
         }
 
-        get(workers, i) = (GraphPlaneHartmanThreadWorker) {
+        get(workers, i) = (GraphPlaneP3ChooseThreadWorker) {
             .coloring = coloring,
             .thread_ctx = &ctx,
             .thread_index = i,
@@ -752,16 +748,16 @@ static inline GraphPropUint8 graph_plane_hartman_thread(
     for (uint32_t i = 0; i < workers.len - 1; i += 1) {
         aven_thread_pool_submit(
             thread_pool,
-            graph_plane_hartman_thread_worker,
+            graph_plane_p3choose_thread_worker,
             &get(workers, i + 1)
         );
     }
 
-    graph_plane_hartman_thread_worker(&get(workers, 0));
+    graph_plane_p3choose_thread_worker(&get(workers, 0));
 
     aven_thread_pool_wait(thread_pool);
 
     return coloring;
 }
 
-#endif // GRAPH_PLANE_HARTMAN_THREAD_H
+#endif // GRAPH_PLANE_P3CHOOSE_THREAD_H

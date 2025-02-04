@@ -4,7 +4,7 @@
 
 //#define SHOW_VERTEX_LABELS
 
-#define AVEN_GRAPH_PLANE_POH_PTHREAD
+#define AVEN_GRAPH_PLANE_P3COLOR_PTHREAD
 
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
@@ -19,8 +19,8 @@
 
 #include <graph.h>
 #include <graph/plane.h>
-#include <graph/plane/poh.h>
-#include <graph/plane/poh/geometry.h>
+#include <graph/plane/p3color.h>
+#include <graph/plane/p3color/geometry.h>
 #include <graph/plane/gen.h>
 #include <graph/plane/gen/geometry.h>
 
@@ -68,7 +68,7 @@ typedef struct {
 
 typedef enum {
     APP_STATE_GEN,
-    APP_STATE_POH,
+    APP_STATE_P3COLOR,
 } AppState;
 
 typedef union {
@@ -77,9 +77,9 @@ typedef union {
         GraphPlaneGenTriData data;
     } gen;
     struct {
-        GraphPlanePohCtx ctx;
-        GraphPlanePohFrameOptional active_frames[1];
-    } poh;
+        GraphPlaneP3ColorCtx ctx;
+        GraphPlaneP3ColorFrameOptional active_frames[1];
+    } p3color;
 } AppData;
 
 typedef struct {
@@ -116,7 +116,7 @@ static GraphPlaneGenGeometryTriInfo gen_geometry_info = {
     .edge_thickness = VERTEX_RADIUS / 3.5f,
 };
 
-static GraphPlanePohGeometryInfo poh_geometry_info = {
+static GraphPlaneP3ColorGeometryInfo p3color_geometry_info = {
     .colors = {
         { 0.9f, 0.9f, 0.9f, 1.0f },
         { 0.75f, 0.25f, 0.25f, 1.0f },
@@ -282,7 +282,7 @@ static void app_update(
                 ctx.embedding = data.embedding;
 
                 if (done) {
-                    ctx.state = APP_STATE_POH;
+                    ctx.state = APP_STATE_P3COLOR;
 
                     uint32_t p_data[3];
                     uint32_t q_data[3];
@@ -302,38 +302,38 @@ static void app_update(
                         get(q, q.len - i - 1) = (q1 + i) % 4;
                     }
 
-                    ctx.data.poh.ctx = graph_plane_poh_init(
+                    ctx.data.p3color.ctx = graph_plane_p3color_init(
                         ctx.graph,
                         p,
                         q,
                         &arena
                     );
-                    ctx.data.poh.active_frames[0] = graph_plane_poh_next_frame(
-                        &ctx.data.poh.ctx
+                    ctx.data.p3color.active_frames[0] = graph_plane_p3color_next_frame(
+                        &ctx.data.p3color.ctx
                     );
                 }
                 break;
-            case APP_STATE_POH: {
+            case APP_STATE_P3COLOR: {
                 bool all_done = true;
-                for (uint32_t i = 0; i < countof(ctx.data.poh.active_frames); i += 1) {
-                    if (ctx.data.poh.active_frames[i].valid) {
-                        bool frame_done = graph_plane_poh_frame_step(
-                            &ctx.data.poh.ctx,
-                            &ctx.data.poh.active_frames[i].value
+                for (uint32_t i = 0; i < countof(ctx.data.p3color.active_frames); i += 1) {
+                    if (ctx.data.p3color.active_frames[i].valid) {
+                        bool frame_done = graph_plane_p3color_frame_step(
+                            &ctx.data.p3color.ctx,
+                            &ctx.data.p3color.active_frames[i].value
                         );
                         if (frame_done) {
-                            if (ctx.data.poh.ctx.frames.len > 0) {
-                                ctx.data.poh.active_frames[i] = graph_plane_poh_next_frame(
-                                    &ctx.data.poh.ctx
+                            if (ctx.data.p3color.ctx.frames.len > 0) {
+                                ctx.data.p3color.active_frames[i] = graph_plane_p3color_next_frame(
+                                    &ctx.data.p3color.ctx
                                 );
                             } else {
-                                ctx.data.poh.active_frames[i].valid = false;
+                                ctx.data.p3color.active_frames[i].valid = false;
                             }
                         }
                         all_done = false;
-                    } else if (ctx.data.poh.ctx.frames.len > 0) {
-                        ctx.data.poh.active_frames[i] = graph_plane_poh_next_frame(
-                            &ctx.data.poh.ctx
+                    } else if (ctx.data.p3color.ctx.frames.len > 0) {
+                        ctx.data.p3color.active_frames[i] = graph_plane_p3color_next_frame(
+                            &ctx.data.p3color.ctx
                         );
                         all_done = false;
                     }
@@ -375,15 +375,15 @@ static void app_update(
                 arena
             );
             break;
-        case APP_STATE_POH:
-            graph_plane_poh_geometry_push_ctx(
+        case APP_STATE_P3COLOR:
+            graph_plane_p3color_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
-                &ctx.data.poh.ctx,
-                &ctx.data.poh.active_frames[0],
+                &ctx.data.p3color.ctx,
+                &ctx.data.p3color.active_frames[0],
                 graph_transform,
-                &poh_geometry_info,
+                &p3color_geometry_info,
                 arena
             );
             break;

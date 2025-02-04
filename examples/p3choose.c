@@ -11,9 +11,9 @@
 #include <graph.h>
 #include <graph/path_color.h>
 #include <graph/plane.h>
-#include <graph/plane/hartman.h>
-#include <graph/plane/hartman/geometry.h>
-#include <graph/plane/hartman/tikz.h>
+#include <graph/plane/p3choose.h>
+#include <graph/plane/p3choose/geometry.h>
+#include <graph/plane/p3choose/tikz.h>
 #include <graph/plane/gen.h>
 #include <graph/plane/gen/geometry.h>
 #include <graph/plane/geometry.h>
@@ -81,7 +81,7 @@ typedef struct {
 
 typedef enum {
     APP_STATE_GEN,
-    APP_STATE_HARTMAN,
+    APP_STATE_P3CHOOSE,
     APP_STATE_COLORED,
 } AppState;
 
@@ -91,11 +91,11 @@ typedef union {
         GraphPlaneGenTriData data;
     } gen;
     struct {
-        GraphPlaneHartmanCtx ctx;
-        GraphPlaneHartmanFrameOptional frames[3];
-        GraphPlaneHartmanListProp color_lists;
+        GraphPlaneP3ChooseCtx ctx;
+        GraphPlaneP3ChooseFrameOptional frames[3];
+        GraphPlaneP3ChooseListProp color_lists;
         bool cases_satisfied[12];
-    } hartman;
+    } p3choose;
     struct {
         GraphPropUint8 coloring;
     } colored;
@@ -103,7 +103,7 @@ typedef union {
 
 typedef struct {
     Vec4 color_data[MAX_COLOR + 1];
-    GraphPlaneHartmanGeometryInfo hartman_geometry_info;
+    GraphPlaneP3ChooseGeometryInfo p3choose_geometry_info;
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
     HelpText help_text;
@@ -185,7 +185,7 @@ static void app_reset(void) {
         .edge_thickness = ctx.radius / 2.5f,
     };
 
-    ctx.hartman_geometry_info = (GraphPlaneHartmanGeometryInfo){
+    ctx.p3choose_geometry_info = (GraphPlaneP3ChooseGeometryInfo){
         .colors = slice_array(ctx.color_data),
         .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
         .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
@@ -404,7 +404,7 @@ static void app_update(
 
                     ctx.graph = data.graph;
                     ctx.embedding = data.embedding;
-                    ctx.state = APP_STATE_HARTMAN;
+                    ctx.state = APP_STATE_P3CHOOSE;
 
                     uint32_t outer_face_data[4];
                     GraphSubset outer_face = {
@@ -422,15 +422,15 @@ static void app_update(
                         );
                     }
 
-                    ctx.data.hartman.color_lists.len = aug_graph.len;
-                    ctx.data.hartman.color_lists.ptr = aven_arena_create_array(
-                        GraphPlaneHartmanList,
+                    ctx.data.p3choose.color_lists.len = aug_graph.len;
+                    ctx.data.p3choose.color_lists.ptr = aven_arena_create_array(
+                        GraphPlaneP3ChooseList,
                         &arena,
-                        ctx.data.hartman.color_lists.len
+                        ctx.data.p3choose.color_lists.len
                     );
 
                     for (uint32_t i = 0; i < aug_graph.len; i += 1) {
-                        GraphPlaneHartmanList list = {
+                        GraphPlaneP3ChooseList list = {
                             .len = 3,
                             .ptr = {
                                 1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
@@ -455,44 +455,44 @@ static void app_update(
                             );
                         }
 
-                        get(ctx.data.hartman.color_lists, i) = list;
+                        get(ctx.data.p3choose.color_lists, i) = list;
                     }
                     
-                    ctx.data.hartman.ctx = graph_plane_hartman_init(
-                        ctx.data.hartman.color_lists,
+                    ctx.data.p3choose.ctx = graph_plane_p3choose_init(
+                        ctx.data.p3choose.color_lists,
                         aug_graph,
                         outer_face,
                         &arena
                     );
-                    ctx.data.hartman.frames[0] = graph_plane_hartman_next_frame(
-                        &ctx.data.hartman.ctx
+                    ctx.data.p3choose.frames[0] = graph_plane_p3choose_next_frame(
+                        &ctx.data.p3choose.ctx
                     );
                     for (
                         size_t j = 0;
-                        j < countof(ctx.data.hartman.cases_satisfied);
+                        j < countof(ctx.data.p3choose.cases_satisfied);
                         j += 1
                     ) {
-                        ctx.data.hartman.cases_satisfied[j] = 0;
+                        ctx.data.p3choose.cases_satisfied[j] = 0;
                     }
-                    graph_plane_hartman_tikz(
+                    graph_plane_p3choose_tikz(
                         ctx.embedding,
-                        &ctx.data.hartman.ctx,
-                        &ctx.data.hartman.frames[0].value,
+                        &ctx.data.p3choose.ctx,
+                        &ctx.data.p3choose.frames[0].value,
                         (Vec2){ 4.5f, 4.0f },
                         arena
                     );
                     ctx.tikz_count += 1;
                     for (
                         size_t i = 1;
-                        i < countof(ctx.data.hartman.frames);
+                        i < countof(ctx.data.p3choose.frames);
                         i += 1
                     ) {
-                        ctx.data.hartman.frames[i] =
-                            (GraphPlaneHartmanFrameOptional){ 0 };
+                        ctx.data.p3choose.frames[i] =
+                            (GraphPlaneP3ChooseFrameOptional){ 0 };
                     }
                 }
                 break;
-            case APP_STATE_HARTMAN:
+            case APP_STATE_P3CHOOSE:
                 ctx.updates = 0;
                 done = true;
                 for (
@@ -500,51 +500,51 @@ static void app_update(
                     i < ctx.threads;
                     i += 1
                 ) {
-                    GraphPlaneHartmanFrameOptional *frame =
-                        &ctx.data.hartman.frames[i];
+                    GraphPlaneP3ChooseFrameOptional *frame =
+                        &ctx.data.p3choose.frames[i];
                     if (frame->valid) {
-                        ctx.data.hartman.cases_satisfied[
-                            graph_plane_hartman_frame_case(
-                                &ctx.data.hartman.ctx,
+                        ctx.data.p3choose.cases_satisfied[
+                            graph_plane_p3choose_frame_case(
+                                &ctx.data.p3choose.ctx,
                                 &frame->value
                             )
                         ] = true;
-                        frame->valid = !graph_plane_hartman_frame_step(
-                            &ctx.data.hartman.ctx,
+                        frame->valid = !graph_plane_p3choose_frame_step(
+                            &ctx.data.p3choose.ctx,
                             &frame->value
                         );
                         done = false;
                     } else {
                         for (
-                            size_t j = ctx.data.hartman.ctx.frames.len;
+                            size_t j = ctx.data.p3choose.ctx.frames.len;
                             j > 0;
                             j -= 1
                         ) {
-                            GraphPlaneHartmanFrame *nframe = &list_get(
-                                ctx.data.hartman.ctx.frames,
+                            GraphPlaneP3ChooseFrame *nframe = &list_get(
+                                ctx.data.p3choose.ctx.frames,
                                 j - 1
                             );
                             if (
                                 get(
-                                    ctx.data.hartman.ctx.color_lists,
+                                    ctx.data.p3choose.ctx.color_lists,
                                     nframe->z
                                 ).len == 1
                             ) {
                                 frame->value = *nframe;
                                 frame->valid = true;
                                 *nframe = list_get(
-                                    ctx.data.hartman.ctx.frames,
-                                    ctx.data.hartman.ctx.frames.len - 1
+                                    ctx.data.p3choose.ctx.frames,
+                                    ctx.data.p3choose.ctx.frames.len - 1
                                 );
-                                ctx.data.hartman.ctx.frames.len -= 1;
+                                ctx.data.p3choose.ctx.frames.len -= 1;
                                 break;
                             }
                         }
                     }
 
-                    graph_plane_hartman_tikz(
+                    graph_plane_p3choose_tikz(
                         ctx.embedding,
-                        &ctx.data.hartman.ctx,
+                        &ctx.data.p3choose.ctx,
                         &frame->value,
                         (Vec2){ 4.5f, 4.0f },
                         arena
@@ -564,10 +564,10 @@ static void app_update(
                     int ncases = 0;
                     for (
                         size_t j = 0;
-                        j < countof(ctx.data.hartman.cases_satisfied);
+                        j < countof(ctx.data.p3choose.cases_satisfied);
                         j += 1
                     ) {
-                        if (ctx.data.hartman.cases_satisfied[j]) {
+                        if (ctx.data.p3choose.cases_satisfied[j]) {
                             ncases += 1;
                         }
                     }
@@ -585,7 +585,7 @@ static void app_update(
                     );
                     for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
                         get(coloring, v) = (uint8_t)get(
-                            get(ctx.data.hartman.ctx.color_lists, v),
+                            get(ctx.data.p3choose.ctx.color_lists, v),
                             0
                         );
                     }
@@ -688,39 +688,39 @@ static void app_update(
                 arena
             );
             break;
-        case APP_STATE_HARTMAN: {
-            GraphPlaneHartmanFrame valid_frame_data[
-                countof(ctx.data.hartman.frames)
+        case APP_STATE_P3CHOOSE: {
+            GraphPlaneP3ChooseFrame valid_frame_data[
+                countof(ctx.data.p3choose.frames)
             ];
-            List(GraphPlaneHartmanFrame) valid_frames = list_array(
+            List(GraphPlaneP3ChooseFrame) valid_frames = list_array(
                 valid_frame_data
             );
-            for (size_t i = 0; i < countof(ctx.data.hartman.frames); i += 1) {
-                GraphPlaneHartmanFrameOptional *frame =
-                    &ctx.data.hartman.frames[i];
+            for (size_t i = 0; i < countof(ctx.data.p3choose.frames); i += 1) {
+                GraphPlaneP3ChooseFrameOptional *frame =
+                    &ctx.data.p3choose.frames[i];
                 if (frame->valid) {
                     list_push(valid_frames) = frame->value;
                 }
             }
-            GraphPlaneHartmanFrameSlice vf_slice = slice_list(valid_frames);
-            graph_plane_hartman_geometry_push_ctx(
+            GraphPlaneP3ChooseFrameSlice vf_slice = slice_list(valid_frames);
+            graph_plane_p3choose_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
-                &ctx.data.hartman.ctx,
+                &ctx.data.p3choose.ctx,
                 vf_slice,
                 graph_transform,
-                &ctx.hartman_geometry_info
+                &ctx.p3choose_geometry_info
             );
             break;
         }
         case APP_STATE_COLORED: {
             GraphPlaneGeometryEdge simple_edge_info = {
-                .thickness = ctx.hartman_geometry_info.edge_thickness,
+                .thickness = ctx.p3choose_geometry_info.edge_thickness,
             };
             vec4_copy(
                 simple_edge_info.color,
-                ctx.hartman_geometry_info.uncolored_edge_color
+                ctx.p3choose_geometry_info.uncolored_edge_color
             );
             graph_plane_geometry_push_uncolored_edges(
                 &ctx.edge_shapes.geometry,
@@ -736,10 +736,10 @@ static void app_update(
             );
             for (uint32_t i = 0; i < colored_edges.len; i += 1) {
                 get(colored_edges, i).thickness =
-                    ctx.hartman_geometry_info.edge_thickness;
+                    ctx.p3choose_geometry_info.edge_thickness;
                 vec4_copy(
                     get(colored_edges, i).color,
-                    get(ctx.hartman_geometry_info.colors, i + 1)
+                    get(ctx.p3choose_geometry_info.colors, i + 1)
                 );
             }
             graph_plane_geometry_push_colored_edges(
@@ -753,15 +753,15 @@ static void app_update(
 
             GraphPlaneGeometryNode vertex_outline = {
                 .mat = {
-                    { ctx.hartman_geometry_info.radius, 0.0f },
-                    { 0.0f, ctx.hartman_geometry_info.radius },
+                    { ctx.p3choose_geometry_info.radius, 0.0f },
+                    { 0.0f, ctx.p3choose_geometry_info.radius },
                 },
                 .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
                 .roundness = 1.0f,
             };
             vec4_copy(
                 vertex_outline.color,
-                ctx.hartman_geometry_info.outline_color
+                ctx.p3choose_geometry_info.outline_color
             );
             graph_plane_geometry_push_vertices(
                 &ctx.vertex_shapes.geometry,
@@ -774,8 +774,8 @@ static void app_update(
             GraphPlaneGeometryNodeSlice colored_vertices = slice_array(
                 colored_vertex_data
             );
-            float radius = ctx.hartman_geometry_info.radius -
-                ctx.hartman_geometry_info.border_thickness;
+            float radius = ctx.p3choose_geometry_info.radius -
+                ctx.p3choose_geometry_info.border_thickness;
             for (uint32_t i = 0; i < colored_vertices.len; i += 1) {
                 get(colored_vertices, i) = (GraphPlaneGeometryNode) {
                     .mat = {
@@ -787,7 +787,7 @@ static void app_update(
                 };
                 vec4_copy(
                     get(colored_vertices, i).color,
-                    get(ctx.hartman_geometry_info.colors, i)
+                    get(ctx.p3choose_geometry_info.colors, i)
                 );
             }
             graph_plane_geometry_push_colored_vertices(
@@ -987,15 +987,15 @@ static void key_callback(
     }
     if (key == GLFW_KEY_T) {
         if (ctx.threads > 1) {
-            if (ctx.state == APP_STATE_HARTMAN) {
+            if (ctx.state == APP_STATE_P3CHOOSE) {
                 for (size_t i = 1; i < ctx.threads; i += 1) {
-                    if (!ctx.data.hartman.frames[i].valid) {
+                    if (!ctx.data.p3choose.frames[i].valid) {
                         continue;
                     }
-                    list_push(ctx.data.hartman.ctx.frames) =
-                        ctx.data.hartman.frames[i].value;
-                    ctx.data.hartman.frames[i] =
-                        (GraphPlaneHartmanFrameOptional){ 0 };
+                    list_push(ctx.data.p3choose.ctx.frames) =
+                        ctx.data.p3choose.frames[i].value;
+                    ctx.data.p3choose.frames[i] =
+                        (GraphPlaneP3ChooseFrameOptional){ 0 };
                 }
             }
             ctx.threads = 1;

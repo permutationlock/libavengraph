@@ -1,19 +1,19 @@
-#ifndef GRAPH_PLANE_HARTMAN_TIKZ_H
-#define GRAPH_PLANE_HARTMAN_TIKZ_H
+#ifndef GRAPH_PLANE_P3CHOOSE_TIKZ_H
+#define GRAPH_PLANE_P3CHOOSE_TIKZ_H
 
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/math.h>
 
 #include "../../../graph.h"
-#include "../hartman.h"
+#include "../p3choose.h"
 
 #include <stdio.h>
 
-static inline void graph_plane_hartman_tikz(
+static inline void graph_plane_p3choose_tikz(
     GraphPlaneEmbedding embedding,
-    GraphPlaneHartmanCtx *ctx,
-    GraphPlaneHartmanFrame *frame,
+    GraphPlaneP3ChooseCtx *ctx,
+    GraphPlaneP3ChooseFrame *frame,
     Vec2 dim_cm,
     AvenArena temp_arena
 ) {
@@ -89,7 +89,7 @@ static inline void graph_plane_hartman_tikz(
             }
         }
 
-        uint32_t v_mark = graph_plane_hartman_vloc(ctx, frame, v)->mark;
+        uint32_t v_mark = graph_plane_p3choose_vloc(ctx, frame, v)->mark;
         printf(
             "\t\\node (v%u) [label=%s:{%u,\\{",
             (unsigned int)v,
@@ -97,7 +97,7 @@ static inline void graph_plane_hartman_tikz(
             (unsigned int)v_mark
         );
 
-        GraphPlaneHartmanList v_colors = get(ctx->vertex_info, v).colors;
+        GraphPlaneP3ChooseList v_colors = get(ctx->vertex_info, v).colors;
         for (uint8_t i = 0; i < v_colors.len - 1; i += 1) {
             printf("%u,", get(v_colors, i));
         }
@@ -117,7 +117,7 @@ static inline void graph_plane_hartman_tikz(
         } else {
             bool done = false;
             for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                GraphPlaneHartmanFrame *stack_frame = &get(ctx->frames, i);
+                GraphPlaneP3ChooseFrame *stack_frame = &get(ctx->frames, i);
 
                 if (v == stack_frame->z) {
                     printf("$z_{%lu}$", (unsigned long) i);
@@ -127,7 +127,7 @@ static inline void graph_plane_hartman_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    GraphPlaneHartmanFrame *stack_frame = &get(
+                    GraphPlaneP3ChooseFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -141,7 +141,7 @@ static inline void graph_plane_hartman_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    GraphPlaneHartmanFrame *stack_frame = &get(
+                    GraphPlaneP3ChooseFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -158,12 +158,12 @@ static inline void graph_plane_hartman_tikz(
         printf("};\n");
     }
 
-    typedef Slice(bool) GraphPlaneHartmanTikzDrawSlice;
-    typedef Slice(GraphPlaneHartmanTikzDrawSlice)
-        GraphPlaneHartmanTikzDrawGraph;
+    typedef Slice(bool) GraphPlaneP3ChooseTikzDrawSlice;
+    typedef Slice(GraphPlaneP3ChooseTikzDrawSlice)
+        GraphPlaneP3ChooseTikzDrawGraph;
 
-    GraphPlaneHartmanTikzDrawGraph draw_graph = aven_arena_create_slice(
-        GraphPlaneHartmanTikzDrawSlice,
+    GraphPlaneP3ChooseTikzDrawGraph draw_graph = aven_arena_create_slice(
+        GraphPlaneP3ChooseTikzDrawSlice,
         &temp_arena,
         ctx->vertex_info.len
     );
@@ -185,9 +185,9 @@ static inline void graph_plane_hartman_tikz(
 
     {
         GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
-        GraphPlaneHartmanTikzDrawSlice z_drawn = get(draw_graph, frame->z);
-        GraphPlaneHartmanVertexLoc *z_loc =
-            graph_plane_hartman_vloc(ctx, frame, frame->z);
+        GraphPlaneP3ChooseTikzDrawSlice z_drawn = get(draw_graph, frame->z);
+        GraphPlaneP3ChooseVertexLoc *z_loc =
+            graph_plane_p3choose_vloc(ctx, frame, frame->z);
         uint32_t zv_index = z_loc->nb.first;
         if (zv_index != z_loc->nb.last) {
             zv_index = graph_aug_adj_next(z_adj, zv_index);
@@ -211,7 +211,7 @@ static inline void graph_plane_hartman_tikz(
         }
     }
 
-    GraphPlaneHartmanFrame *cur_frame = frame;
+    GraphPlaneP3ChooseFrame *cur_frame = frame;
     size_t frame_index = (size_t)0 - (size_t)1;
     do {
         frame_index += 1;
@@ -220,9 +220,9 @@ static inline void graph_plane_hartman_tikz(
 
         do {
             GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
-            GraphPlaneHartmanTikzDrawSlice v_drawn = get(draw_graph, v);
-            GraphPlaneHartmanVertexLoc *v_info =
-                graph_plane_hartman_vloc(ctx, cur_frame, v);
+            GraphPlaneP3ChooseTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlaneP3ChooseVertexLoc *v_info =
+                graph_plane_p3choose_vloc(ctx, cur_frame, v);
 
             for (
                 uint32_t i = v_info->nb.first;
@@ -260,7 +260,7 @@ static inline void graph_plane_hartman_tikz(
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
         GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
-        GraphPlaneHartmanTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ChooseTikzDrawSlice v_drawn = get(draw_graph, v);
 
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
             uint32_t u = get(v_adj, i).vertex;
@@ -287,4 +287,4 @@ static inline void graph_plane_hartman_tikz(
     printf("\\end{tikzpicture}\n");
 }
 
-#endif // GRAPH_PLANE_HARTMAN_TIKZ_H
+#endif // GRAPH_PLANE_P3CHOOSE_TIKZ_H

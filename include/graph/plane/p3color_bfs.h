@@ -1,5 +1,5 @@
-#ifndef GRAPH_PLANE_POH_BFS_H
-#define GRAPH_PLANE_POH_BFS_H
+#ifndef GRAPH_PLANE_P3COLOR_BFS_H
+#define GRAPH_PLANE_P3COLOR_BFS_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -13,8 +13,8 @@ typedef struct {
     uint32_t v;
     uint32_t edge_index;
     int32_t mark;
-} GraphPlanePohBfsFrame;
-typedef Optional(GraphPlanePohBfsFrame) GraphPlanePohBfsFrameOptional;
+} GraphPlaneP3ColorBfsFrame;
+typedef Optional(GraphPlaneP3ColorBfsFrame) GraphPlaneP3ColorBfsFrameOptional;
 
 typedef struct {
     uint32_t len;
@@ -22,21 +22,21 @@ typedef struct {
     uint32_t parent;
     bool path_end;
     uint32_t *ptr;
-} GraphPlanePohBfsVertex;
+} GraphPlaneP3ColorBfsVertex;
 
 typedef struct {
     Queue(uint32_t) vertices;
-    Slice(GraphPlanePohBfsVertex) vertex_info;
-    List(GraphPlanePohBfsFrame) frames;
-} GraphPlanePohBfsCtx;
+    Slice(GraphPlaneP3ColorBfsVertex) vertex_info;
+    List(GraphPlaneP3ColorBfsFrame) frames;
+} GraphPlaneP3ColorBfsCtx;
 
-static inline GraphPlanePohBfsCtx graph_plane_poh_bfs_init(
+static inline GraphPlaneP3ColorBfsCtx graph_plane_p3color_bfs_init(
     Graph graph,
     GraphSubset path1,
     GraphSubset path2,
     AvenArena *arena
 ) {
-    GraphPlanePohBfsCtx ctx = {
+    GraphPlaneP3ColorBfsCtx ctx = {
         .vertices = { .cap = graph.len },
         .vertex_info = { .len = graph.len },
         .frames = { .cap = 3 * graph.len - 6 },
@@ -48,19 +48,19 @@ static inline GraphPlanePohBfsCtx graph_plane_poh_bfs_init(
         ctx.vertices.cap
     );
     ctx.vertex_info.ptr = aven_arena_create_array(
-        GraphPlanePohBfsVertex,
+        GraphPlaneP3ColorBfsVertex,
         arena,
         ctx.vertex_info.len
     );
     ctx.frames.ptr = aven_arena_create_array(
-        GraphPlanePohBfsFrame,
+        GraphPlaneP3ColorBfsFrame,
         arena,
         ctx.frames.cap
     );
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
         GraphAdjList v_adj = get(graph, v);
-        get(ctx.vertex_info, v) = (GraphPlanePohBfsVertex){
+        get(ctx.vertex_info, v) = (GraphPlaneP3ColorBfsVertex){
             .len = (uint32_t)v_adj.len,
             .ptr = v_adj.ptr,
         };
@@ -87,7 +87,7 @@ static inline GraphPlanePohBfsCtx graph_plane_poh_bfs_init(
     uint32_t p1 = get(path1, 0);
     uint32_t p2 = get(path2, 0);
     uint32_t p2p1_index = graph_adj_neighbor_index(get(graph, p2), p1);
-    list_push(ctx.frames) = (GraphPlanePohBfsFrame){
+    list_push(ctx.frames) = (GraphPlaneP3ColorBfsFrame){
         .p1 = p1,
         .p2 = p2,
         .p2p1_index = p2p1_index,
@@ -98,32 +98,32 @@ static inline GraphPlanePohBfsCtx graph_plane_poh_bfs_init(
     return ctx;
 }
 
-static inline GraphPlanePohBfsFrameOptional
-graph_plane_poh_bfs_next_frame(
-    GraphPlanePohBfsCtx *ctx
+static inline GraphPlaneP3ColorBfsFrameOptional
+graph_plane_p3color_bfs_next_frame(
+    GraphPlaneP3ColorBfsCtx *ctx
 ) {
     if (ctx->frames.len == 0) {
-        return (GraphPlanePohBfsFrameOptional){ 0 };
+        return (GraphPlaneP3ColorBfsFrameOptional){ 0 };
     }
 
-    GraphPlanePohBfsFrame *frame = &list_get(
+    GraphPlaneP3ColorBfsFrame *frame = &list_get(
         ctx->frames,
         ctx->frames.len - 1
     );
     ctx->frames.len -= 1;
 
-    return (GraphPlanePohBfsFrameOptional){
+    return (GraphPlaneP3ColorBfsFrameOptional){
         .value = *frame,
         .valid = true,
     };
 }
 
-static inline bool graph_plane_poh_bfs_frame_step(
-    GraphPlanePohBfsCtx *ctx,
-    GraphPlanePohBfsFrame *frame
+static inline bool graph_plane_p3color_bfs_frame_step(
+    GraphPlaneP3ColorBfsCtx *ctx,
+    GraphPlaneP3ColorBfsFrame *frame
 ) {
-    GraphPlanePohBfsVertex *p1_info = &get(ctx->vertex_info, frame->p1);
-    GraphPlanePohBfsVertex *p2_info = &get(ctx->vertex_info, frame->p2);
+    GraphPlaneP3ColorBfsVertex *p1_info = &get(ctx->vertex_info, frame->p1);
+    GraphPlaneP3ColorBfsVertex *p2_info = &get(ctx->vertex_info, frame->p2);
 
     if (frame->v == frame->p2) {
         if (p1_info->path_end and p2_info->path_end) {
@@ -134,7 +134,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
         uint32_t p2u_index = graph_adj_prev(p2_adj, frame->p2p1_index);
         uint32_t u = get(p2_adj, p2u_index);
 
-        GraphPlanePohBfsVertex *u_info = &get(ctx->vertex_info, u);
+        GraphPlaneP3ColorBfsVertex *u_info = &get(ctx->vertex_info, u);
         if (u_info->mark <= 0) {
             frame->v = u;
             u_info->mark = frame->mark;
@@ -161,7 +161,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
         return false;
     }
 
-    GraphPlanePohBfsVertex *v_info = &get(ctx->vertex_info, frame->v); 
+    GraphPlaneP3ColorBfsVertex *v_info = &get(ctx->vertex_info, frame->v); 
     GraphAdjList v_adj = { .len = v_info->len, .ptr = v_info->ptr };
     if (frame->edge_index == v_adj.len) {
         frame->v = queue_pop(ctx->vertices);
@@ -171,7 +171,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
 
     uint32_t vy_index = frame->edge_index;
     uint32_t y = get(v_adj, vy_index);
-    GraphPlanePohBfsVertex *y_info = &get(ctx->vertex_info, y);
+    GraphPlaneP3ColorBfsVertex *y_info = &get(ctx->vertex_info, y);
     frame->edge_index += 1;
 
     if (y_info->mark == p2_info->mark) {
@@ -180,7 +180,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
             next_index -= (uint32_t)v_adj.len;
         }
         uint32_t x = get(v_adj, next_index);
-        GraphPlanePohBfsVertex *x_info = &get(ctx->vertex_info, x);
+        GraphPlaneP3ColorBfsVertex *x_info = &get(ctx->vertex_info, x);
 
         if (x_info->mark == p1_info->mark) {
             if (!x_info->path_end or !y_info->path_end) {
@@ -191,7 +191,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
                     },
                     x
                 );
-                list_push(ctx->frames) = (GraphPlanePohBfsFrame){
+                list_push(ctx->frames) = (GraphPlaneP3ColorBfsFrame){
                     .p1 = x,
                     .p2 = y,
                     .p2p1_index = yx_index,
@@ -203,7 +203,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
             int32_t p3_color = p1_info->mark ^ p2_info->mark;
 
             uint32_t w = frame->v;
-            GraphPlanePohBfsVertex *w_info = &get(ctx->vertex_info, w);
+            GraphPlaneP3ColorBfsVertex *w_info = &get(ctx->vertex_info, w);
 
             w_info->mark = p3_color;
             w_info->path_end = true;
@@ -221,7 +221,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
                 },
                 frame->p1
             );
-            list_push(ctx->frames) = (GraphPlanePohBfsFrame){
+            list_push(ctx->frames) = (GraphPlaneP3ColorBfsFrame){
                 .p1 = frame->p1,
                 .p2 = w,
                 .p2p1_index = wp1_index,
@@ -236,7 +236,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
                 },
                 frame->p2p1_index
             );
-            *frame = (GraphPlanePohBfsFrame){
+            *frame = (GraphPlaneP3ColorBfsFrame){
                 .p1 = w,
                 .p2 = frame->p2,
                 .p2p1_index = p2w_index,
@@ -254,7 +254,7 @@ static inline bool graph_plane_poh_bfs_frame_step(
     return false;
 }
 
-static inline GraphPropUint8 graph_plane_poh_bfs(
+static inline GraphPropUint8 graph_plane_p3color_bfs(
     Graph graph,
     GraphSubset p,
     GraphSubset q,
@@ -264,19 +264,19 @@ static inline GraphPropUint8 graph_plane_poh_bfs(
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
-    GraphPlanePohBfsCtx ctx = graph_plane_poh_bfs_init(
+    GraphPlaneP3ColorBfsCtx ctx = graph_plane_p3color_bfs_init(
         graph,
         p,
         q,
         &temp_arena
     );
 
-    GraphPlanePohBfsFrameOptional cur_frame =
-        graph_plane_poh_bfs_next_frame(&ctx);
+    GraphPlaneP3ColorBfsFrameOptional cur_frame =
+        graph_plane_p3color_bfs_next_frame(&ctx);
 
     do {
-        while (!graph_plane_poh_bfs_frame_step(&ctx, &cur_frame.value)) {}
-        cur_frame = graph_plane_poh_bfs_next_frame(&ctx);
+        while (!graph_plane_p3color_bfs_frame_step(&ctx, &cur_frame.value)) {}
+        cur_frame = graph_plane_p3color_bfs_next_frame(&ctx);
     } while (cur_frame.valid);
 
     for (uint32_t v = 0; v < coloring.len; v += 1) {
@@ -288,4 +288,4 @@ static inline GraphPropUint8 graph_plane_poh_bfs(
     return coloring;
 }
 
-#endif // GRAPH_PLANE_POH_BFS_H
+#endif // GRAPH_PLANE_P3COLOR_BFS_H

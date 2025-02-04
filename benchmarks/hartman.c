@@ -10,7 +10,7 @@
 #include <graph.h>
 #include <graph/path_color.h>
 #include <graph/plane.h>
-#include <graph/plane/hartman.h>
+#include <graph/plane/p3choose.h>
 #include <graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
@@ -48,7 +48,7 @@ int main(void) {
         typedef struct {
             Graph graph;
             GraphAug aug_graph;
-            GraphPlaneHartmanListProp color_lists;
+            GraphPlaneP3ChooseListProp color_lists;
             GraphPropUint8 coloring;
         } CaseData;
 
@@ -73,20 +73,20 @@ int main(void) {
                 &temp_arena
             );
 
-            GraphPlaneHartmanListProp *color_lists = &get(
+            GraphPlaneP3ChooseListProp *color_lists = &get(
                 cases,
                 i
             ).color_lists;
 
             color_lists->len = n;
             color_lists->ptr = aven_arena_create_array(
-                GraphPlaneHartmanList,
+                GraphPlaneP3ChooseList,
                 &temp_arena,
                 n
             );
 
             for (uint32_t j = 0; j < color_lists->len; j += 1) {
-                GraphPlaneHartmanList list = { .len = 3 };
+                GraphPlaneP3ChooseList list = { .len = 3 };
                 get(list, 0) = (uint8_t)(
                     1 + aven_rng_rand_bounded(rng, MAX_COLOR)
                 );
@@ -123,7 +123,7 @@ int main(void) {
         __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            get(cases, i).coloring = graph_plane_hartman(
+            get(cases, i).coloring = graph_plane_p3choose(
                 get(cases, i).aug_graph,
                 get(cases, i).color_lists,
                 face,
@@ -142,7 +142,7 @@ int main(void) {
         for (uint32_t i = 0; i < cases.len; i += 1) {
             bool valid = true;
             
-            GraphPlaneHartmanListProp color_lists = get(
+            GraphPlaneP3ChooseListProp color_lists = get(
                 cases,
                 i
             ).color_lists;
@@ -151,7 +151,7 @@ int main(void) {
             // verify coloring is a list-coloring
             for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
                 uint8_t v_color = get(coloring, v);
-                GraphPlaneHartmanList v_colors = get(color_lists, v);
+                GraphPlaneP3ChooseList v_colors = get(color_lists, v);
 
                 bool found = false;
                 for (uint32_t j = 0; j < v_colors.len; j += 1) {

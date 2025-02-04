@@ -14,8 +14,8 @@
 #include <graph.h>
 #include <graph/plane.h>
 #include <graph/plane/gen.h>
-#include <graph/plane/hartman.h>
-#include <graph/plane/hartman/tikz.h>
+#include <graph/plane/p3choose.h>
+#include <graph/plane/p3choose/tikz.h>
 #include <aven/math.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -33,7 +33,7 @@
 typedef struct {
     GraphAug graph;
     GraphPlaneEmbedding embedding;
-    GraphPlaneHartmanCtx ctx;
+    GraphPlaneP3ChooseCtx ctx;
 } TestCase;
 
 static TestCase gen_test_case(
@@ -64,14 +64,14 @@ static TestCase gen_test_case(
     uint32_t outer_face_data[4] = { 0, 1, 2, 3, };
     GraphSubset outer_face = slice_array(outer_face_data);
 
-    GraphPlaneHartmanListProp color_lists = aven_arena_create_slice(
-        GraphPlaneHartmanList,
+    GraphPlaneP3ChooseListProp color_lists = aven_arena_create_slice(
+        GraphPlaneP3ChooseList,
         arena,
         test_case.graph.len
     );
 
     for (uint32_t i = 0; i < color_lists.len; i += 1) {
-        GraphPlaneHartmanList list = { .len = 3 };
+        GraphPlaneP3ChooseList list = { .len = 3 };
 
         for (uint8_t j = 0; j < list.len; j += 1) {
             get(list, j) = (uint8_t)(1 + aven_rng_rand_bounded(rng, max_color));
@@ -96,7 +96,7 @@ static TestCase gen_test_case(
         get(color_lists, i) = list;
     }
     
-    test_case.ctx = graph_plane_hartman_init(
+    test_case.ctx = graph_plane_p3choose_init(
         test_case.graph,
         color_lists,
         outer_face,
@@ -141,26 +141,26 @@ int main(void) {
 
         bool cases[12] = { 0 };
 
-        GraphPlaneHartmanFrameOptional frame =
-            graph_plane_hartman_next_frame(&test_case.ctx);
+        GraphPlaneP3ChooseFrameOptional frame =
+            graph_plane_p3choose_next_frame(&test_case.ctx);
 
         do {
             do {
                 cases[
-                    graph_plane_hartman_frame_case(
+                    graph_plane_p3choose_frame_case(
                         &test_case.ctx,
                         &frame.value
                     )
                 ] = true;
                 steps += 1;
             } while (
-                !graph_plane_hartman_frame_step(
+                !graph_plane_p3choose_frame_step(
                     &test_case.ctx,
                     &frame.value
                 )
             );
 
-            frame = graph_plane_hartman_next_frame(&test_case.ctx);
+            frame = graph_plane_p3choose_next_frame(&test_case.ctx);
         } while (frame.valid);
 
         for (size_t i = 0; i < countof(cases); i += 1) {
@@ -182,13 +182,13 @@ int main(void) {
         &arena
     );
 
-    GraphPlaneHartmanFrameOptional frame =
-        graph_plane_hartman_next_frame(&test_case.ctx);
+    GraphPlaneP3ChooseFrameOptional frame =
+        graph_plane_p3choose_next_frame(&test_case.ctx);
 
     int count = 0;
     do {
         do {
-            graph_plane_hartman_tikz(
+            graph_plane_p3choose_tikz(
                 test_case.embedding,
                 &test_case.ctx,
                 &frame.value,
@@ -202,10 +202,10 @@ int main(void) {
                 printf("$\\qquad$\n");
             }
         } while (
-            !graph_plane_hartman_frame_step(&test_case.ctx, &frame.value)
+            !graph_plane_p3choose_frame_step(&test_case.ctx, &frame.value)
         );
 
-        frame = graph_plane_hartman_next_frame(&test_case.ctx);
+        frame = graph_plane_p3choose_next_frame(&test_case.ctx);
     } while (frame.valid);
 
     return 0;

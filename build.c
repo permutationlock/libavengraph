@@ -268,148 +268,148 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep poh_obj_step = aven_build_common_step_cc_ex(
+    AvenBuildStep p3color_obj_step = aven_build_common_step_cc_ex(
         &opts,
         graphics_includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "poh.c", NULL),
+        aven_path(&arena, root_path.ptr, "examples", "p3color.c", NULL),
         &work_dir_step,
         &arena
     );
 
-    AvenBuildStep *poh_obj_data[5];
-    List(AvenBuildStep *) poh_obj_list = list_array(poh_obj_data);
+    AvenBuildStep *p3color_obj_data[5];
+    List(AvenBuildStep *) p3color_obj_list = list_array(p3color_obj_data);
 
-    list_push(poh_obj_list) = &poh_obj_step;
-    list_push(poh_obj_list) = &stb_obj_step;
+    list_push(p3color_obj_list) = &p3color_obj_step;
+    list_push(p3color_obj_list) = &stb_obj_step;
     
     if (winutf8_obj_step.valid) {
-        list_push(poh_obj_list) = &winutf8_obj_step.value;
+        list_push(p3color_obj_list) = &winutf8_obj_step.value;
     }
 
     if (winpthreads_obj_step.valid) {
-        list_push(poh_obj_list) = &winpthreads_obj_step.value;
+        list_push(p3color_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
-        list_push(poh_obj_list) = &glfw_obj_step.value;
+        list_push(p3color_obj_list) = &glfw_obj_step.value;
     }
 
-    AvenBuildStepPtrSlice poh_objs = slice_list(poh_obj_list);
+    AvenBuildStepPtrSlice p3color_objs = slice_list(p3color_obj_list);
 
-    AvenBuildStep poh_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep p3color_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
         libavengl_opts.syslibs,
-        poh_objs,
+        p3color_objs,
         &out_dir_step,
-        aven_str("poh"),
+        aven_str("p3color"),
         true,
         &arena
     );
 
-    AvenBuildStep hartman_obj_step = aven_build_common_step_cc_ex(
+    AvenBuildStep p3choose_obj_step = aven_build_common_step_cc_ex(
         &opts,
         graphics_includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "hartman.c", NULL),
+        aven_path(&arena, root_path.ptr, "examples", "p3choose.c", NULL),
         &work_dir_step,
         &arena
     );
 
-    AvenBuildStep *hartman_obj_data[5];
-    List(AvenBuildStep *) hartman_obj_list = list_array(hartman_obj_data);
+    AvenBuildStep *p3choose_obj_data[5];
+    List(AvenBuildStep *) p3choose_obj_list = list_array(p3choose_obj_data);
 
-    list_push(hartman_obj_list) = &hartman_obj_step;
-    list_push(hartman_obj_list) = &stb_obj_step;
+    list_push(p3choose_obj_list) = &p3choose_obj_step;
+    list_push(p3choose_obj_list) = &stb_obj_step;
     
     if (winutf8_obj_step.valid) {
-        list_push(hartman_obj_list) = &winutf8_obj_step.value;
+        list_push(p3choose_obj_list) = &winutf8_obj_step.value;
     }
 
     if (winpthreads_obj_step.valid) {
-        list_push(hartman_obj_list) = &winpthreads_obj_step.value;
+        list_push(p3choose_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
-        list_push(hartman_obj_list) = &glfw_obj_step.value;
+        list_push(p3choose_obj_list) = &glfw_obj_step.value;
     }
 
-    AvenBuildStepPtrSlice hartman_objs = slice_list(hartman_obj_list);
+    AvenBuildStepPtrSlice p3choose_objs = slice_list(p3choose_obj_list);
 
-    AvenBuildStep hartman_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep p3choose_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
         libavengl_opts.syslibs,
-        hartman_objs,
+        p3choose_objs,
         &out_dir_step,
-        aven_str("hartman"),
+        aven_str("p3choose"),
         true,
         &arena
     );
 
-    AvenBuildStep poh_tikz_obj_step = aven_build_common_step_cc_ex(
+    AvenBuildStep p3color_tikz_obj_step = aven_build_common_step_cc_ex(
         &opts,
         includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "poh_tikz.c", NULL),
+        aven_path(&arena, root_path.ptr, "examples", "p3color_tikz.c", NULL),
         &work_dir_step,
         &arena
     );
 
-    AvenBuildStep *poh_tikz_obj_data[2];
-    List(AvenBuildStep *) poh_tikz_obj_list = list_array(
-        poh_tikz_obj_data
+    AvenBuildStep *p3color_tikz_obj_data[2];
+    List(AvenBuildStep *) p3color_tikz_obj_list = list_array(
+        p3color_tikz_obj_data
     );
 
-    list_push(poh_tikz_obj_list) = &poh_tikz_obj_step;
+    list_push(p3color_tikz_obj_list) = &p3color_tikz_obj_step;
     
     if (winutf8_obj_step.valid) {
-        list_push(poh_tikz_obj_list) = &winutf8_obj_step.value;
+        list_push(p3color_tikz_obj_list) = &winutf8_obj_step.value;
     }
 
-    AvenBuildStepPtrSlice poh_tikz_objs = slice_list(
-        poh_tikz_obj_list
+    AvenBuildStepPtrSlice p3color_tikz_objs = slice_list(
+        p3color_tikz_obj_list
     );
 
-    AvenBuildStep poh_tikz_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep p3color_tikz_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
         libavengl_opts.syslibs,
-        poh_tikz_objs,
+        p3color_tikz_objs,
         &out_dir_step,
-        aven_str("poh_tikz"),
+        aven_str("p3color_tikz"),
         true,
         &arena
     );
 
-    AvenBuildStep hartman_tikz_obj_step = aven_build_common_step_cc_ex(
+    AvenBuildStep p3choose_tikz_obj_step = aven_build_common_step_cc_ex(
         &opts,
         includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "hartman_tikz.c", NULL),
+        aven_path(&arena, root_path.ptr, "examples", "p3choose_tikz.c", NULL),
         &work_dir_step,
         &arena
     );
 
-    AvenBuildStep *hartman_tikz_obj_data[2];
-    List(AvenBuildStep *) hartman_tikz_obj_list = list_array(
-        hartman_tikz_obj_data
+    AvenBuildStep *p3choose_tikz_obj_data[2];
+    List(AvenBuildStep *) p3choose_tikz_obj_list = list_array(
+        p3choose_tikz_obj_data
     );
 
-    list_push(hartman_tikz_obj_list) = &hartman_tikz_obj_step;
+    list_push(p3choose_tikz_obj_list) = &p3choose_tikz_obj_step;
     
     if (winutf8_obj_step.valid) {
-        list_push(hartman_tikz_obj_list) = &winutf8_obj_step.value;
+        list_push(p3choose_tikz_obj_list) = &winutf8_obj_step.value;
     }
 
-    AvenBuildStepPtrSlice hartman_tikz_objs = slice_list(
-        hartman_tikz_obj_list
+    AvenBuildStepPtrSlice p3choose_tikz_objs = slice_list(
+        p3choose_tikz_obj_list
     );
 
-    AvenBuildStep hartman_tikz_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep p3choose_tikz_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
         libavengl_opts.syslibs,
-        hartman_tikz_objs,
+        p3choose_tikz_objs,
         &out_dir_step,
-        aven_str("hartman_tikz"),
+        aven_str("p3choose_tikz"),
         true,
         &arena
     );
@@ -418,11 +418,11 @@ int main(int argc, char **argv) {
     // aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
     // aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
     // (void)gen_tri_exe_step;
-    // aven_build_step_add_dep(&root_step, &poh_exe_step, &arena);
-    aven_build_step_add_dep(&root_step, &hartman_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &poh_tikz_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &hartman_tikz_exe_step, &arena);
-    // (void)hartman_exe_step;
+    aven_build_step_add_dep(&root_step, &p3color_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &p3choose_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
+    // (void)p3choose_exe_step;
 
     // Build steps for tests
 
@@ -491,80 +491,80 @@ int main(int argc, char **argv) {
     AvenBuildStep gen_tri_root_step = aven_build_step_root();
     aven_build_step_add_dep(&gen_tri_root_step, &bench_gen_tri_step, &arena);
 
-    AvenBuildStep bench_poh_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_p3color_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "poh_bfs.c", NULL),
+        aven_path(&arena, root_path.ptr, "benchmarks", "p3color_bfs.c", NULL),
         &bench_dir_step,
         false,
         bench_args,
         &arena
     );
-    AvenBuildStep poh_bfs_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&poh_bfs_root_step, &bench_poh_bfs_step, &arena);
+    AvenBuildStep p3color_bfs_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&p3color_bfs_root_step, &bench_p3color_bfs_step, &arena);
 
-    AvenBuildStep bench_poh_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_p3color_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "poh.c", NULL),
+        aven_path(&arena, root_path.ptr, "benchmarks", "p3color.c", NULL),
         &bench_dir_step,
         false,
         bench_args,
         &arena
     );
-    AvenBuildStep poh_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&poh_root_step, &bench_poh_step, &arena);
+    AvenBuildStep p3color_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&p3color_root_step, &bench_p3color_step, &arena);
 
-    AvenBuildStep bench_hartman_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_p3choose_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "hartman.c", NULL),
+        aven_path(&arena, root_path.ptr, "benchmarks", "p3choose.c", NULL),
         &bench_dir_step,
         false,
         bench_args,
         &arena
     );
-    AvenBuildStep hartman_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&hartman_root_step, &bench_hartman_step, &arena);
+    AvenBuildStep p3choose_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&p3choose_root_step, &bench_p3choose_step, &arena);
 
-    AvenBuildStep bench_poh_thread_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_p3color_thread_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "poh_thread.c", NULL),
+        aven_path(&arena, root_path.ptr, "benchmarks", "p3color_thread.c", NULL),
         &bench_dir_step,
         false,
         bench_args,
         &arena
     );
-    AvenBuildStep poh_thread_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&poh_thread_root_step, &bench_poh_thread_step, &arena);
+    AvenBuildStep p3color_thread_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&p3color_thread_root_step, &bench_p3color_thread_step, &arena);
 
-    AvenBuildStep bench_hartman_thread_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_p3choose_thread_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "hartman_thread.c", NULL),
+        aven_path(&arena, root_path.ptr, "benchmarks", "p3choose_thread.c", NULL),
         &bench_dir_step,
         false,
         bench_args,
         &arena
     );
-    AvenBuildStep hartman_thread_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&hartman_thread_root_step, &bench_hartman_thread_step, &arena);
+    AvenBuildStep p3choose_thread_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&p3choose_thread_root_step, &bench_p3choose_thread_step, &arena);
 
     AvenBuildStep bench_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
@@ -612,13 +612,13 @@ int main(int argc, char **argv) {
     aven_build_step_add_dep(&pyramid_root_step, &bench_pyramid_step, &arena);
 
     AvenBuildStep bench_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&bench_root_step, &pyramid_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &all_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &hartman_thread_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &hartman_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &poh_thread_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &poh_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &poh_bfs_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &pyramid_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &all_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &p3choose_thread_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &p3choose_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &p3color_thread_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &p3color_root_step, &arena);
+    // aven_build_step_add_dep(&bench_root_step, &p3color_bfs_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &bfs_root_step, &arena);
     // aven_build_step_add_dep(&bench_root_step, &gen_tri_root_step, &arena);
 

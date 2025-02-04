@@ -1,19 +1,19 @@
-#ifndef GRAPH_PLANE_HARTMAN_TIKZ_H
-#define GRAPH_PLANE_HARTMAN_TIKZ_H
+#ifndef GRAPH_PLANE_P3CHOOSE_TIKZ_H
+#define GRAPH_PLANE_P3CHOOSE_TIKZ_H
 
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/math.h>
 
 #include "../../../graph.h"
-#include "../poh.h"
+#include "../p3color.h"
 
 #include <stdio.h>
 
-static inline void graph_plane_poh_tikz(
+static inline void graph_plane_p3color_tikz(
     GraphPlaneEmbedding embedding,
-    GraphPlanePohCtx *ctx,
-    GraphPlanePohFrame *frame,
+    GraphPlaneP3ColorCtx *ctx,
+    GraphPlaneP3ColorFrame *frame,
     Vec2 dim_cm,
     AvenArena temp_arena
 ) {
@@ -54,7 +54,7 @@ static inline void graph_plane_poh_tikz(
         float dir_score[8] = { 0 };
         float dir_bonus[8] = { 0 };
 
-        GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
 
@@ -109,7 +109,7 @@ static inline void graph_plane_poh_tikz(
         } else {
             bool done = false;
             for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                GraphPlanePohFrame *stack_frame = &get(ctx->frames, i);
+                GraphPlaneP3ColorFrame *stack_frame = &get(ctx->frames, i);
 
                 if (v == stack_frame->u) {
                     printf("$u_{%lu}$", (unsigned long) i);
@@ -119,7 +119,7 @@ static inline void graph_plane_poh_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    GraphPlanePohFrame *stack_frame = &get(
+                    GraphPlaneP3ColorFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -133,7 +133,7 @@ static inline void graph_plane_poh_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    GraphPlanePohFrame *stack_frame = &get(
+                    GraphPlaneP3ColorFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -147,7 +147,7 @@ static inline void graph_plane_poh_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    GraphPlanePohFrame *stack_frame = &get(
+                    GraphPlaneP3ColorFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -164,12 +164,12 @@ static inline void graph_plane_poh_tikz(
         printf("};\n");
     }
 
-    typedef Slice(bool) GraphPlanePohTikzDrawSlice;
-    typedef Slice(GraphPlanePohTikzDrawSlice)
-        GraphPlanePohTikzDrawGraph;
+    typedef Slice(bool) GraphPlaneP3ColorTikzDrawSlice;
+    typedef Slice(GraphPlaneP3ColorTikzDrawSlice)
+        GraphPlaneP3ColorTikzDrawGraph;
 
-    GraphPlanePohTikzDrawGraph draw_graph = aven_arena_create_slice(
-        GraphPlanePohTikzDrawSlice,
+    GraphPlaneP3ColorTikzDrawGraph draw_graph = aven_arena_create_slice(
+        GraphPlaneP3ColorTikzDrawSlice,
         &temp_arena,
         ctx->vertex_info.len
     );
@@ -204,7 +204,7 @@ static inline void graph_plane_poh_tikz(
 
     printf("\t\\begin{pgfonlayer}{bg}\n"); 
     {
-        GraphPlanePohVertex fu_info = get(ctx->vertex_info, frame->u);
+        GraphPlaneP3ColorVertex fu_info = get(ctx->vertex_info, frame->u);
         uint32_t n_index = frame->u_nb_first + frame->edge_index;
         if (frame->edge_index != 0) {
             n_index -= 1;
@@ -221,7 +221,7 @@ static inline void graph_plane_poh_tikz(
                 (unsigned int)n
             );
         } else {
-            GraphPlanePohVertex n_info = get(ctx->vertex_info, n);
+            GraphPlaneP3ColorVertex n_info = get(ctx->vertex_info, n);
             for (uint32_t i = 0; i < n_info.len; i += 1) {
                 if (get(n_info, i) == frame->u) {
                     get(get(draw_graph, n), i) = true;
@@ -236,7 +236,7 @@ static inline void graph_plane_poh_tikz(
         }
     }
 
-    GraphPlanePohFrame *cur_frame = frame;
+    GraphPlaneP3ColorFrame *cur_frame = frame;
     uint32_t frame_index = (uint32_t)0 - (uint32_t)1;
     do {
         frame_index += 1;
@@ -246,8 +246,8 @@ static inline void graph_plane_poh_tikz(
 
         get(visited, cur_frame->u) = mark;
 
-        GraphPlanePohVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
-        GraphPlanePohTikzDrawSlice cfu_drawn = get(
+        GraphPlaneP3ColorVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
+        GraphPlaneP3ColorTikzDrawSlice cfu_drawn = get(
             draw_graph,
             cur_frame->u
         );
@@ -300,12 +300,12 @@ static inline void graph_plane_poh_tikz(
 
         while (vertices.used > 0) {
             uint32_t v = queue_pop(vertices);
-            GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-            GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+            GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
-                GraphPlanePohVertex u_info = get(ctx->vertex_info, u); 
+                GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u); 
 
                 if (u_info.mark <= 0) {
                     if (get(visited, u) != mark) {
@@ -334,8 +334,8 @@ static inline void graph_plane_poh_tikz(
         } 
 
         for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-            GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-            GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+            GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
@@ -419,8 +419,8 @@ static inline void graph_plane_poh_tikz(
     } while (frame_index < ctx->frames.len);
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-        GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
@@ -440,4 +440,4 @@ static inline void graph_plane_poh_tikz(
     printf("\\end{tikzpicture}\n");
 }
 
-#endif // GRAPH_PLANE_HARTMAN_TIKZ_H
+#endif // GRAPH_PLANE_P3CHOOSE_TIKZ_H

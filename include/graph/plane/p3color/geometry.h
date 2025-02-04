@@ -1,5 +1,5 @@
-#ifndef GRAPH_PLANE_POH_GEOMETRY_H
-#define GRAPH_PLANE_POH_GEOMETRY_H
+#ifndef GRAPH_PLANE_P3COLOR_GEOMETRY_H
+#define GRAPH_PLANE_P3COLOR_GEOMETRY_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -7,7 +7,7 @@
 
 #include <aven/gl/shape.h>
 
-#include "../poh.h"
+#include "../p3color.h"
 #include "../geometry.h"
 
 typedef struct {
@@ -20,16 +20,16 @@ typedef struct {
     float edge_thickness;
     float border_thickness;
     float radius;
-} GraphPlanePohGeometryInfo;
+} GraphPlaneP3ColorGeometryInfo;
 
-static inline void graph_plane_poh_geometry_push_ctx(
+static inline void graph_plane_p3color_geometry_push_ctx(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
     GraphPlaneEmbedding embedding,
-    GraphPlanePohCtx *ctx,
-    GraphPlanePohFrameOptional *maybe_frame,
+    GraphPlaneP3ColorCtx *ctx,
+    GraphPlaneP3ColorFrameOptional *maybe_frame,
     Aff2 trans,
-    GraphPlanePohGeometryInfo *info,
+    GraphPlaneP3ColorGeometryInfo *info,
     AvenArena temp_arena
 ) {
     GraphPlaneGeometryNode active_node_info = {
@@ -92,7 +92,7 @@ static inline void graph_plane_poh_geometry_push_ctx(
 
     for (uint32_t v = 0; v < embedding.len; v += 1) {
         if (maybe_frame->valid) {
-            GraphPlanePohFrame *frame = &maybe_frame->value;
+            GraphPlaneP3ColorFrame *frame = &maybe_frame->value;
             if (v == frame->u) {
                 graph_plane_geometry_push_vertex(
                     rounded_geometry,
@@ -147,12 +147,12 @@ static inline void graph_plane_poh_geometry_push_ctx(
         );
     }
 
-    typedef Slice(bool) GraphPlanePohTikzDrawSlice;
-    typedef Slice(GraphPlanePohTikzDrawSlice)
-        GraphPlanePohTikzDrawGraph;
+    typedef Slice(bool) GraphPlaneP3ColorTikzDrawSlice;
+    typedef Slice(GraphPlaneP3ColorTikzDrawSlice)
+        GraphPlaneP3ColorTikzDrawGraph;
 
-    GraphPlanePohTikzDrawGraph draw_graph = aven_arena_create_slice(
-        GraphPlanePohTikzDrawSlice,
+    GraphPlaneP3ColorTikzDrawGraph draw_graph = aven_arena_create_slice(
+        GraphPlaneP3ColorTikzDrawSlice,
         &temp_arena,
         ctx->vertex_info.len
     );
@@ -235,9 +235,9 @@ static inline void graph_plane_poh_geometry_push_ctx(
     }
 
     if (maybe_frame->valid) {
-        GraphPlanePohFrame *frame = &maybe_frame->value;
+        GraphPlaneP3ColorFrame *frame = &maybe_frame->value;
 
-        GraphPlanePohVertex fu_info = get(ctx->vertex_info, frame->u);
+        GraphPlaneP3ColorVertex fu_info = get(ctx->vertex_info, frame->u);
 
         if (frame->edge_index < fu_info.len) {
             uint32_t n_index = frame->u_nb_first + frame->edge_index;
@@ -260,13 +260,13 @@ static inline void graph_plane_poh_geometry_push_ctx(
     }
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
         if (v_info.mark <= 0) {
             continue;
         }
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
-            GraphPlanePohVertex u_info = get(ctx->vertex_info, u);
+            GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u);
             if (u > v and u_info.mark == v_info.mark) {
                 get(get(draw_graph, v), i) = true;
                 graph_plane_geometry_push_edge(
@@ -281,7 +281,7 @@ static inline void graph_plane_poh_geometry_push_ctx(
         }
     }
 
-    Optional(GraphPlanePohFrame *)maybe_cur_frame = { 0 };
+    Optional(GraphPlaneP3ColorFrame *)maybe_cur_frame = { 0 };
     uint32_t frame_index = 0;
     if (maybe_frame->valid) {
         maybe_cur_frame.value = &maybe_frame->value;
@@ -294,7 +294,7 @@ static inline void graph_plane_poh_geometry_push_ctx(
         }
     }
     while (maybe_cur_frame.valid) {
-        GraphPlanePohFrame *cur_frame = maybe_cur_frame.value;
+        GraphPlaneP3ColorFrame *cur_frame = maybe_cur_frame.value;
         maybe_cur_frame.valid = false;
 
         frame_index += 1;
@@ -304,8 +304,8 @@ static inline void graph_plane_poh_geometry_push_ctx(
 
         get(visited, cur_frame->u) = mark;
 
-        GraphPlanePohVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
-        GraphPlanePohTikzDrawSlice cfu_drawn = get(
+        GraphPlaneP3ColorVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
+        GraphPlaneP3ColorTikzDrawSlice cfu_drawn = get(
             draw_graph,
             cur_frame->u
         );
@@ -364,12 +364,12 @@ static inline void graph_plane_poh_geometry_push_ctx(
 
         while (vertices.used > 0) {
             uint32_t v = queue_pop(vertices);
-            GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-            GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+            GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
-                GraphPlanePohVertex u_info = get(ctx->vertex_info, u); 
+                GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u); 
 
                 if (u_info.mark <= 0) {
                     if (get(visited, u) != mark) {
@@ -404,8 +404,8 @@ static inline void graph_plane_poh_geometry_push_ctx(
         }
 
         for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-            GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-            GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+            GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
@@ -496,8 +496,8 @@ static inline void graph_plane_poh_geometry_push_ctx(
     }
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-        GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
@@ -517,4 +517,4 @@ static inline void graph_plane_poh_geometry_push_ctx(
     }
 }
 
-#endif // GRAPH_PLANE_POH_GEOMETRY_H
+#endif // GRAPH_PLANE_P3COLOR_GEOMETRY_H

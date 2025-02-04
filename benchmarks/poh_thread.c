@@ -10,7 +10,7 @@
 #include <graph.h>
 #include <graph/path_color.h>
 #include <graph/plane.h>
-#include <graph/plane/poh/thread.h>
+#include <graph/plane/p3color/thread.h>
 #include <graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
@@ -88,7 +88,7 @@ int main(void) {
         __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            get(cases, i).coloring = graph_plane_poh_thread(
+            get(cases, i).coloring = graph_plane_p3color_thread(
                 get(cases, i).graph,
                 p,
                 q,

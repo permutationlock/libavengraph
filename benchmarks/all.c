@@ -17,11 +17,11 @@
 #include <graph/path_color.h>
 #include <graph/plane.h>
 #include <graph/bfs.h>
-#include <graph/plane/poh_bfs.h>
-#include <graph/plane/poh.h>
-#include <graph/plane/poh/thread.h>
-#include <graph/plane/hartman.h>
-#include <graph/plane/hartman/thread.h>
+#include <graph/plane/p3color_bfs.h>
+#include <graph/plane/p3color.h>
+#include <graph/plane/p3color/thread.h>
+#include <graph/plane/p3choose.h>
+#include <graph/plane/p3choose/thread.h>
 #include <graph/plane/gen.h>
 
 #include <float.h>
@@ -32,7 +32,7 @@
 
 #define FULL_RUNS 10
 #define NGRAPHS 10
-#define MAX_VERTICES 1000001
+#define MAX_VERTICES 10000001
 #define START_VERTICES 1000
 
 #define MAX_COLOR 8
@@ -121,7 +121,7 @@ int main(void) {
             typedef struct {
                 Graph graph;
                 GraphAug aug_graph;
-                GraphPlaneHartmanListProp color_lists;
+                GraphPlaneP3ChooseListProp color_lists;
                 GraphPropUint8 coloring;
                 GraphSubset path;
                 uint32_t root;
@@ -148,20 +148,20 @@ int main(void) {
                     aven_panic("graph generation failed");
                 }
 
-                GraphPlaneHartmanListProp *color_lists = &get(
+                GraphPlaneP3ChooseListProp *color_lists = &get(
                     cases,
                     i
                 ).color_lists;
 
                 color_lists->len = n;
                 color_lists->ptr = aven_arena_create_array(
-                    GraphPlaneHartmanList,
+                    GraphPlaneP3ChooseList,
                     &loop_arena,
                     n
                 );
 
                 for (uint32_t j = 0; j < color_lists->len; j += 1) {
-                    GraphPlaneHartmanList list = { .len = 3 };
+                    GraphPlaneP3ChooseList list = { .len = 3 };
                     get(list, 0) = (uint8_t)(
                         1 + aven_rng_rand_bounded(rng, MAX_COLOR)
                     );
@@ -343,16 +343,18 @@ int main(void) {
             }
             {
                 AvenArena temp_arena = loop_arena;
+
+                size_t bfs_nruns = max(nruns / 10, 1);
         
                 __asm volatile("" ::: "memory");
                 AvenTimeInst start_inst = aven_time_now();
                 __asm volatile("" ::: "memory");
 
-                for (size_t k = 0; k < nruns; k += 1) {
+                for (size_t k = 0; k < bfs_nruns; k += 1) {
                     __asm volatile("" ::: "memory");
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
-                        get(cases, i).coloring = graph_plane_poh_bfs(
+                        get(cases, i).coloring = graph_plane_p3color_bfs(
                             get(cases, i).graph,
                             p,
                             q,
@@ -367,7 +369,8 @@ int main(void) {
                 __asm volatile("" ::: "memory");
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(cases.len * bfs_nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -411,7 +414,7 @@ int main(void) {
                     __asm volatile("" ::: "memory");
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
-                        get(cases, i).coloring = graph_plane_poh(
+                        get(cases, i).coloring = graph_plane_p3color(
                             get(cases, i).graph,
                             p,
                             q,
@@ -470,7 +473,7 @@ int main(void) {
                     __asm volatile("" ::: "memory");
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
-                        get(cases, i).coloring = graph_plane_poh_thread(
+                        get(cases, i).coloring = graph_plane_p3color_thread(
                             get(cases, i).graph,
                             p,
                             q,
@@ -532,7 +535,7 @@ int main(void) {
                     __asm volatile("" ::: "memory");
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
-                        get(cases, i).coloring = graph_plane_hartman(
+                        get(cases, i).coloring = graph_plane_p3choose(
                             get(cases, i).aug_graph,
                             get(cases, i).color_lists,
                             face,
@@ -553,7 +556,7 @@ int main(void) {
                 for (uint32_t i = 0; i < cases.len; i += 1) {
                     bool valid = true;
     
-                    GraphPlaneHartmanListProp color_lists = get(
+                    GraphPlaneP3ChooseListProp color_lists = get(
                         cases,
                         i
                     ).color_lists;
@@ -562,7 +565,7 @@ int main(void) {
                     // verify coloring is a list-coloring
                     for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
                         uint8_t v_color = get(coloring, v);
-                        GraphPlaneHartmanList v_colors = get(color_lists, v);
+                        GraphPlaneP3ChooseList v_colors = get(color_lists, v);
 
                         bool found = false;
                         for (uint32_t j = 0; j < v_colors.len; j += 1) {
@@ -621,7 +624,7 @@ int main(void) {
                     __asm volatile("" ::: "memory");
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
-                        get(cases, i).coloring = graph_plane_hartman_thread(
+                        get(cases, i).coloring = graph_plane_p3choose_thread(
                             get(cases, i).aug_graph,
                             get(cases, i).color_lists,
                             face,
@@ -644,7 +647,7 @@ int main(void) {
                 for (uint32_t i = 0; i < cases.len; i += 1) {
                     bool valid = true;
     
-                    GraphPlaneHartmanListProp color_lists = get(
+                    GraphPlaneP3ChooseListProp color_lists = get(
                         cases,
                         i
                     ).color_lists;
@@ -653,7 +656,7 @@ int main(void) {
                     // verify coloring is a list-coloring
                     for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
                         uint8_t v_color = get(coloring, v);
-                        GraphPlaneHartmanList v_colors = get(color_lists, v);
+                        GraphPlaneP3ChooseList v_colors = get(color_lists, v);
 
                         bool found = false;
                         for (uint32_t j = 0; j < v_colors.len; j += 1) {

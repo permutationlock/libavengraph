@@ -1,5 +1,5 @@
-#ifndef GRAPH_PLANE_HARTMAN_GEOMETRY_H
-#define GRAPH_PLANE_HARTMAN_GEOMETRY_H
+#ifndef GRAPH_PLANE_P3CHOOSE_GEOMETRY_H
+#define GRAPH_PLANE_P3CHOOSE_GEOMETRY_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -7,7 +7,7 @@
 
 #include <aven/gl/shape.h>
 
-#include "../hartman.h"
+#include "../p3choose.h"
 #include "../geometry.h"
 
 typedef struct {
@@ -15,32 +15,32 @@ typedef struct {
     Vec4 cycle_color;
     Vec4 py_color;
     Vec4 xp_color;    
-} GraphPlaneHartmanGeometryFrame;
+} GraphPlaneP3ChooseGeometryFrame;
 
 typedef struct {
     Slice(Vec4) colors;
-    GraphPlaneHartmanGeometryFrame active_frame;
-    GraphPlaneHartmanGeometryFrame inactive_frame;
+    GraphPlaneP3ChooseGeometryFrame active_frame;
+    GraphPlaneP3ChooseGeometryFrame inactive_frame;
     Vec4 outline_color;
     Vec4 uncolored_edge_color;
     Vec4 edge_color;
     float edge_thickness;
     float radius;
     float border_thickness;
-} GraphPlaneHartmanGeometryInfo;
+} GraphPlaneP3ChooseGeometryInfo;
 
-static inline void graph_plane_hartman_geometry_push_frame_active(
+static inline void graph_plane_p3choose_geometry_push_frame_active(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
     GraphPlaneEmbedding embedding,
-    GraphPlaneHartmanCtx *ctx,
-    GraphPlaneHartmanFrame *frame,
+    GraphPlaneP3ChooseCtx *ctx,
+    GraphPlaneP3ChooseFrame *frame,
     Aff2 trans,
     float radius,
     float edge_thickness,
-    GraphPlaneHartmanGeometryFrame *info
+    GraphPlaneP3ChooseGeometryFrame *info
 ) {
-    GraphPlaneHartmanVertex z_info = *graph_plane_hartman_vinfo(
+    GraphPlaneP3ChooseVertex z_info = *graph_plane_p3choose_vinfo(
         ctx,
         frame,
         frame->z
@@ -102,18 +102,18 @@ static inline void graph_plane_hartman_geometry_push_frame_active(
     }
 }
 
-static inline void graph_plane_hartman_geometry_push_frame_outline(
+static inline void graph_plane_p3choose_geometry_push_frame_outline(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
     GraphPlaneEmbedding embedding,
-    GraphPlaneHartmanCtx *ctx,
-    GraphPlaneHartmanFrame *frame,
+    GraphPlaneP3ChooseCtx *ctx,
+    GraphPlaneP3ChooseFrame *frame,
     Aff2 trans,
     float radius,
     float edge_thickness,
     float border_thickness,
     Vec4 outline_color,
-    GraphPlaneHartmanGeometryFrame *info
+    GraphPlaneP3ChooseGeometryFrame *info
 ) {
     uint32_t x_mark = get(ctx->marks, frame->x_info.mark);
     uint32_t y_mark = get(ctx->marks, frame->y_info.mark);
@@ -134,7 +134,7 @@ static inline void graph_plane_hartman_geometry_push_frame_outline(
         vec4_copy(cycle_edge_info.color, info->cycle_color);
 
         uint32_t v = frame->x;
-        GraphPlaneHartmanNeighbors v_nb = frame->x_info.nb;
+        GraphPlaneP3ChooseNeighbors v_nb = frame->x_info.nb;
         uint32_t v_mark = get(ctx->marks, frame->x_info.mark);
         do {
             GraphAugAdjList v_aug_adj = get(ctx->graph, v);
@@ -222,8 +222,8 @@ static inline void graph_plane_hartman_geometry_push_frame_outline(
 
             GraphAugAdjListNode vu_node = get(v_aug_adj, v_nb.last);
             uint32_t u = vu_node.vertex;
-            GraphPlaneHartmanVertex u_info =
-                *graph_plane_hartman_vinfo(ctx, frame, u);
+            GraphPlaneP3ChooseVertex u_info =
+                *graph_plane_p3choose_vinfo(ctx, frame, u);
             uint32_t u_mark = get(ctx->marks, u_info.mark);
             // GraphAugAdjList u_aug_adj = get(ctx->graph, u);
 
@@ -268,7 +268,7 @@ static inline void graph_plane_hartman_geometry_push_frame_outline(
                 .thickness = edge_thickness + border_thickness,
             };
             vec4_copy(active_edge_info.color, info->active_color);
-            GraphPlaneHartmanVertex *z_info = graph_plane_hartman_vinfo(
+            GraphPlaneP3ChooseVertex *z_info = graph_plane_p3choose_vinfo(
                 ctx,
                 frame,
                 frame->z
@@ -299,7 +299,7 @@ static inline void graph_plane_hartman_geometry_push_frame_outline(
 
         v = frame->x;
         do {
-            GraphPlaneHartmanVertex *v_info = graph_plane_hartman_vinfo(
+            GraphPlaneP3ChooseVertex *v_info = graph_plane_p3choose_vinfo(
                 ctx,
                 frame,
                 v
@@ -341,16 +341,16 @@ static inline void graph_plane_hartman_geometry_push_frame_outline(
     }
 }
 
-typedef Slice(GraphPlaneHartmanFrame) GraphPlaneHartmanFrameSlice;
+typedef Slice(GraphPlaneP3ChooseFrame) GraphPlaneP3ChooseFrameSlice;
 
-static inline void graph_plane_hartman_geometry_push_ctx(
+static inline void graph_plane_p3choose_geometry_push_ctx(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
     GraphPlaneEmbedding embedding,
-    GraphPlaneHartmanCtx *ctx,
-    GraphPlaneHartmanFrameSlice active_frames,
+    GraphPlaneP3ChooseCtx *ctx,
+    GraphPlaneP3ChooseFrameSlice active_frames,
     Aff2 trans,
-    GraphPlaneHartmanGeometryInfo *info
+    GraphPlaneP3ChooseGeometryInfo *info
 ) {
     // Draw all graph edges
     {
@@ -379,7 +379,7 @@ static inline void graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
-            graph_plane_hartman_geometry_push_frame_active(
+            graph_plane_p3choose_geometry_push_frame_active(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -393,7 +393,7 @@ static inline void graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
-            graph_plane_hartman_geometry_push_frame_outline(
+            graph_plane_p3choose_geometry_push_frame_outline(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -409,7 +409,7 @@ static inline void graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < active_frames.len; i += 1) {
-            graph_plane_hartman_geometry_push_frame_active(
+            graph_plane_p3choose_geometry_push_frame_active(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -423,7 +423,7 @@ static inline void graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < active_frames.len; i += 1) {
-            graph_plane_hartman_geometry_push_frame_outline(
+            graph_plane_p3choose_geometry_push_frame_outline(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -468,13 +468,13 @@ static inline void graph_plane_hartman_geometry_push_ctx(
 
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
             GraphAugAdjList v_adj = get(ctx->graph, v);
-            GraphPlaneHartmanList *v_colors = &get(ctx->color_lists, v);
+            GraphPlaneP3ChooseList *v_colors = &get(ctx->color_lists, v);
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
                 if (u < v) {
                     continue;
                 }
-                GraphPlaneHartmanList *u_colors = &get(
+                GraphPlaneP3ChooseList *u_colors = &get(
                     ctx->color_lists,
                     u
                 );
@@ -522,7 +522,7 @@ static inline void graph_plane_hartman_geometry_push_ctx(
             info->outline_color
         );
 
-        GraphPlaneHartmanList v_list = get(ctx->color_lists, v);
+        GraphPlaneP3ChooseList v_list = get(ctx->color_lists, v);
         switch (v_list.len) {
             case 1: {
                 Aff2 node_trans;
@@ -619,30 +619,30 @@ static inline void graph_plane_hartman_geometry_push_ctx(
 }
 
 // typedef struct {
-//     GraphPlaneHartmanCtx alg_ctx;
+//     GraphPlaneP3ChooseCtx alg_ctx;
 //     GraphPlaneEmbedding embedding;
 //     GraphPropUint8 visited_marks;
 //     int64_t timestep;
 //     AvenTimeInst last_update;
-// } GraphPlaneHartmanGeometryCtx;
+// } GraphPlaneP3ChooseGeometryCtx;
 
-// static inline void graph_plane_hartman_geometry_init(
+// static inline void graph_plane_p3choose_geometry_init(
 //     Graph graph,
 //     GraphPlaneEmbedding embedding,
-//     GraphPlaneHartmanList list_colors,
+//     GraphPlaneP3ChooseList list_colors,
 //     GraphSubset cwise_outer_face,
 //     int64_t timestep,
 //     AvenTimeInst now,
 //     AvenArena *arena
 // ) {
-//     GraphPlaneHartmanGeometryCtx ctx = {
+//     GraphPlaneP3ChooseGeometryCtx ctx = {
 //         .embedding = embedding,
 //         .visited_marks = { .len = embedding.len },
 //         .timestep = timestep,
 //         .last_update = now,
 //     };
 
-//     ctx.alg_ctx = graph_plane_hartman_init(
+//     ctx.alg_ctx = graph_plane_p3choose_init(
 //         list_colors,
 //         graph_aug(graph, arena),
 //         cwise_outer_face,
@@ -652,14 +652,14 @@ static inline void graph_plane_hartman_geometry_push_ctx(
 //     return ctx;
 // }
 
-// static inline void graph_plane_hartman_geometry_push_active_frame(
+// static inline void graph_plane_p3choose_geometry_push_active_frame(
 //     AvenGlShapeGeometry *geometry,
 //     AvenGlShapeRoundedGeometry *rounded_geometry,
-//     GraphPlaneHartmanGeometryCtx *ctx,
+//     GraphPlaneP3ChooseGeometryCtx *ctx,
 //     Aff2 trans,
 //     AvenTimeInst now
 // ) {
     
 // }
 
-#endif // GRAPH_PLANE_HARTMAN_GEOMETRY_H
+#endif // GRAPH_PLANE_P3CHOOSE_GEOMETRY_H
