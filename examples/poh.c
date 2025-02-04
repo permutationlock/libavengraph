@@ -42,7 +42,7 @@
 
 #define VERTEX_RADIUS 0.12f
 
-#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 10)
+#define BFS_TIMESTEP (AVEN_TIME_NSEC_PER_SEC / 2)
 #define DONE_WAIT_STEPS (5 * (AVEN_TIME_NSEC_PER_SEC / BFS_TIMESTEP))
 
 typedef struct {
@@ -124,6 +124,7 @@ static AvenGraphPlanePohGeometryInfo poh_geometry_info = {
         { 0.15f, 0.35f, 0.75f, 1.0f },
     },
     .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
+    .done_color = { 0.5f, 0.5f, 0.5f, 1.0f },
     .face_color = { 0.1f, 0.5f, 0.5f, 1.0f },
     .below_color = { 0.5f, 0.5f, 0.1f, 1.0f },
     .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
@@ -382,7 +383,8 @@ static void app_update(
                 &ctx.data.poh.ctx,
                 &ctx.data.poh.active_frames[0],
                 graph_transform,
-                &poh_geometry_info
+                &poh_geometry_info,
+                arena
             );
             break;
     }
