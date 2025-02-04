@@ -7,12 +7,12 @@
 
 #include <aven.h>
 #include <aven/arena.h>
-#include <aven/graph.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/gen.h>
-#include <aven/graph/plane/poh.h>
-#include <aven/graph/plane/poh_bfs.h>
-#include <aven/graph/plane/poh/tikz.h>
+#include <graph.h>
+#include <graph/plane.h>
+#include <graph/plane/gen.h>
+#include <graph/plane/poh.h>
+#include <graph/plane/poh_bfs.h>
+#include <graph/plane/poh/tikz.h>
 #include <aven/math.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -27,10 +27,10 @@
 #define ARENA_SIZE (4096 * 100)
 
 typedef struct {
-    AvenGraph graph;
-    AvenGraphPlaneEmbedding embedding;
-    AvenGraphPlanePohCtx ctx;
-    AvenGraphPropUint8 bfs_coloring;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
+    GraphPlanePohCtx ctx;
+    GraphPropUint8 bfs_coloring;
 } TestCase;
 
 static TestCase gen_test_case(
@@ -44,7 +44,7 @@ static TestCase gen_test_case(
 
     Aff2 ident;
     aff2_identity(ident);
-    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri(
+    GraphPlaneGenData data = graph_plane_gen_tri(
         vertices,
         ident,
         min_area,
@@ -59,17 +59,17 @@ static TestCase gen_test_case(
 
     uint32_t p_data[] = { 0, };
     uint32_t q_data[] = { 3, 2, 1 };
-    AvenGraphSubset p = slice_array(p_data);
-    AvenGraphSubset q = slice_array(q_data);
+    GraphSubset p = slice_array(p_data);
+    GraphSubset q = slice_array(q_data);
     
-    test_case.ctx = aven_graph_plane_poh_init(
+    test_case.ctx = graph_plane_poh_init(
         test_case.graph,
         p,
         q,
         arena
     );
 
-    test_case.bfs_coloring = aven_graph_plane_poh_bfs(
+    test_case.bfs_coloring = graph_plane_poh_bfs(
         test_case.graph,
         p,
         q,
@@ -114,14 +114,14 @@ int main(void) {
 
         bool cases[AVEN_GRAPH_PLANE_POH_CASE_MAX] = { 0 };
 
-        AvenGraphPlanePohFrameOptional frame =
-            aven_graph_plane_poh_next_frame(&test_case.ctx);
-        AvenGraphPlanePohFrame last_frame = { .u = (uint32_t)(-1) };
+        GraphPlanePohFrameOptional frame =
+            graph_plane_poh_next_frame(&test_case.ctx);
+        GraphPlanePohFrame last_frame = { .u = (uint32_t)(-1) };
 
         do {
             do {
                 cases[
-                    aven_graph_plane_poh_frame_case(
+                    graph_plane_poh_frame_case(
                         &test_case.ctx,
                         &frame.value
                     )
@@ -140,13 +140,13 @@ int main(void) {
                 }
                 last_frame = frame.value;
             } while (
-                !aven_graph_plane_poh_frame_step(
+                !graph_plane_poh_frame_step(
                     &test_case.ctx,
                     &frame.value
                 )
             );
 
-            frame = aven_graph_plane_poh_next_frame(&test_case.ctx);
+            frame = graph_plane_poh_next_frame(&test_case.ctx);
         } while (frame.valid);
 
         for (size_t i = 0; i < countof(cases); i += 1) {
@@ -175,9 +175,9 @@ int main(void) {
         &arena
     );
 
-    AvenGraphPlanePohFrameOptional frame =
-        aven_graph_plane_poh_next_frame(&test_case.ctx);
-    AvenGraphPlanePohFrame last_frame = { .u = (uint32_t)(-1) };
+    GraphPlanePohFrameOptional frame =
+        graph_plane_poh_next_frame(&test_case.ctx);
+    GraphPlanePohFrame last_frame = { .u = (uint32_t)(-1) };
 
     int count = 0;
     do {
@@ -192,7 +192,7 @@ int main(void) {
                     frame.value.u
                 ).len
             ) {
-                aven_graph_plane_poh_tikz(
+                graph_plane_poh_tikz(
                     test_case.embedding,
                     &test_case.ctx,
                     &frame.value,
@@ -208,10 +208,10 @@ int main(void) {
             }
             last_frame = frame.value;
         } while (
-            !aven_graph_plane_poh_frame_step(&test_case.ctx, &frame.value)
+            !graph_plane_poh_frame_step(&test_case.ctx, &frame.value)
         );
 
-        frame = aven_graph_plane_poh_next_frame(&test_case.ctx);
+        frame = graph_plane_poh_next_frame(&test_case.ctx);
     } while (frame.valid);
 
     return 0;

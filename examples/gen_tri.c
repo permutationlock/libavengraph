@@ -7,10 +7,10 @@
 #include <aven/fs.h>
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
-#include <aven/graph.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/gen.h>
-#include <aven/graph/plane/geometry.h>
+#include <graph.h>
+#include <graph/plane.h>
+#include <graph/plane/gen.h>
+#include <graph/plane/geometry.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -47,11 +47,11 @@ typedef struct {
 typedef struct {
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
-    AvenGraph graph;
-    AvenGraphPlaneEmbedding embedding;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
     AvenRngPcg pcg;
     AvenRng rng;
-    AvenGraphPlaneGenTriCtx tri_ctx;
+    GraphPlaneGenTriCtx tri_ctx;
     AvenArena pre_tri_ctx_arena;
     AvenTimeInst last_update;
     int64_t elapsed;
@@ -94,7 +94,7 @@ static void app_init(void) {
     ctx.rng = aven_rng_pcg(&ctx.pcg);
 
     ctx.pre_tri_ctx_arena = arena;
-    ctx.tri_ctx = aven_graph_plane_gen_tri_init(
+    ctx.tri_ctx = graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
         3.5f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.01f,
@@ -102,7 +102,7 @@ static void app_init(void) {
         &arena
     );
 
-    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+    GraphPlaneGenData data = graph_plane_gen_tri_data(
         &ctx.tri_ctx,
         &arena
     );
@@ -114,14 +114,14 @@ static void app_init(void) {
 
 static void app_reset(void) {
     arena = ctx.pre_tri_ctx_arena;
-    ctx.tri_ctx = aven_graph_plane_gen_tri_init(
+    ctx.tri_ctx = graph_plane_gen_tri_init(
         GRAPH_MAX_VERTICES,
         3.5f * AVEN_MATH_SQRT3_F * (VERTEX_RADIUS * VERTEX_RADIUS),
         0.01f,
         false,
         &arena
     );
-    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+    GraphPlaneGenData data = graph_plane_gen_tri_data(
         &ctx.tri_ctx,
         &arena
     );
@@ -163,11 +163,11 @@ static void app_update(
     while (ctx.elapsed >= BFS_TIMESTEP) {
         changed = true;
         ctx.elapsed -= BFS_TIMESTEP;
-        bool done = aven_graph_plane_gen_tri_step(&ctx.tri_ctx, ctx.rng);
+        bool done = graph_plane_gen_tri_step(&ctx.tri_ctx, ctx.rng);
         if (done) {
             changed = false;
             AvenArena temp_arena = arena;
-            AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+            GraphPlaneGenData data = graph_plane_gen_tri_data(
                 &ctx.tri_ctx,
                 &temp_arena
             );
@@ -191,7 +191,7 @@ static void app_update(
 
     if (changed) {
         AvenArena temp_arena = arena;
-        AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+        GraphPlaneGenData data = graph_plane_gen_tri_data(
             &ctx.tri_ctx,
             &temp_arena
         );
@@ -210,12 +210,12 @@ static void app_update(
         graph_transform
     );
 
-    AvenGraphPlaneGeometryEdge edge_info = {
+    GraphPlaneGeometryEdge edge_info = {
         .color = { 0.0f, 0.0f, 0.0f, 1.0f },
         .thickness = (VERTEX_RADIUS / 3.0f),
     };
 
-    aven_graph_plane_geometry_push_edges(
+    graph_plane_geometry_push_edges(
         &ctx.edge_shapes.geometry,
         ctx.graph,
         ctx.embedding,
@@ -223,14 +223,14 @@ static void app_update(
         &edge_info
     ); 
 
-    AvenGraphPlaneGeometryNode node_outline_info = {
+    GraphPlaneGeometryNode node_outline_info = {
         .color = { 0.0f, 0.0f, 0.0f, 1.0f },
         .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
         .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
 
-    AvenGraphPlaneGeometryNode node_empty_info = {
+    GraphPlaneGeometryNode node_empty_info = {
         .color = { 0.9f, 0.9f, 0.9f, 1.0f },
         .mat = {
             { 0.75f * VERTEX_RADIUS, 0.0f },
@@ -240,13 +240,13 @@ static void app_update(
         .roundness = 1.0f,
     };
 
-    aven_graph_plane_geometry_push_vertices(
+    graph_plane_geometry_push_vertices(
         &ctx.vertex_shapes.geometry,
         ctx.embedding,
         graph_transform,
         &node_outline_info
     );
-    aven_graph_plane_geometry_push_vertices(
+    graph_plane_geometry_push_vertices(
         &ctx.vertex_shapes.geometry,
         ctx.embedding,
         graph_transform,
@@ -254,11 +254,11 @@ static void app_update(
     );
 
     if (ctx.tri_ctx.active_face != AVEN_GRAPH_PLANE_GEN_FACE_INVALID) {
-        AvenGraphPlaneGenFace face = list_get(
+        GraphPlaneGenFace face = list_get(
             ctx.tri_ctx.faces,
             ctx.tri_ctx.active_face
         );
-        AvenGraphPlaneGeometryNode node_active_info = {
+        GraphPlaneGeometryNode node_active_info = {
             .color = { 0.9f, 0.1f, 0.1f, 1.0f },
             .mat = {
                 { 0.75f * VERTEX_RADIUS, 0.0f },
@@ -269,7 +269,7 @@ static void app_update(
         };
 
         for (uint32_t i = 0; i < 3; i += 1) {
-            aven_graph_plane_geometry_push_vertex(
+            graph_plane_geometry_push_vertex(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 face.vertices[i],
@@ -400,7 +400,7 @@ int main(void) {
     window = glfwCreateWindow(
         (int)width,
         (int)height,
-        "AvenGraph BFS Example",
+        "Graph BFS Example",
         NULL,
         NULL
     );

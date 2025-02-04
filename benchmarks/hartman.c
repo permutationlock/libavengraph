@@ -7,11 +7,11 @@
 #include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/math.h>
-#include <aven/graph.h>
-#include <aven/graph/path_color.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/hartman.h>
-#include <aven/graph/plane/gen.h>
+#include <graph.h>
+#include <graph/path_color.h>
+#include <graph/plane.h>
+#include <graph/plane/hartman.h>
+#include <graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -46,10 +46,10 @@ int main(void) {
         AvenArena temp_arena = arena;
 
         typedef struct {
-            AvenGraph graph;
-            AvenGraphAug aug_graph;
-            AvenGraphPlaneHartmanListProp color_lists;
-            AvenGraphPropUint8 coloring;
+            Graph graph;
+            GraphAug aug_graph;
+            GraphPlaneHartmanListProp color_lists;
+            GraphPropUint8 coloring;
         } CaseData;
 
         Slice(CaseData) cases = { .len = NGRAPHS * (MAX_VERTICES / n) };
@@ -60,7 +60,7 @@ int main(void) {
         );
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            get(cases, i).graph = aven_graph_plane_gen_tri_abs(
+            get(cases, i).graph = graph_plane_gen_tri_abs(
                 n,
                 rng,
                 &temp_arena
@@ -68,25 +68,25 @@ int main(void) {
             if (get(cases, i).graph.len != n) {
                 aven_panic("graph generation failed");
             }
-            get(cases, i).aug_graph = aven_graph_aug(
+            get(cases, i).aug_graph = graph_aug(
                 get(cases, i).graph,
                 &temp_arena
             );
 
-            AvenGraphPlaneHartmanListProp *color_lists = &get(
+            GraphPlaneHartmanListProp *color_lists = &get(
                 cases,
                 i
             ).color_lists;
 
             color_lists->len = n;
             color_lists->ptr = aven_arena_create_array(
-                AvenGraphPlaneHartmanList,
+                GraphPlaneHartmanList,
                 &temp_arena,
                 n
             );
 
             for (uint32_t j = 0; j < color_lists->len; j += 1) {
-                AvenGraphPlaneHartmanList list = { .len = 3 };
+                GraphPlaneHartmanList list = { .len = 3 };
                 get(list, 0) = (uint8_t)(
                     1 + aven_rng_rand_bounded(rng, MAX_COLOR)
                 );
@@ -116,14 +116,14 @@ int main(void) {
         }
 
         uint32_t face_data[3] = { 0, 1, 2 };
-        AvenGraphSubset face = slice_array(face_data);
+        GraphSubset face = slice_array(face_data);
 
         __asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
         __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            get(cases, i).coloring = aven_graph_plane_hartman(
+            get(cases, i).coloring = graph_plane_hartman(
                 get(cases, i).aug_graph,
                 get(cases, i).color_lists,
                 face,
@@ -142,16 +142,16 @@ int main(void) {
         for (uint32_t i = 0; i < cases.len; i += 1) {
             bool valid = true;
             
-            AvenGraphPlaneHartmanListProp color_lists = get(
+            GraphPlaneHartmanListProp color_lists = get(
                 cases,
                 i
             ).color_lists;
-            AvenGraphPropUint8 coloring = get(cases, i).coloring;
+            GraphPropUint8 coloring = get(cases, i).coloring;
 
             // verify coloring is a list-coloring
             for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
                 uint8_t v_color = get(coloring, v);
-                AvenGraphPlaneHartmanList v_colors = get(color_lists, v);
+                GraphPlaneHartmanList v_colors = get(color_lists, v);
 
                 bool found = false;
                 for (uint32_t j = 0; j < v_colors.len; j += 1) {
@@ -168,7 +168,7 @@ int main(void) {
 
             // verify coloring is a path coloring
             if (valid) {
-                valid = aven_graph_path_color_verify(
+                valid = graph_path_color_verify(
                     get(cases, i).graph,
                     get(cases, i).coloring,
                     temp_arena

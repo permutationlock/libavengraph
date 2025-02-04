@@ -17,12 +17,12 @@
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
 
-#include <aven/graph.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/poh.h>
-#include <aven/graph/plane/poh/geometry.h>
-#include <aven/graph/plane/gen.h>
-#include <aven/graph/plane/gen/geometry.h>
+#include <graph.h>
+#include <graph/plane.h>
+#include <graph/plane/poh.h>
+#include <graph/plane/poh/geometry.h>
+#include <graph/plane/gen.h>
+#include <graph/plane/gen/geometry.h>
 
 #include <GLFW/glfw3.h>
 
@@ -73,12 +73,12 @@ typedef enum {
 
 typedef union {
     struct {
-        AvenGraphPlaneGenTriCtx ctx;
-        AvenGraphPlaneGenTriData data;
+        GraphPlaneGenTriCtx ctx;
+        GraphPlaneGenTriData data;
     } gen;
     struct {
-        AvenGraphPlanePohCtx ctx;
-        AvenGraphPlanePohFrameOptional active_frames[1];
+        GraphPlanePohCtx ctx;
+        GraphPlanePohFrameOptional active_frames[1];
     } poh;
 } AppData;
 
@@ -88,8 +88,8 @@ typedef struct {
 #ifdef SHOW_VERTEX_LABELS
     VertexText vertex_text;
 #endif
-    AvenGraph graph;
-    AvenGraphPlaneEmbedding embedding;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
     AvenRngPcg pcg;
     AvenRng rng;
     AppState state;
@@ -106,7 +106,7 @@ static AvenGl gl;
 static AppCtx ctx;
 static AvenArena arena;
 
-static AvenGraphPlaneGenGeometryTriInfo gen_geometry_info = {
+static GraphPlaneGenGeometryTriInfo gen_geometry_info = {
     .node_color = { 0.9f, 0.9f, 0.9f, 1.0f },
     .outline_color = { 0.15f, 0.15f, 0.15f, 1.0f },
     .edge_color = { 0.15f, 0.15f, 0.15f, 1.0f },
@@ -116,7 +116,7 @@ static AvenGraphPlaneGenGeometryTriInfo gen_geometry_info = {
     .edge_thickness = VERTEX_RADIUS / 3.5f,
 };
 
-static AvenGraphPlanePohGeometryInfo poh_geometry_info = {
+static GraphPlanePohGeometryInfo poh_geometry_info = {
     .colors = {
         { 0.9f, 0.9f, 0.9f, 1.0f },
         { 0.75f, 0.25f, 0.25f, 1.0f },
@@ -137,7 +137,7 @@ static void app_reset(void) {
     arena = ctx.init_arena;
     ctx.state = APP_STATE_GEN;
 
-    ctx.data.gen.data = aven_graph_plane_gen_tri_data_alloc(
+    ctx.data.gen.data = graph_plane_gen_tri_data_alloc(
         GRAPH_MAX_VERTICES,
         &arena
     );
@@ -150,7 +150,7 @@ static void app_reset(void) {
 
     Aff2 area_transform;
     aff2_identity(area_transform);
-    ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
+    ctx.data.gen.ctx = graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
         1.33f * (VERTEX_RADIUS * VERTEX_RADIUS),
@@ -158,7 +158,7 @@ static void app_reset(void) {
         true,
         &arena
     );
-    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+    GraphPlaneGenData data = graph_plane_gen_tri_data(
         &ctx.data.gen.ctx,
         &ctx.data.gen.data
     );
@@ -269,12 +269,12 @@ static void app_update(
         bool done = false;
         switch (ctx.state) {
             case APP_STATE_GEN:
-                done = aven_graph_plane_gen_tri_step(
+                done = graph_plane_gen_tri_step(
                     &ctx.data.gen.ctx,
                     ctx.rng
                 );
 
-                AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+                GraphPlaneGenData data = graph_plane_gen_tri_data(
                     &ctx.data.gen.ctx,
                     &ctx.data.gen.data
                 );
@@ -288,7 +288,7 @@ static void app_update(
                     uint32_t q_data[3];
 
                     uint32_t p1 = aven_rng_rand_bounded(ctx.rng, 4);
-                    AvenGraphSubset p = {
+                    GraphSubset p = {
                         .len = 1 + aven_rng_rand_bounded(ctx.rng, 3),
                         .ptr = p_data,
                     };
@@ -297,18 +297,18 @@ static void app_update(
                     }
 
                     uint32_t q1 = (p1 + (uint32_t)p.len) % 4;
-                    AvenGraphSubset q = { .len = 4 - p.len, .ptr = q_data };
+                    GraphSubset q = { .len = 4 - p.len, .ptr = q_data };
                     for (uint32_t i = 0; i < q.len; i += 1) {
                         get(q, q.len - i - 1) = (q1 + i) % 4;
                     }
 
-                    ctx.data.poh.ctx = aven_graph_plane_poh_init(
+                    ctx.data.poh.ctx = graph_plane_poh_init(
                         ctx.graph,
                         p,
                         q,
                         &arena
                     );
-                    ctx.data.poh.active_frames[0] = aven_graph_plane_poh_next_frame(
+                    ctx.data.poh.active_frames[0] = graph_plane_poh_next_frame(
                         &ctx.data.poh.ctx
                     );
                 }
@@ -317,13 +317,13 @@ static void app_update(
                 bool all_done = true;
                 for (uint32_t i = 0; i < countof(ctx.data.poh.active_frames); i += 1) {
                     if (ctx.data.poh.active_frames[i].valid) {
-                        bool frame_done = aven_graph_plane_poh_frame_step(
+                        bool frame_done = graph_plane_poh_frame_step(
                             &ctx.data.poh.ctx,
                             &ctx.data.poh.active_frames[i].value
                         );
                         if (frame_done) {
                             if (ctx.data.poh.ctx.frames.len > 0) {
-                                ctx.data.poh.active_frames[i] = aven_graph_plane_poh_next_frame(
+                                ctx.data.poh.active_frames[i] = graph_plane_poh_next_frame(
                                     &ctx.data.poh.ctx
                                 );
                             } else {
@@ -332,7 +332,7 @@ static void app_update(
                         }
                         all_done = false;
                     } else if (ctx.data.poh.ctx.frames.len > 0) {
-                        ctx.data.poh.active_frames[i] = aven_graph_plane_poh_next_frame(
+                        ctx.data.poh.active_frames[i] = graph_plane_poh_next_frame(
                             &ctx.data.poh.ctx
                         );
                         all_done = false;
@@ -366,7 +366,7 @@ static void app_update(
 
     switch (ctx.state) {
         case APP_STATE_GEN:
-            aven_graph_plane_gen_geometry_push_tri_ctx(
+            graph_plane_gen_geometry_push_tri_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 &ctx.data.gen.ctx,
@@ -376,7 +376,7 @@ static void app_update(
             );
             break;
         case APP_STATE_POH:
-            aven_graph_plane_poh_geometry_push_ctx(
+            graph_plane_poh_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
@@ -390,7 +390,7 @@ static void app_update(
     }
 
 #ifdef SHOW_VERTEX_LABELS
-    aven_graph_plane_geometry_push_labels(
+    graph_plane_geometry_push_labels(
         &ctx.vertex_text.geometry,
         &ctx.vertex_text.font,
         ctx.embedding,
@@ -547,7 +547,7 @@ int main(void) {
     window = glfwCreateWindow(
         (int)width,
         (int)height,
-        "AvenGraph BFS Example",
+        "Graph BFS Example",
         NULL,
         NULL
     );

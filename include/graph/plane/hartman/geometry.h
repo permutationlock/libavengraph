@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_HARTMAN_GEOMETRY_H
-#define AVEN_GRAPH_PLANE_HARTMAN_GEOMETRY_H
+#ifndef GRAPH_PLANE_HARTMAN_GEOMETRY_H
+#define GRAPH_PLANE_HARTMAN_GEOMETRY_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -15,32 +15,32 @@ typedef struct {
     Vec4 cycle_color;
     Vec4 py_color;
     Vec4 xp_color;    
-} AvenGraphPlaneHartmanGeometryFrame;
+} GraphPlaneHartmanGeometryFrame;
 
 typedef struct {
     Slice(Vec4) colors;
-    AvenGraphPlaneHartmanGeometryFrame active_frame;
-    AvenGraphPlaneHartmanGeometryFrame inactive_frame;
+    GraphPlaneHartmanGeometryFrame active_frame;
+    GraphPlaneHartmanGeometryFrame inactive_frame;
     Vec4 outline_color;
     Vec4 uncolored_edge_color;
     Vec4 edge_color;
     float edge_thickness;
     float radius;
     float border_thickness;
-} AvenGraphPlaneHartmanGeometryInfo;
+} GraphPlaneHartmanGeometryInfo;
 
-static inline void aven_graph_plane_hartman_geometry_push_frame_active(
+static inline void graph_plane_hartman_geometry_push_frame_active(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPlaneHartmanCtx *ctx,
-    AvenGraphPlaneHartmanFrame *frame,
+    GraphPlaneEmbedding embedding,
+    GraphPlaneHartmanCtx *ctx,
+    GraphPlaneHartmanFrame *frame,
     Aff2 trans,
     float radius,
     float edge_thickness,
-    AvenGraphPlaneHartmanGeometryFrame *info
+    GraphPlaneHartmanGeometryFrame *info
 ) {
-    AvenGraphPlaneHartmanVertex z_info = *aven_graph_plane_hartman_vinfo(
+    GraphPlaneHartmanVertex z_info = *graph_plane_hartman_vinfo(
         ctx,
         frame,
         frame->z
@@ -69,19 +69,19 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_active(
         info->active_color
     );
 
-    AvenGraphPlaneGeometryEdge active_edge_info = {
+    GraphPlaneGeometryEdge active_edge_info = {
         .thickness = edge_thickness,
     };
     vec4_copy(active_edge_info.color, info->active_color);
 
-    AvenGraphAugAdjList z_adj = get(ctx->graph, frame->z);
+    GraphAugAdjList z_adj = get(ctx->graph, frame->z);
 
     if (z_info.nb.last != z_info.nb.first) {
         uint32_t v = get(
             z_adj,
-            aven_graph_aug_adj_next(z_adj, z_info.nb.first)
+            graph_aug_adj_next(z_adj, z_info.nb.first)
         ).vertex;
-        aven_graph_plane_geometry_push_edge(
+        graph_plane_geometry_push_edge(
             geometry,
             embedding,
             v,
@@ -91,7 +91,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_active(
         );
     } else {
         uint32_t u = get(z_adj, z_info.nb.first).vertex;
-        aven_graph_plane_geometry_push_edge(
+        graph_plane_geometry_push_edge(
             geometry,
             embedding,
             u,
@@ -102,42 +102,42 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_active(
     }
 }
 
-static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
+static inline void graph_plane_hartman_geometry_push_frame_outline(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPlaneHartmanCtx *ctx,
-    AvenGraphPlaneHartmanFrame *frame,
+    GraphPlaneEmbedding embedding,
+    GraphPlaneHartmanCtx *ctx,
+    GraphPlaneHartmanFrame *frame,
     Aff2 trans,
     float radius,
     float edge_thickness,
     float border_thickness,
     Vec4 outline_color,
-    AvenGraphPlaneHartmanGeometryFrame *info
+    GraphPlaneHartmanGeometryFrame *info
 ) {
     uint32_t x_mark = get(ctx->marks, frame->x_info.mark);
     uint32_t y_mark = get(ctx->marks, frame->y_info.mark);
 
     // Draw edges of outer cycle including active edge
     {
-        AvenGraphPlaneGeometryEdge xp_edge_info = {
+        GraphPlaneGeometryEdge xp_edge_info = {
             .thickness = edge_thickness + border_thickness,
         };
         vec4_copy(xp_edge_info.color, info->xp_color);
-        AvenGraphPlaneGeometryEdge py_edge_info = {
+        GraphPlaneGeometryEdge py_edge_info = {
             .thickness = edge_thickness + border_thickness,
         };
         vec4_copy(py_edge_info.color, info->py_color);
-        AvenGraphPlaneGeometryEdge cycle_edge_info = {
+        GraphPlaneGeometryEdge cycle_edge_info = {
             .thickness = edge_thickness + border_thickness,
         };
         vec4_copy(cycle_edge_info.color, info->cycle_color);
 
         uint32_t v = frame->x;
-        AvenGraphPlaneHartmanNeighbors v_nb = frame->x_info.nb;
+        GraphPlaneHartmanNeighbors v_nb = frame->x_info.nb;
         uint32_t v_mark = get(ctx->marks, frame->x_info.mark);
         do {
-            AvenGraphAugAdjList v_aug_adj = get(ctx->graph, v);
+            GraphAugAdjList v_aug_adj = get(ctx->graph, v);
             Vec2 v_pos;
             vec2_copy(v_pos, get(embedding, v));
             aff2_transform(v_pos, trans, v_pos);
@@ -220,17 +220,17 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                 );
             }
 
-            AvenGraphAugAdjListNode vu_node = get(v_aug_adj, v_nb.last);
+            GraphAugAdjListNode vu_node = get(v_aug_adj, v_nb.last);
             uint32_t u = vu_node.vertex;
-            AvenGraphPlaneHartmanVertex u_info =
-                *aven_graph_plane_hartman_vinfo(ctx, frame, u);
+            GraphPlaneHartmanVertex u_info =
+                *graph_plane_hartman_vinfo(ctx, frame, u);
             uint32_t u_mark = get(ctx->marks, u_info.mark);
-            // AvenGraphAugAdjList u_aug_adj = get(ctx->graph, u);
+            // GraphAugAdjList u_aug_adj = get(ctx->graph, u);
 
             assert(u_mark != 0);
 
             if (u_mark == v_mark and u_mark == y_mark) {
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     u,
@@ -239,7 +239,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                     &py_edge_info
                 );
             } else if (u_mark == v_mark and u_mark == x_mark) {
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     u,
@@ -248,7 +248,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
                     &xp_edge_info
                 );
             } else {
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     u,
@@ -264,25 +264,25 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
         } while (v != frame->x);
 
         {
-            AvenGraphPlaneGeometryEdge active_edge_info = {
+            GraphPlaneGeometryEdge active_edge_info = {
                 .thickness = edge_thickness + border_thickness,
             };
             vec4_copy(active_edge_info.color, info->active_color);
-            AvenGraphPlaneHartmanVertex *z_info = aven_graph_plane_hartman_vinfo(
+            GraphPlaneHartmanVertex *z_info = graph_plane_hartman_vinfo(
                 ctx,
                 frame,
                 frame->z
             );
-            AvenGraphAugAdjList z_adj = get(ctx->graph, frame->z);
+            GraphAugAdjList z_adj = get(ctx->graph, frame->z);
             uint32_t u = get(z_adj, z_info->nb.first).vertex;
             if (z_info->nb.first != z_info->nb.last) {
                 u = get(
                     z_adj,
-                    aven_graph_aug_adj_next(z_adj, z_info->nb.first)
+                    graph_aug_adj_next(z_adj, z_info->nb.first)
                 ).vertex;
             }
 
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
                 frame->z,
@@ -292,29 +292,29 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
             );
         }
 
-        AvenGraphPlaneGeometryEdge edge_info = {
+        GraphPlaneGeometryEdge edge_info = {
             .thickness = edge_thickness,
         };
         vec4_copy(edge_info.color, outline_color);
 
         v = frame->x;
         do {
-            AvenGraphPlaneHartmanVertex *v_info = aven_graph_plane_hartman_vinfo(
+            GraphPlaneHartmanVertex *v_info = graph_plane_hartman_vinfo(
                 ctx,
                 frame,
                 v
             );
-            AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+            GraphAugAdjList v_adj = get(ctx->graph, v);
             for (
                 uint32_t i = v_info->nb.first;
                 i != v_info->nb.last;
-                i = aven_graph_aug_adj_next(v_adj, i)
+                i = graph_aug_adj_next(v_adj, i)
             ) {
                 uint32_t u = get(v_adj, i).vertex;
                 // if (u < v) {
                 //     continue;
                 // }
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     u,
@@ -326,7 +326,7 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
             if (v_info->nb.first == v_info->nb.last) {
                 uint32_t u = get(v_adj, v_info->nb.last).vertex;
                 // if (u >= v) {
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     u,
@@ -341,33 +341,33 @@ static inline void aven_graph_plane_hartman_geometry_push_frame_outline(
     }
 }
 
-typedef Slice(AvenGraphPlaneHartmanFrame) AvenGraphPlaneHartmanFrameSlice;
+typedef Slice(GraphPlaneHartmanFrame) GraphPlaneHartmanFrameSlice;
 
-static inline void aven_graph_plane_hartman_geometry_push_ctx(
+static inline void graph_plane_hartman_geometry_push_ctx(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPlaneHartmanCtx *ctx,
-    AvenGraphPlaneHartmanFrameSlice active_frames,
+    GraphPlaneEmbedding embedding,
+    GraphPlaneHartmanCtx *ctx,
+    GraphPlaneHartmanFrameSlice active_frames,
     Aff2 trans,
-    AvenGraphPlaneHartmanGeometryInfo *info
+    GraphPlaneHartmanGeometryInfo *info
 ) {
     // Draw all graph edges
     {
-        AvenGraphPlaneGeometryEdge edge_info = {
+        GraphPlaneGeometryEdge edge_info = {
             .thickness = info->edge_thickness,
         };
 
         vec4_copy(edge_info.color, info->uncolored_edge_color);
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+            GraphAugAdjList v_adj = get(ctx->graph, v);
 
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
                 if (u < v) {
                     continue;
                 }
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     get(v_adj, i).vertex,
@@ -379,7 +379,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
-            aven_graph_plane_hartman_geometry_push_frame_active(
+            graph_plane_hartman_geometry_push_frame_active(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -393,7 +393,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
-            aven_graph_plane_hartman_geometry_push_frame_outline(
+            graph_plane_hartman_geometry_push_frame_outline(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -409,7 +409,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < active_frames.len; i += 1) {
-            aven_graph_plane_hartman_geometry_push_frame_active(
+            graph_plane_hartman_geometry_push_frame_active(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -423,7 +423,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < active_frames.len; i += 1) {
-            aven_graph_plane_hartman_geometry_push_frame_outline(
+            graph_plane_hartman_geometry_push_frame_outline(
                 geometry,
                 rounded_geometry,
                 embedding,
@@ -440,7 +440,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
 
         vec4_copy(edge_info.color, info->edge_color);
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            AvenGraphAugAdjList v_adj = get(ctx->graph, v);
+            GraphAugAdjList v_adj = get(ctx->graph, v);
 
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
@@ -455,7 +455,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                     continue;
                 }
 
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
                     get(v_adj, i).vertex,
@@ -467,14 +467,14 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
         }
 
         for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            AvenGraphAugAdjList v_adj = get(ctx->graph, v);
-            AvenGraphPlaneHartmanList *v_colors = &get(ctx->color_lists, v);
+            GraphAugAdjList v_adj = get(ctx->graph, v);
+            GraphPlaneHartmanList *v_colors = &get(ctx->color_lists, v);
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
                 if (u < v) {
                     continue;
                 }
-                AvenGraphPlaneHartmanList *u_colors = &get(
+                GraphPlaneHartmanList *u_colors = &get(
                     ctx->color_lists,
                     u
                 );
@@ -487,7 +487,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
                         edge_info.color,
                         get(info->colors, get(*u_colors, 0))
                     );
-                    aven_graph_plane_geometry_push_edge(
+                    graph_plane_geometry_push_edge(
                         geometry,
                         embedding,
                         u,
@@ -522,7 +522,7 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
             info->outline_color
         );
 
-        AvenGraphPlaneHartmanList v_list = get(ctx->color_lists, v);
+        GraphPlaneHartmanList v_list = get(ctx->color_lists, v);
         switch (v_list.len) {
             case 1: {
                 Aff2 node_trans;
@@ -619,32 +619,32 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
 }
 
 // typedef struct {
-//     AvenGraphPlaneHartmanCtx alg_ctx;
-//     AvenGraphPlaneEmbedding embedding;
-//     AvenGraphPropUint8 visited_marks;
+//     GraphPlaneHartmanCtx alg_ctx;
+//     GraphPlaneEmbedding embedding;
+//     GraphPropUint8 visited_marks;
 //     int64_t timestep;
 //     AvenTimeInst last_update;
-// } AvenGraphPlaneHartmanGeometryCtx;
+// } GraphPlaneHartmanGeometryCtx;
 
-// static inline void aven_graph_plane_hartman_geometry_init(
-//     AvenGraph graph,
-//     AvenGraphPlaneEmbedding embedding,
-//     AvenGraphPlaneHartmanList list_colors,
-//     AvenGraphSubset cwise_outer_face,
+// static inline void graph_plane_hartman_geometry_init(
+//     Graph graph,
+//     GraphPlaneEmbedding embedding,
+//     GraphPlaneHartmanList list_colors,
+//     GraphSubset cwise_outer_face,
 //     int64_t timestep,
 //     AvenTimeInst now,
 //     AvenArena *arena
 // ) {
-//     AvenGraphPlaneHartmanGeometryCtx ctx = {
+//     GraphPlaneHartmanGeometryCtx ctx = {
 //         .embedding = embedding,
 //         .visited_marks = { .len = embedding.len },
 //         .timestep = timestep,
 //         .last_update = now,
 //     };
 
-//     ctx.alg_ctx = aven_graph_plane_hartman_init(
+//     ctx.alg_ctx = graph_plane_hartman_init(
 //         list_colors,
-//         aven_graph_aug(graph, arena),
+//         graph_aug(graph, arena),
 //         cwise_outer_face,
 //         arena
 //     );
@@ -652,14 +652,14 @@ static inline void aven_graph_plane_hartman_geometry_push_ctx(
 //     return ctx;
 // }
 
-// static inline void aven_graph_plane_hartman_geometry_push_active_frame(
+// static inline void graph_plane_hartman_geometry_push_active_frame(
 //     AvenGlShapeGeometry *geometry,
 //     AvenGlShapeRoundedGeometry *rounded_geometry,
-//     AvenGraphPlaneHartmanGeometryCtx *ctx,
+//     GraphPlaneHartmanGeometryCtx *ctx,
 //     Aff2 trans,
 //     AvenTimeInst now
 // ) {
     
 // }
 
-#endif // AVEN_GRAPH_PLANE_HARTMAN_GEOMETRY_H
+#endif // GRAPH_PLANE_HARTMAN_GEOMETRY_H

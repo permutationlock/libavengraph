@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_HARTMAN_TIKZ_H
-#define AVEN_GRAPH_PLANE_HARTMAN_TIKZ_H
+#ifndef GRAPH_PLANE_HARTMAN_TIKZ_H
+#define GRAPH_PLANE_HARTMAN_TIKZ_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -10,10 +10,10 @@
 
 #include <stdio.h>
 
-static inline void aven_graph_plane_poh_tikz(
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPlanePohCtx *ctx,
-    AvenGraphPlanePohFrame *frame,
+static inline void graph_plane_poh_tikz(
+    GraphPlaneEmbedding embedding,
+    GraphPlanePohCtx *ctx,
+    GraphPlanePohFrame *frame,
     Vec2 dim_cm,
     AvenArena temp_arena
 ) {
@@ -54,7 +54,7 @@ static inline void aven_graph_plane_poh_tikz(
         float dir_score[8] = { 0 };
         float dir_bonus[8] = { 0 };
 
-        AvenGraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+        GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
 
@@ -109,7 +109,7 @@ static inline void aven_graph_plane_poh_tikz(
         } else {
             bool done = false;
             for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                AvenGraphPlanePohFrame *stack_frame = &get(ctx->frames, i);
+                GraphPlanePohFrame *stack_frame = &get(ctx->frames, i);
 
                 if (v == stack_frame->u) {
                     printf("$u_{%lu}$", (unsigned long) i);
@@ -119,7 +119,7 @@ static inline void aven_graph_plane_poh_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    AvenGraphPlanePohFrame *stack_frame = &get(
+                    GraphPlanePohFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -133,7 +133,7 @@ static inline void aven_graph_plane_poh_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    AvenGraphPlanePohFrame *stack_frame = &get(
+                    GraphPlanePohFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -147,7 +147,7 @@ static inline void aven_graph_plane_poh_tikz(
             }
             if (!done) {
                 for (size_t i = 0; i < ctx->frames.len; i += 1) {
-                    AvenGraphPlanePohFrame *stack_frame = &get(
+                    GraphPlanePohFrame *stack_frame = &get(
                         ctx->frames,
                         i
                     );
@@ -164,12 +164,12 @@ static inline void aven_graph_plane_poh_tikz(
         printf("};\n");
     }
 
-    typedef Slice(bool) AvenGraphPlanePohTikzDrawSlice;
-    typedef Slice(AvenGraphPlanePohTikzDrawSlice)
-        AvenGraphPlanePohTikzDrawGraph;
+    typedef Slice(bool) GraphPlanePohTikzDrawSlice;
+    typedef Slice(GraphPlanePohTikzDrawSlice)
+        GraphPlanePohTikzDrawGraph;
 
-    AvenGraphPlanePohTikzDrawGraph draw_graph = aven_arena_create_slice(
-        AvenGraphPlanePohTikzDrawSlice,
+    GraphPlanePohTikzDrawGraph draw_graph = aven_arena_create_slice(
+        GraphPlanePohTikzDrawSlice,
         &temp_arena,
         ctx->vertex_info.len
     );
@@ -204,7 +204,7 @@ static inline void aven_graph_plane_poh_tikz(
 
     printf("\t\\begin{pgfonlayer}{bg}\n"); 
     {
-        AvenGraphPlanePohVertex fu_info = get(ctx->vertex_info, frame->u);
+        GraphPlanePohVertex fu_info = get(ctx->vertex_info, frame->u);
         uint32_t n_index = frame->u_nb_first + frame->edge_index;
         if (frame->edge_index != 0) {
             n_index -= 1;
@@ -221,7 +221,7 @@ static inline void aven_graph_plane_poh_tikz(
                 (unsigned int)n
             );
         } else {
-            AvenGraphPlanePohVertex n_info = get(ctx->vertex_info, n);
+            GraphPlanePohVertex n_info = get(ctx->vertex_info, n);
             for (uint32_t i = 0; i < n_info.len; i += 1) {
                 if (get(n_info, i) == frame->u) {
                     get(get(draw_graph, n), i) = true;
@@ -236,7 +236,7 @@ static inline void aven_graph_plane_poh_tikz(
         }
     }
 
-    AvenGraphPlanePohFrame *cur_frame = frame;
+    GraphPlanePohFrame *cur_frame = frame;
     uint32_t frame_index = (uint32_t)0 - (uint32_t)1;
     do {
         frame_index += 1;
@@ -246,8 +246,8 @@ static inline void aven_graph_plane_poh_tikz(
 
         get(visited, cur_frame->u) = mark;
 
-        AvenGraphPlanePohVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
-        AvenGraphPlanePohTikzDrawSlice cfu_drawn = get(
+        GraphPlanePohVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
+        GraphPlanePohTikzDrawSlice cfu_drawn = get(
             draw_graph,
             cur_frame->u
         );
@@ -300,12 +300,12 @@ static inline void aven_graph_plane_poh_tikz(
 
         while (vertices.used > 0) {
             uint32_t v = queue_pop(vertices);
-            AvenGraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-            AvenGraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+            GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
-                AvenGraphPlanePohVertex u_info = get(ctx->vertex_info, u); 
+                GraphPlanePohVertex u_info = get(ctx->vertex_info, u); 
 
                 if (u_info.mark <= 0) {
                     if (get(visited, u) != mark) {
@@ -334,8 +334,8 @@ static inline void aven_graph_plane_poh_tikz(
         } 
 
         for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-            AvenGraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-            AvenGraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+            GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
@@ -343,12 +343,12 @@ static inline void aven_graph_plane_poh_tikz(
                     continue;
                 }
 
-                uint32_t i_prev = aven_graph_adj_prev(
-                    (AvenGraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
+                uint32_t i_prev = graph_adj_prev(
+                    (GraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
                     i
                 );
-                uint32_t i_next = aven_graph_adj_next(
-                    (AvenGraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
+                uint32_t i_next = graph_adj_next(
+                    (GraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
                     i
                 );
 
@@ -419,8 +419,8 @@ static inline void aven_graph_plane_poh_tikz(
     } while (frame_index < ctx->frames.len);
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        AvenGraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
-        AvenGraphPlanePohVertex v_info = get(ctx->vertex_info, v);
+        GraphPlanePohTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlanePohVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
@@ -440,4 +440,4 @@ static inline void aven_graph_plane_poh_tikz(
     printf("\\end{tikzpicture}\n");
 }
 
-#endif // AVEN_GRAPH_PLANE_HARTMAN_TIKZ_H
+#endif // GRAPH_PLANE_HARTMAN_TIKZ_H

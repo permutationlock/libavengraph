@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_GEOMETRY_H
-#define AVEN_GRAPH_PLANE_GEOMETRY_H
+#ifndef GRAPH_PLANE_GEOMETRY_H
+#define GRAPH_PLANE_GEOMETRY_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -12,30 +12,30 @@
 #include "../plane.h"
 
 typedef enum {
-    AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-    AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_TRIANGLE,
-} AvenGraphPlaneGeometryShape;
+    GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+    GRAPH_PLANE_GEOMETRY_SHAPE_TRIANGLE,
+} GraphPlaneGeometryShape;
 
 typedef struct {
     Vec4 color;
     Mat2 mat;
-    AvenGraphPlaneGeometryShape shape;
+    GraphPlaneGeometryShape shape;
     float roundness;
-} AvenGraphPlaneGeometryNode;
-typedef Slice(AvenGraphPlaneGeometryNode) AvenGraphPlaneGeometryNodeSlice;
+} GraphPlaneGeometryNode;
+typedef Slice(GraphPlaneGeometryNode) GraphPlaneGeometryNodeSlice;
 
 typedef struct {
     Vec4 color;
     float thickness;
-} AvenGraphPlaneGeometryEdge;
-typedef Slice(AvenGraphPlaneGeometryEdge) AvenGraphPlaneGeometryEdgeSlice;
+} GraphPlaneGeometryEdge;
+typedef Slice(GraphPlaneGeometryEdge) GraphPlaneGeometryEdgeSlice;
 
-static inline void aven_graph_plane_geometry_push_vertex(
+static inline void graph_plane_geometry_push_vertex(
     AvenGlShapeRoundedGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
+    GraphPlaneEmbedding embedding,
     uint32_t v,
     Aff2 trans,
-    AvenGraphPlaneGeometryNode *draw_info
+    GraphPlaneGeometryNode *draw_info
 ) {
     Vec2 node_pos;
     aff2_transform(node_pos, trans, get(embedding, v));
@@ -46,7 +46,7 @@ static inline void aven_graph_plane_geometry_push_vertex(
     aff2_add_vec2(node_trans, node_trans, node_pos);
 
     switch (draw_info->shape) {
-        case AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_TRIANGLE:
+        case GRAPH_PLANE_GEOMETRY_SHAPE_TRIANGLE:
             aven_gl_shape_rounded_geometry_push_triangle_isoceles(
                 geometry,
                 node_trans,
@@ -54,7 +54,7 @@ static inline void aven_graph_plane_geometry_push_vertex(
                 draw_info->color
             );
             break;
-        case AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE:
+        case GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE:
             aven_gl_shape_rounded_geometry_push_square(
                 geometry,
                 node_trans,
@@ -65,14 +65,14 @@ static inline void aven_graph_plane_geometry_push_vertex(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_vertices(
+static inline void graph_plane_geometry_push_vertices(
     AvenGlShapeRoundedGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
+    GraphPlaneEmbedding embedding,
     Aff2 trans,
-    AvenGraphPlaneGeometryNode *draw_info
+    GraphPlaneGeometryNode *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        aven_graph_plane_geometry_push_vertex(
+        graph_plane_geometry_push_vertex(
             geometry,
             embedding,
             v,
@@ -82,13 +82,13 @@ static inline void aven_graph_plane_geometry_push_vertices(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_edge(
+static inline void graph_plane_geometry_push_edge(
     AvenGlShapeGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
+    GraphPlaneEmbedding embedding,
     uint32_t u,
     uint32_t v,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     Vec2 p1;
     aff2_transform(p1, trans, get(embedding, u));
@@ -119,22 +119,22 @@ static inline void aven_graph_plane_geometry_push_edge(
     );
 }
 
-static inline void aven_graph_plane_geometry_push_edges(
+static inline void graph_plane_geometry_push_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraph graph,
-    AvenGraphPlaneEmbedding embedding,
+    Graph graph,
+    GraphPlaneEmbedding embedding,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t u = 0; u < graph.len; u += 1) {
-        AvenGraphAdjList u_neighbors = get(graph, u);
+        GraphAdjList u_neighbors = get(graph, u);
         for (uint32_t i = 0; i < u_neighbors.len; i += 1) {
             uint32_t v = get(u_neighbors, i);
             if (v < u) {
                 continue;
             }
 
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
                 u,
@@ -146,10 +146,10 @@ static inline void aven_graph_plane_geometry_push_edges(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_label(
+static inline void graph_plane_geometry_push_label(
     AvenGlTextGeometry *geometry,
     AvenGlTextFont * font,
-    AvenGraphPlaneEmbedding embedding,
+    GraphPlaneEmbedding embedding,
     uint32_t v,
     Aff2 trans,
     Vec2 label_offset,
@@ -177,10 +177,10 @@ static inline void aven_graph_plane_geometry_push_label(
     );
 }
 
-static inline void aven_graph_plane_geometry_push_labels(
+static inline void graph_plane_geometry_push_labels(
     AvenGlTextGeometry *geometry,
     AvenGlTextFont * font,
-    AvenGraphPlaneEmbedding embedding,
+    GraphPlaneEmbedding embedding,
     Aff2 trans,
     Vec2 label_offset,
     float scale,
@@ -188,7 +188,7 @@ static inline void aven_graph_plane_geometry_push_labels(
     AvenArena arena
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        aven_graph_plane_geometry_push_label(
+        graph_plane_geometry_push_label(
             geometry,
             font,
             embedding,
@@ -202,12 +202,12 @@ static inline void aven_graph_plane_geometry_push_labels(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_subset_vertices(
+static inline void graph_plane_geometry_push_subset_vertices(
     AvenGlShapeRoundedGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphSubset vertices,
+    GraphPlaneEmbedding embedding,
+    GraphSubset vertices,
     Aff2 trans,
-    AvenGraphPlaneGeometryNode *draw_info
+    GraphPlaneGeometryNode *draw_info
 ) {
     if (vertices.len == 0) {
         return;
@@ -215,7 +215,7 @@ static inline void aven_graph_plane_geometry_push_subset_vertices(
 
     for (size_t i = 0; i < vertices.len; i += 1) {
         uint32_t v = get(vertices, i);
-        aven_graph_plane_geometry_push_vertex(
+        graph_plane_geometry_push_vertex(
             geometry,
             embedding,
             v,
@@ -225,12 +225,12 @@ static inline void aven_graph_plane_geometry_push_subset_vertices(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_path_edges(
+static inline void graph_plane_geometry_push_path_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphSubset path,
+    GraphPlaneEmbedding embedding,
+    GraphSubset path,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     if (path.len < 2) {
         return;
@@ -240,7 +240,7 @@ static inline void aven_graph_plane_geometry_push_path_edges(
         uint32_t u = get(path, i);
         uint32_t v = get(path, i + 1);
 
-        aven_graph_plane_geometry_push_edge(
+        graph_plane_geometry_push_edge(
             geometry,
             embedding,
             u,
@@ -251,18 +251,18 @@ static inline void aven_graph_plane_geometry_push_path_edges(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_cycle_edges(
+static inline void graph_plane_geometry_push_cycle_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphSubset cycle,
+    GraphPlaneEmbedding embedding,
+    GraphSubset cycle,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     if (cycle.len < 2) {
         return;
     }
 
-    aven_graph_plane_geometry_push_path_edges(
+    graph_plane_geometry_push_path_edges(
         geometry,
         embedding,
         cycle,
@@ -271,7 +271,7 @@ static inline void aven_graph_plane_geometry_push_cycle_edges(
     );
 
     if (cycle.len > 2) {
-        aven_graph_plane_geometry_push_edge(
+        graph_plane_geometry_push_edge(
             geometry,
             embedding,
             get(cycle, 0),
@@ -282,20 +282,20 @@ static inline void aven_graph_plane_geometry_push_cycle_edges(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_marked_vertices(
+static inline void graph_plane_geometry_push_marked_vertices(
     AvenGlShapeRoundedGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint32 marking,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint32 marking,
     uint32_t mark,
     Aff2 trans,
-    AvenGraphPlaneGeometryNode *draw_info
+    GraphPlaneGeometryNode *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
         if (get(marking, v) != mark) {
             continue;
         }
 
-        aven_graph_plane_geometry_push_vertex(
+        graph_plane_geometry_push_vertex(
             geometry,
             embedding,
             v,
@@ -305,28 +305,28 @@ static inline void aven_graph_plane_geometry_push_marked_vertices(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_marked_edges(
+static inline void graph_plane_geometry_push_marked_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraph graph,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint32 marking,
+    Graph graph,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint32 marking,
     uint32_t mark,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t u = 0; u < graph.len; u += 1) {
         if (get(marking, u) != mark) {
             continue;
         }
 
-        AvenGraphAdjList adj = get(graph, u);
+        GraphAdjList adj = get(graph, u);
         for (uint32_t i = 0; i < adj.len; i += 1) {
             uint32_t v = get(adj, i);
             if (get(marking, v) != mark) {
                 continue;
             }
 
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
                 u,
@@ -338,20 +338,20 @@ static inline void aven_graph_plane_geometry_push_marked_edges(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_unmarked_vertices(
+static inline void graph_plane_geometry_push_unmarked_vertices(
     AvenGlShapeRoundedGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint32 marking,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint32 marking,
     uint32_t mark,
     Aff2 trans,
-    AvenGraphPlaneGeometryNode *draw_info
+    GraphPlaneGeometryNode *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
         if (get(marking, v) == mark) {
             continue;
         }
 
-        aven_graph_plane_geometry_push_vertex(
+        graph_plane_geometry_push_vertex(
             geometry,
             embedding,
             v,
@@ -361,28 +361,28 @@ static inline void aven_graph_plane_geometry_push_unmarked_vertices(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_unmarked_edges(
+static inline void graph_plane_geometry_push_unmarked_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraph graph,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint32 marking,
+    Graph graph,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint32 marking,
     uint32_t mark,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t u = 0; u < graph.len; u += 1) {
         if (get(marking, u) == mark) {
             continue;
         }
 
-        AvenGraphAdjList adj = get(graph, u);
+        GraphAdjList adj = get(graph, u);
         for (uint32_t i = 0; i < adj.len; i += 1) {
             uint32_t v = get(adj, i);
             if (get(marking, v) == mark) {
                 continue;
             }
 
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
                 u,
@@ -394,10 +394,10 @@ static inline void aven_graph_plane_geometry_push_unmarked_edges(
     }
 }
 
-static inline void aven_graph_plane_geometry_subgraph_transform(
+static inline void graph_plane_geometry_subgraph_transform(
     Aff2 dest,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphSubset vertices
+    GraphPlaneEmbedding embedding,
+    GraphSubset vertices
 ) {
     assert(vertices.len > 0);
 
@@ -436,15 +436,15 @@ static inline void aven_graph_plane_geometry_subgraph_transform(
     );
 }
 
-static inline void aven_graph_plane_geometry_push_colored_vertices(
+static inline void graph_plane_geometry_push_colored_vertices(
     AvenGlShapeRoundedGeometry *geometry,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint8 coloring,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint8 coloring,
     Aff2 trans,
-    AvenGraphPlaneGeometryNodeSlice draw_infos
+    GraphPlaneGeometryNodeSlice draw_infos
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        aven_graph_plane_geometry_push_vertex(
+        graph_plane_geometry_push_vertex(
             geometry,
             embedding,
             v,
@@ -454,20 +454,20 @@ static inline void aven_graph_plane_geometry_push_colored_vertices(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_colored_edges(
+static inline void graph_plane_geometry_push_colored_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraph graph,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint8 coloring,
+    Graph graph,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint8 coloring,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdgeSlice draw_infos
+    GraphPlaneGeometryEdgeSlice draw_infos
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
         uint8_t v_color = get(coloring, v);
         if (v_color == 0) {
             continue;
         }
-        AvenGraphAdjList v_adj = get(graph, v);
+        GraphAdjList v_adj = get(graph, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
             uint32_t u = get(v_adj, i);
             if (v < u) {
@@ -476,7 +476,7 @@ static inline void aven_graph_plane_geometry_push_colored_edges(
             if (get(coloring, u) != v_color) {
                 continue;
             }
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
                 v,
@@ -488,17 +488,17 @@ static inline void aven_graph_plane_geometry_push_colored_edges(
     }
 }
 
-static inline void aven_graph_plane_geometry_push_uncolored_edges(
+static inline void graph_plane_geometry_push_uncolored_edges(
     AvenGlShapeGeometry *geometry,
-    AvenGraph graph,
-    AvenGraphPlaneEmbedding embedding,
-    AvenGraphPropUint8 coloring,
+    Graph graph,
+    GraphPlaneEmbedding embedding,
+    GraphPropUint8 coloring,
     Aff2 trans,
-    AvenGraphPlaneGeometryEdge *draw_info
+    GraphPlaneGeometryEdge *draw_info
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
         uint8_t v_color = get(coloring, v);
-        AvenGraphAdjList v_adj = get(graph, v);
+        GraphAdjList v_adj = get(graph, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
             uint32_t u = get(v_adj, i);
             if (v < u) {
@@ -507,7 +507,7 @@ static inline void aven_graph_plane_geometry_push_uncolored_edges(
             if (v_color != 0 and get(coloring, u) == v_color) {
                 continue;
             }
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
                 v,
@@ -519,4 +519,4 @@ static inline void aven_graph_plane_geometry_push_uncolored_edges(
     }
 }
 
-#endif // AVEN_GRAPH_PLANE_GEOMETRY_H
+#endif // GRAPH_PLANE_GEOMETRY_H

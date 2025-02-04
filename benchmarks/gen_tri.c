@@ -7,8 +7,8 @@
 #include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/math.h>
-#include <aven/graph.h>
-#include <aven/graph/plane/gen.h>
+#include <graph.h>
+#include <graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -56,7 +56,7 @@ int main(void) {
             size_t max_deg = 0;
             size_t min_deg = MAX_VERTICES;
 
-            AvenGraph graph = aven_graph_plane_gen_tri_abs(
+            Graph graph = graph_plane_gen_tri_abs(
                 n,
                 rng,
                 &temp_arena
@@ -64,7 +64,7 @@ int main(void) {
             assert(graph.len == n);
 
             for (uint32_t v = 0; v < graph.len; v += 1) {
-                AvenGraphAdjList v_adj = get(graph, v);
+                GraphAdjList v_adj = get(graph, v);
                 deg_sum += v_adj.len;
                 max_deg = max(max_deg, v_adj.len);
                 min_deg = min(min_deg, v_adj.len);

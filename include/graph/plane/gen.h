@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_GEN_H
-#define AVEN_GRAPH_PLANE_GEN_H
+#ifndef GRAPH_PLANE_GEN_H
+#define GRAPH_PLANE_GEN_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -11,24 +11,24 @@
 #include "../plane.h"
 
 typedef struct {
-    AvenGraph graph;
-    AvenGraphPlaneEmbedding embedding;
-} AvenGraphPlaneGenData;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
+} GraphPlaneGenData;
 
-static inline AvenGraphPlaneGenData aven_graph_plane_gen_grid(
+static inline GraphPlaneGenData graph_plane_gen_grid(
     uint32_t width,
     uint32_t height,
     AvenArena *arena
 ) {
     if (width == 0 or height == 0) {
-        return (AvenGraphPlaneGenData){ 0 };
+        return (GraphPlaneGenData){ 0 };
     }
 
-    AvenGraph graph = { .len = width * height };
-    graph.ptr = aven_arena_create_array(AvenGraphAdjList, arena, graph.len);
+    Graph graph = { .len = width * height };
+    graph.ptr = aven_arena_create_array(GraphAdjList, arena, graph.len);
 
     for (uint32_t v = 0; v < graph.len; v += 1) {
-        AvenGraphAdjList *adj = &get(graph, v);
+        GraphAdjList *adj = &get(graph, v);
         adj->len = 4;
         adj->ptr = aven_arena_create_array(
             uint32_t,
@@ -60,7 +60,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_grid(
         adj->len = i;
     }
 
-    AvenGraphPlaneEmbedding embedding = { .len = graph.len };
+    GraphPlaneEmbedding embedding = { .len = graph.len };
     embedding.ptr = aven_arena_create_array(Vec2, arena, embedding.len);
 
     float x_scale = 2.0f;
@@ -80,53 +80,53 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_grid(
         get(embedding, v)[1] = -1.0f + (float)y * y_scale;
     }
 
-    return (AvenGraphPlaneGenData){
+    return (GraphPlaneGenData){
         .graph = graph,
         .embedding = embedding,
     };
 }
 
-#define AVEN_GRAPH_PLANE_GEN_FACE_INVALID 0xffffffffUL
+#define GRAPH_PLANE_GEN_FACE_INVALID 0xffffffffUL
 
 typedef struct {
     uint32_t vertices[3];
     uint32_t neighbors[3];
     float area;
     bool invalid;
-} AvenGraphPlaneGenFace;
+} GraphPlaneGenFace;
 
-typedef Slice(AvenGraphPlaneGenFace) AvenGraphPlaneGenFaceSlice;
+typedef Slice(GraphPlaneGenFace) GraphPlaneGenFaceSlice;
 
 typedef struct {
     List(Vec2) embedding;
-    List(AvenGraphPlaneGenFace) faces;
+    List(GraphPlaneGenFace) faces;
     List(uint32_t) valid_faces;
     uint32_t active_face;
     float min_coeff;
     float min_area;
     bool square;
-} AvenGraphPlaneGenTriCtx;
+} GraphPlaneGenTriCtx;
 
-static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
-    AvenGraphPlaneEmbedding embedding,
+static inline GraphPlaneGenTriCtx graph_plane_gen_tri_init(
+    GraphPlaneEmbedding embedding,
     Aff2 trans,
     float min_area,
     float min_coeff,
     bool square,
     AvenArena *arena
 ) {
-    AvenGraphPlaneGenTriCtx ctx = {
+    GraphPlaneGenTriCtx ctx = {
         .embedding = { .ptr = embedding.ptr, .cap = embedding.len },
         .faces = { .cap = 2 * embedding.len - 4 },
         .valid_faces = { .cap = 2 * embedding.len - 4 },
-        .active_face = AVEN_GRAPH_PLANE_GEN_FACE_INVALID,
+        .active_face = GRAPH_PLANE_GEN_FACE_INVALID,
         .min_area = 2.0f * min_area,
         .min_coeff = min_coeff,
         .square = square,
     };
 
     ctx.faces.ptr = aven_arena_create_array(
-        AvenGraphPlaneGenFace,
+        GraphPlaneGenFace,
         arena,
         ctx.faces.cap
     );
@@ -155,12 +155,12 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
             get(ctx.embedding, 2)
         );
 
-        list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        list_push(ctx.faces) = (GraphPlaneGenFace){
             .vertices = { 0, 2, 1 },
             .neighbors = { 1, 1, 1 },
             .area = -1.0f,
         };
-        list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        list_push(ctx.faces) = (GraphPlaneGenFace){
             .vertices = { 0, 1, 2 },
             .neighbors = { 0, 0, 0 },
             .area = area,
@@ -186,22 +186,22 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
             get(ctx.embedding, 2)
         );
 
-        list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        list_push(ctx.faces) = (GraphPlaneGenFace){
             .vertices = { 2, 1, 3 },
             .neighbors = { 2, 1, 3 },
             .area = -1.0f,
         };
-        list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        list_push(ctx.faces) = (GraphPlaneGenFace){
             .vertices = { 1, 0, 3 },
             .neighbors = { 2, 3, 0 },
             .area = -1.0f,
         };
-        list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        list_push(ctx.faces) = (GraphPlaneGenFace){
             .vertices = { 0, 1, 2 },
             .neighbors = { 1, 0, 3 },
             .area = area,
         };
-        list_push(ctx.faces) = (AvenGraphPlaneGenFace){
+        list_push(ctx.faces) = (GraphPlaneGenFace){
             .vertices = { 0, 2, 3 },
             .neighbors = { 2, 0, 1 },
             .area = area,
@@ -214,8 +214,8 @@ static inline AvenGraphPlaneGenTriCtx aven_graph_plane_gen_tri_init(
     return ctx;
 }
 
-static float aven_graph_plane_gen_tri_face_area_internal(
-    AvenGraphPlaneGenTriCtx *ctx,
+static float graph_plane_gen_tri_face_area_internal(
+    GraphPlaneGenTriCtx *ctx,
     uint32_t v1,
     uint32_t v2,
     uint32_t v3
@@ -241,15 +241,15 @@ static float aven_graph_plane_gen_tri_face_area_internal(
     return area * bh_ratio;
 }
 
-static inline bool aven_graph_plane_gen_tri_step(
-    AvenGraphPlaneGenTriCtx *ctx,
+static inline bool graph_plane_gen_tri_step(
+    GraphPlaneGenTriCtx *ctx,
     AvenRng rng
 ) {
     if (ctx->embedding.len == ctx->embedding.cap) {
         return true;
     }
 
-    if (ctx->active_face == AVEN_GRAPH_PLANE_GEN_FACE_INVALID) {
+    if (ctx->active_face == GRAPH_PLANE_GEN_FACE_INVALID) {
         uint32_t tries = (uint32_t)ctx->valid_faces.len;
         while (tries != 0) {
             uint32_t valid_face_index = aven_rng_rand_bounded(
@@ -258,7 +258,7 @@ static inline bool aven_graph_plane_gen_tri_step(
             );
             ctx->active_face = list_get(ctx->valid_faces, valid_face_index);
 
-            AvenGraphPlaneGenFace *face = &list_get(
+            GraphPlaneGenFace *face = &list_get(
                 ctx->faces,
                 ctx->active_face
             );
@@ -278,11 +278,11 @@ static inline bool aven_graph_plane_gen_tri_step(
             tries -= 1;
         }
 
-        ctx->active_face = AVEN_GRAPH_PLANE_GEN_FACE_INVALID;
+        ctx->active_face = GRAPH_PLANE_GEN_FACE_INVALID;
         return true;
     }
 
-    AvenGraphPlaneGenFace face = list_get(ctx->faces, ctx->active_face);
+    GraphPlaneGenFace face = list_get(ctx->faces, ctx->active_face);
 
     // Generate a random vertex contained within the active face
 
@@ -331,8 +331,8 @@ static inline bool aven_graph_plane_gen_tri_step(
         (uint32_t)ctx->faces.len + 1,
     };
 
-    list_push(ctx->faces) = (AvenGraphPlaneGenFace){ 0 };
-    list_push(ctx->faces) = (AvenGraphPlaneGenFace){ 0 };
+    list_push(ctx->faces) = (GraphPlaneGenFace){ 0 };
+    list_push(ctx->faces) = (GraphPlaneGenFace){ 0 };
 
     list_push(ctx->valid_faces) = new_face_indices[1];
     list_push(ctx->valid_faces) = new_face_indices[2];
@@ -341,7 +341,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         uint32_t nexti = (i + 1) % 3;
         uint32_t previ = (i + 2) % 3;
 
-        AvenGraphPlaneGenFace *new_face = &list_get(
+        GraphPlaneGenFace *new_face = &list_get(
             ctx->faces,
             new_face_indices[i]
         );
@@ -354,7 +354,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         new_face->neighbors[1] = face.neighbors[i];
         new_face->neighbors[2] = new_face_indices[nexti];
 
-        new_face->area = aven_graph_plane_gen_tri_face_area_internal(
+        new_face->area = graph_plane_gen_tri_face_area_internal(
             ctx,
             new_face->vertices[0],
             new_face->vertices[1],
@@ -363,7 +363,7 @@ static inline bool aven_graph_plane_gen_tri_step(
     }
 
     for (uint32_t i = 0; i < 3; i += 1) {
-        AvenGraphPlaneGenFace *neighbor = &list_get(
+        GraphPlaneGenFace *neighbor = &list_get(
             ctx->faces,
             face.neighbors[i]
         );
@@ -388,14 +388,14 @@ static inline bool aven_graph_plane_gen_tri_step(
         uint32_t vertex_index;
         float new_area;
         float new_neighbor_area;
-    } AvenGraphPlaneGenNeighbor;
-    AvenGraphPlaneGenNeighbor neighbor_data[3];
-    List(AvenGraphPlaneGenNeighbor) valid_neighbors = list_array(neighbor_data);
+    } GraphPlaneGenNeighbor;
+    GraphPlaneGenNeighbor neighbor_data[3];
+    List(GraphPlaneGenNeighbor) valid_neighbors = list_array(neighbor_data);
 
     // uint32_t flips = aven_rng_rand(rng);
 
     for (uint32_t i = 0; i < 3; i += 1) {
-        AvenGraphPlaneGenFace *neighbor = &list_get(
+        GraphPlaneGenFace *neighbor = &list_get(
             ctx->faces,
             face.neighbors[i]
         );
@@ -430,13 +430,13 @@ static inline bool aven_graph_plane_gen_tri_step(
 
         float min_existing = min(existing_area, existing_neighbor_area);
 
-        float new_area = aven_graph_plane_gen_tri_face_area_internal(
+        float new_area = graph_plane_gen_tri_face_area_internal(
             ctx,
             v,
             f1,
             n
         );
-        float new_neighbor_area = aven_graph_plane_gen_tri_face_area_internal(
+        float new_neighbor_area = graph_plane_gen_tri_face_area_internal(
             ctx,
             n,
             f2,
@@ -470,7 +470,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         float test2 = vec2_dot(vn, perp2);
 
         if (test1 > 0.0f and test2 > 0.0f) {
-            list_push(valid_neighbors) = (AvenGraphPlaneGenNeighbor){
+            list_push(valid_neighbors) = (GraphPlaneGenNeighbor){
                 .neighbor_index = i,
                 .vertex_index = k,
                 .new_area = new_area,
@@ -482,13 +482,13 @@ static inline bool aven_graph_plane_gen_tri_step(
     // Flip selected valid edges around the newly split active face
 
     for (uint32_t i = 0; i < valid_neighbors.len; i += 1) {
-        AvenGraphPlaneGenNeighbor *neighbor = &list_get(valid_neighbors, i);
+        GraphPlaneGenNeighbor *neighbor = &list_get(valid_neighbors, i);
 
         uint32_t new_face_index = new_face_indices[neighbor->neighbor_index];
-        AvenGraphPlaneGenFace *new_face = &list_get(ctx->faces, new_face_index);
+        GraphPlaneGenFace *new_face = &list_get(ctx->faces, new_face_index);
 
         uint32_t neighbor_face_index = new_face->neighbors[1];
-        AvenGraphPlaneGenFace *neighbor_face = &list_get(
+        GraphPlaneGenFace *neighbor_face = &list_get(
             ctx->faces,
             neighbor_face_index
         );
@@ -497,7 +497,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         uint32_t nnext = (ncur + 1) % 3;
         uint32_t nprev = (ncur + 2) % 3;
 
-        AvenGraphPlaneGenFace old_neighbor_face = *neighbor_face;
+        GraphPlaneGenFace old_neighbor_face = *neighbor_face;
 
         neighbor_face->neighbors[nprev] = new_face_index;
         neighbor_face->neighbors[nnext] = new_face->neighbors[2];
@@ -509,7 +509,7 @@ static inline bool aven_graph_plane_gen_tri_step(
         new_face->vertices[2] = old_neighbor_face.vertices[ncur];
         new_face->area = neighbor->new_area;
 
-        AvenGraphPlaneGenFace *neighbor_prev_neighbor = &list_get(
+        GraphPlaneGenFace *neighbor_prev_neighbor = &list_get(
             ctx->faces,
             new_face->neighbors[1]
         );
@@ -524,7 +524,7 @@ static inline bool aven_graph_plane_gen_tri_step(
 
         neighbor_prev_neighbor->neighbors[j] = new_face_index;
 
-        AvenGraphPlaneGenFace *new_face_next_neighbor = &list_get(
+        GraphPlaneGenFace *new_face_next_neighbor = &list_get(
             ctx->faces,
             neighbor_face->neighbors[nnext]
         );
@@ -545,29 +545,29 @@ static inline bool aven_graph_plane_gen_tri_step(
         }
     }
 
-    ctx->active_face = AVEN_GRAPH_PLANE_GEN_FACE_INVALID;
+    ctx->active_face = GRAPH_PLANE_GEN_FACE_INVALID;
 
     return false;
 }
 
 typedef struct {
-    List(AvenGraphAdjList) graph;
+    List(GraphAdjList) graph;
     List(uint32_t) master_adj;
-} AvenGraphPlaneGenTriData;
+} GraphPlaneGenTriData;
 
-static inline AvenGraphPlaneGenTriData aven_graph_plane_gen_tri_data_alloc(
+static inline GraphPlaneGenTriData graph_plane_gen_tri_data_alloc(
     uint32_t size,
     AvenArena *arena
 ) {
     assert(size >= 3);
 
-    AvenGraphPlaneGenTriData data = {
+    GraphPlaneGenTriData data = {
         .graph = { .cap = size },
         .master_adj = { .cap = 6 * size - 12 },
     };
 
     data.graph.ptr = aven_arena_create_array(
-        AvenGraphAdjList,
+        GraphAdjList,
         arena,
         data.graph.cap
     );
@@ -580,19 +580,19 @@ static inline AvenGraphPlaneGenTriData aven_graph_plane_gen_tri_data_alloc(
     return data;
 }
 
-static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
-    AvenGraphPlaneGenTriCtx *ctx,
-    AvenGraphPlaneGenTriData *data
+static inline GraphPlaneGenData graph_plane_gen_tri_data(
+    GraphPlaneGenTriCtx *ctx,
+    GraphPlaneGenTriData *data
 ) {
     data->graph.len = 0;
     data->master_adj.len = 0;
 
     for (uint32_t i = 0; i < ctx->embedding.len; i += 1) {
-        list_push(data->graph) = (AvenGraphAdjList){ 0 };
+        list_push(data->graph) = (GraphAdjList){ 0 };
     }
 
     for (uint32_t i = 0; i < ctx->faces.len; i += 1) {
-        AvenGraphPlaneGenFace *face = &list_get(ctx->faces, i);
+        GraphPlaneGenFace *face = &list_get(ctx->faces, i);
 
         for (uint32_t j = 0; j < 3; j += 1) {
             uint32_t v = face->vertices[j];
@@ -617,7 +617,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
             uint32_t face_index = face->neighbors[j];
 
             while (face_index != i) {
-                AvenGraphPlaneGenFace *cur_face = &list_get(
+                GraphPlaneGenFace *cur_face = &list_get(
                     ctx->faces,
                     face_index
                 );
@@ -647,16 +647,16 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri_data(
         }
     }
 
-    return (AvenGraphPlaneGenData){
-        .graph = (AvenGraph){ .ptr = data->graph.ptr, .len = data->graph.len },
-        .embedding = (AvenGraphPlaneEmbedding){
+    return (GraphPlaneGenData){
+        .graph = (Graph){ .ptr = data->graph.ptr, .len = data->graph.len },
+        .embedding = (GraphPlaneEmbedding){
             .ptr = ctx->embedding.ptr,
             .len = ctx->embedding.len,
         },
     };
 }
 
-static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
+static inline GraphPlaneGenData graph_plane_gen_tri(
     uint32_t size,
     Aff2 trans,
     float min_area,
@@ -667,11 +667,11 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
 ) {
     assert(size >= 3);
 
-    AvenGraphPlaneGenTriData data = aven_graph_plane_gen_tri_data_alloc(
+    GraphPlaneGenTriData data = graph_plane_gen_tri_data_alloc(
         size,
         arena
     );
-    AvenGraphPlaneEmbedding embedding = { .len = size };
+    GraphPlaneEmbedding embedding = { .len = size };
     embedding.ptr = aven_arena_create_array(
         Vec2,
         arena,
@@ -679,7 +679,7 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
     );
 
     AvenArena temp_arena = *arena;
-    AvenGraphPlaneGenTriCtx ctx = aven_graph_plane_gen_tri_init(
+    GraphPlaneGenTriCtx ctx = graph_plane_gen_tri_init(
         embedding,
         trans,
         min_area,
@@ -687,17 +687,17 @@ static inline AvenGraphPlaneGenData aven_graph_plane_gen_tri(
         square,
         &temp_arena
     );
-    while (!aven_graph_plane_gen_tri_step(&ctx, rng)) {}
+    while (!graph_plane_gen_tri_step(&ctx, rng)) {}
 
-    return aven_graph_plane_gen_tri_data(&ctx, &data);
+    return graph_plane_gen_tri_data(&ctx, &data);
 }
 
 typedef struct {
     uint32_t vertices[3];
     uint32_t neighbors[3];
-} AvenGraphPlaneGenAbsFace;
+} GraphPlaneGenAbsFace;
 
-static inline AvenGraph aven_graph_plane_gen_tri_abs(
+static inline Graph graph_plane_gen_tri_abs(
     uint32_t size,
     AvenRng rng,
     AvenArena *arena
@@ -709,29 +709,29 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
         arena,
         6 * size - 12
     );
-    AvenGraph graph = aven_arena_create_slice(
-        AvenGraphAdjList,
+    Graph graph = aven_arena_create_slice(
+        GraphAdjList,
         arena,
         size
     );
 
     for (uint32_t v = 0; v < graph.len; v += 1) {
-        get(graph, v) = (AvenGraphAdjList){ .len = 0, .ptr = NULL };
+        get(graph, v) = (GraphAdjList){ .len = 0, .ptr = NULL };
     }
 
     AvenArena temp_arena = *arena;
 
-    List(AvenGraphPlaneGenAbsFace) faces = aven_arena_create_list(
-        AvenGraphPlaneGenAbsFace,
+    List(GraphPlaneGenAbsFace) faces = aven_arena_create_list(
+        GraphPlaneGenAbsFace,
         &temp_arena,
         2 * size - 4
     );
 
-    list_push(faces) = (AvenGraphPlaneGenAbsFace){
+    list_push(faces) = (GraphPlaneGenAbsFace){
         .vertices = { 0, 2, 1 },
         .neighbors = { 1, 1, 1 },
     };
-    list_push(faces) = (AvenGraphPlaneGenAbsFace){
+    list_push(faces) = (GraphPlaneGenAbsFace){
         .vertices = { 0, 1, 2 },
         .neighbors = { 0, 0, 0 },
     };
@@ -744,7 +744,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
         uint32_t edge_flips = aven_rng_rand_bounded(rng, 3);
         uint32_t flip_start = aven_rng_rand_bounded(rng, 3);
 
-        AvenGraphPlaneGenAbsFace og_face = get(faces, face_index);
+        GraphPlaneGenAbsFace og_face = get(faces, face_index);
 
         uint32_t face_indices[3] = {
             face_index,
@@ -753,10 +753,10 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
         };
         faces.len += 2;
 
-        AvenGraphPlaneGenAbsFace *new_faces[3];
+        GraphPlaneGenAbsFace *new_faces[3];
         for (size_t i = 0; i < 3; i += 1) {
             new_faces[i] = &get(faces, face_indices[i]);
-            *(new_faces[i]) = (AvenGraphPlaneGenAbsFace){
+            *(new_faces[i]) = (GraphPlaneGenAbsFace){
                 .vertices = {
                     v,
                     og_face.vertices[i],
@@ -770,7 +770,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
             };
         }
 
-        AvenGraphPlaneGenAbsFace *neighbor_faces[3];
+        GraphPlaneGenAbsFace *neighbor_faces[3];
         uint32_t neighbor_edge_indices[3];
         uint32_t neighbor_opposite_vertices[3];
         for (size_t i = 0; i < 3; i += 1) {
@@ -813,11 +813,11 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
 
             uint32_t nflip_index = neighbor_edge_indices[flip_index];
 
-            AvenGraphPlaneGenAbsFace *face = new_faces[flip_index];
-            AvenGraphPlaneGenAbsFace *neighbor = neighbor_faces[flip_index];
+            GraphPlaneGenAbsFace *face = new_faces[flip_index];
+            GraphPlaneGenAbsFace *neighbor = neighbor_faces[flip_index];
 
             {
-                AvenGraphPlaneGenAbsFace *face_next_neighbor =
+                GraphPlaneGenAbsFace *face_next_neighbor =
                     new_faces[(flip_index + 1) % 3];
                 uint32_t j = 0;
                 for (; j < 3; j += 1) {
@@ -830,7 +830,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
                     og_face.neighbors[flip_index];
             }
             {
-                AvenGraphPlaneGenAbsFace *neighbor_prev_neighbor = &get(
+                GraphPlaneGenAbsFace *neighbor_prev_neighbor = &get(
                     faces,
                     neighbor->neighbors[(nflip_index + 1) % 3]
                 );
@@ -878,7 +878,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
     }
 
     for (uint32_t i = 0; i < faces.len; i += 1) {
-        AvenGraphPlaneGenAbsFace *face = &get(faces, i);
+        GraphPlaneGenAbsFace *face = &get(faces, i);
 
         for (uint32_t j = 0; j < 3; j += 1) {
             uint32_t v = face->vertices[j];
@@ -897,7 +897,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
 
             uint32_t face_index = face->neighbors[j];
             while (face_index != i) {
-                AvenGraphPlaneGenAbsFace *cur_face = &get(faces, face_index);
+                GraphPlaneGenAbsFace *cur_face = &get(faces, face_index);
 
                 uint32_t k = 0;
                 for (; k < 3; k += 1) {
@@ -923,7 +923,7 @@ static inline AvenGraph aven_graph_plane_gen_tri_abs(
     return graph;
 }
 
-static uint32_t aven_graph_plane_gen_pyramid_coord(
+static uint32_t graph_plane_gen_pyramid_coord(
     uint32_t k,
     uint32_t x,
     uint32_t y
@@ -934,14 +934,14 @@ static uint32_t aven_graph_plane_gen_pyramid_coord(
     return k * y - ((y * (y - 1)) / 2) + x + 3;
 }
 
-static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
+static inline Graph graph_plane_gen_pyramid_abs(
     uint32_t k,
     AvenArena *arena
 ) {
     assert(k > 0);
 
-    AvenGraph graph = { .len = ((k * (k + 1)) / 2) + 3 };
-    graph.ptr = aven_arena_create_array(AvenGraphAdjList, arena, graph.len);
+    Graph graph = { .len = ((k * (k + 1)) / 2) + 3 };
+    graph.ptr = aven_arena_create_array(GraphAdjList, arena, graph.len);
 
     {
         List(uint32_t) adj_list = aven_arena_create_list(
@@ -953,20 +953,20 @@ static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
         list_push(adj_list) = 2;
 
         for (uint32_t y = 0; y < k; y += 1) {
-            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, 0, y);
+            uint32_t u = graph_plane_gen_pyramid_coord(k, 0, y);
             list_push(adj_list) = u;
         }
 
         for (uint32_t x = 1; x < k; x += 1) {
             uint32_t y = (k - x) - 1;
-            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x, y);
+            uint32_t u = graph_plane_gen_pyramid_coord(k, x, y);
             list_push(adj_list) = u;
         }
 
         list_push(adj_list) = 1;
 
         assert(adj_list.len == adj_list.cap);
-        get(graph, 0) = (AvenGraphAdjList)slice_list(adj_list);
+        get(graph, 0) = (GraphAdjList)slice_list(adj_list);
     }
 
     {
@@ -979,14 +979,14 @@ static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
         list_push(adj_list) = 0;
 
         {
-            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, k - 1, 0);
+            uint32_t u = graph_plane_gen_pyramid_coord(k, k - 1, 0);
             list_push(adj_list) = u;
         }
 
         list_push(adj_list) = 2;
 
         assert(adj_list.len == adj_list.cap);
-        get(graph, 1) = (AvenGraphAdjList)slice_list(adj_list);
+        get(graph, 1) = (GraphAdjList)slice_list(adj_list);
     }
 
     {
@@ -999,31 +999,31 @@ static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
         list_push(adj_list) = 1;
 
         for (uint32_t x = k; x > 0; x -= 1) {
-            uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x - 1, 0);
+            uint32_t u = graph_plane_gen_pyramid_coord(k, x - 1, 0);
             list_push(adj_list) = u;
         }
 
         list_push(adj_list) = 0;
 
         assert(adj_list.len == adj_list.cap);
-        get(graph, 2) = (AvenGraphAdjList)slice_list(adj_list);
+        get(graph, 2) = (GraphAdjList)slice_list(adj_list);
     }
 
     for (uint32_t y = 0; y < k; y += 1) {
         uint32_t width = k - y;
         for (uint32_t x = 0; x < width; x += 1) {
-            uint32_t v = aven_graph_plane_gen_pyramid_coord(k, x, y);
+            uint32_t v = graph_plane_gen_pyramid_coord(k, x, y);
 
             uint32_t adj_list_data[6];
             List(uint32_t) adj_list = list_array(adj_list_data);
 
             if (x > 0) {
-                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x - 1, y);
+                uint32_t u = graph_plane_gen_pyramid_coord(k, x - 1, y);
                 list_push(adj_list) = u;
             }
             if (y > 0) {
-                list_push(adj_list) = aven_graph_plane_gen_pyramid_coord(k, x, y - 1);
-                list_push(adj_list) = aven_graph_plane_gen_pyramid_coord(k, x + 1, y - 1);
+                list_push(adj_list) = graph_plane_gen_pyramid_coord(k, x, y - 1);
+                list_push(adj_list) = graph_plane_gen_pyramid_coord(k, x + 1, y - 1);
             } else {
                 list_push(adj_list) = 2;
                 if (x == width - 1) {
@@ -1031,23 +1031,23 @@ static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
                 }
             }
             if (x < (width - 1)) {
-                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x + 1, y);
+                uint32_t u = graph_plane_gen_pyramid_coord(k, x + 1, y);
                 list_push(adj_list) = u;
             } else if ((width - 1) != 0) {
                 list_push(adj_list) = 0;
             }
             if (y < (k - 1) and x < width - 1) {
-                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x, y + 1);
+                uint32_t u = graph_plane_gen_pyramid_coord(k, x, y + 1);
                 list_push(adj_list) = u;
             }
             if (x == 0) {
                 list_push(adj_list) = 0;
             } else if (y < (k - 1)) {
-                uint32_t u = aven_graph_plane_gen_pyramid_coord(k, x - 1, y + 1);
+                uint32_t u = graph_plane_gen_pyramid_coord(k, x - 1, y + 1);
                 list_push(adj_list) = u;
             }
 
-            AvenGraphAdjList *v_adj = &get(graph, v);
+            GraphAdjList *v_adj = &get(graph, v);
             v_adj->len = adj_list.len;
             v_adj->ptr = aven_arena_create_array(uint32_t, arena, v_adj->len);
             for (size_t i = 0; i < adj_list.len; i += 1) {
@@ -1059,4 +1059,4 @@ static inline AvenGraph aven_graph_plane_gen_pyramid_abs(
     return graph;
 }
 
-#endif // AVEN_GRAPH_PLANE_GEN_H
+#endif // GRAPH_PLANE_GEN_H

@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_POH_THREAD_H
-#define AVEN_GRAPH_PLANE_POH_THREAD_H
+#ifndef GRAPH_PLANE_POH_THREAD_H
+#define GRAPH_PLANE_POH_THREAD_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -14,42 +14,42 @@
 #include "../../../graph.h"
 #include "../poh.h"
 
-typedef List(AvenGraphPlanePohFrame) AvenGraphPlanePohThreadFrameList;
+typedef List(GraphPlanePohFrame) GraphPlanePohThreadFrameList;
 typedef struct {
-    AvenGraphPlanePohFrame *ptr;
+    GraphPlanePohFrame *ptr;
     atomic_size_t len;
     size_t cap;
-} AvenGraphPlanePohThreadAtomicFrameList;
+} GraphPlanePohThreadAtomicFrameList;
 
 typedef struct {
-    Slice(AvenGraphPlanePohVertex) vertex_info;
-    AvenGraphPlanePohThreadAtomicFrameList frames;
+    Slice(GraphPlanePohVertex) vertex_info;
+    GraphPlanePohThreadAtomicFrameList frames;
     atomic_int threads_active;
     atomic_int frames_active;
     atomic_bool frames_lock;
-} AvenGraphPlanePohThreadCtx;
+} GraphPlanePohThreadCtx;
 
-static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
-    AvenGraph graph,
-    AvenGraphSubset p,
-    AvenGraphSubset q,
+static inline GraphPlanePohThreadCtx graph_plane_poh_thread_init(
+    Graph graph,
+    GraphSubset p,
+    GraphSubset q,
     AvenArena *arena
 ) {
     uint32_t p1 = get(p, 0);
     uint32_t q1 = get(q, 0);
 
-    AvenGraphPlanePohThreadCtx ctx = {
+    GraphPlanePohThreadCtx ctx = {
         .vertex_info = { .len = graph.len },
         .frames = { .cap = graph.len - 2 },
     };
 
     ctx.vertex_info.ptr = aven_arena_create_array(
-        AvenGraphPlanePohVertex,
+        GraphPlanePohVertex,
         arena,
         ctx.vertex_info.len
     );
     ctx.frames.ptr = aven_arena_create_array(
-        AvenGraphPlanePohFrame,
+        GraphPlanePohFrame,
         arena,
         ctx.frames.cap
     );
@@ -60,8 +60,8 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     atomic_init(&ctx.threads_active, 0);
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
-        AvenGraphAdjList v_adj = get(graph, v);
-        get(ctx.vertex_info, v) = (AvenGraphPlanePohVertex){
+        GraphAdjList v_adj = get(graph, v);
+        get(ctx.vertex_info, v) = (GraphPlanePohVertex){
             .len = (uint32_t)v_adj.len,
             .ptr = v_adj.ptr,
         };
@@ -77,11 +77,11 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
         get(ctx.vertex_info, get(q, i)).mark = 2;
     }
 
-    list_push(ctx.frames) = (AvenGraphPlanePohFrame){
+    list_push(ctx.frames) = (GraphPlanePohFrame){
         .p_color = 3,
         .q_color = 2,
         .u = p1,
-        .u_nb_first = aven_graph_adj_neighbor_index(
+        .u_nb_first = graph_adj_neighbor_index(
             get(graph, p1),
             q1
         ),
@@ -94,8 +94,8 @@ static inline AvenGraphPlanePohThreadCtx aven_graph_plane_poh_thread_init(
     return ctx;
 }
 
-static inline void aven_graph_plane_poh_thread_lock_internal(
-    AvenGraphPlanePohThreadCtx *ctx
+static inline void graph_plane_poh_thread_lock_internal(
+    GraphPlanePohThreadCtx *ctx
 ) {    
     for (;;) {
         if (
@@ -115,20 +115,20 @@ static inline void aven_graph_plane_poh_thread_lock_internal(
     }
 }
 
-static inline void aven_graph_plane_poh_thread_unlock_internal(
-    AvenGraphPlanePohThreadCtx *ctx
+static inline void graph_plane_poh_thread_unlock_internal(
+    GraphPlanePohThreadCtx *ctx
 ) {
     atomic_store_explicit(&ctx->frames_lock, false, memory_order_release);
 }
 
-static inline void aven_graph_plane_poh_thread_push_internal(
-    AvenGraphPlanePohThreadCtx *ctx,
-    AvenGraphPlanePohThreadFrameList *local_frames,
-    AvenGraphPlanePohFrame frame
+static inline void graph_plane_poh_thread_push_internal(
+    GraphPlanePohThreadCtx *ctx,
+    GraphPlanePohThreadFrameList *local_frames,
+    GraphPlanePohFrame frame
 ) {
     list_push(*local_frames) = frame;
     if (local_frames->len == local_frames->cap) {
-        aven_graph_plane_poh_thread_lock_internal(ctx);
+        graph_plane_poh_thread_lock_internal(ctx);
         size_t len = atomic_fetch_add_explicit(
             &ctx->frames.len,
             local_frames->cap / 2,
@@ -142,18 +142,18 @@ static inline void aven_graph_plane_poh_thread_push_internal(
         ) {
             ctx->frames.ptr[len + i] = list_pop(*local_frames);
         }
-        aven_graph_plane_poh_thread_unlock_internal(ctx);
+        graph_plane_poh_thread_unlock_internal(ctx);
     }
 }
 
-static inline bool aven_graph_plane_poh_thread_frame_step(
-    AvenGraphPlanePohThreadCtx *ctx,
-    AvenGraphPlanePohThreadFrameList *local_frames,
-    AvenGraphPlanePohFrame *frame
+static inline bool graph_plane_poh_thread_frame_step(
+    GraphPlanePohThreadCtx *ctx,
+    GraphPlanePohThreadFrameList *local_frames,
+    GraphPlanePohFrame *frame
 ) {
     uint8_t path_color = frame->p_color ^ frame->q_color;
 
-    AvenGraphPlanePohVertex *u_info = &get(ctx->vertex_info, frame->u);
+    GraphPlanePohVertex *u_info = &get(ctx->vertex_info, frame->u);
 
     if (frame->edge_index == u_info->len) {
         assert(frame->z == frame->u);
@@ -167,9 +167,9 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
             frame->x = frame->y;
         }
 
-        AvenGraphPlanePohVertex *y_info = &get(ctx->vertex_info, frame->y);
-        frame->u_nb_first = aven_graph_adj_next_neighbor_index(
-            (AvenGraphAdjList){ .len = y_info->len, .ptr = y_info->ptr },
+        GraphPlanePohVertex *y_info = &get(ctx->vertex_info, frame->y);
+        frame->u_nb_first = graph_adj_next_neighbor_index(
+            (GraphAdjList){ .len = y_info->len, .ptr = y_info->ptr },
             frame->u
         );
         frame->u = frame->y;
@@ -186,7 +186,7 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
     }
 
     uint32_t n = get(*u_info, n_index);
-    AvenGraphPlanePohVertex *n_info = &get(ctx->vertex_info, n);
+    GraphPlanePohVertex *n_info = &get(ctx->vertex_info, n);
 
     frame->edge_index += 1;
 
@@ -202,19 +202,19 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
         } else {
             frame->last_colored = true;
             if (frame->z != frame->u) {
-                AvenGraphPlanePohVertex *z_info = &get(
+                GraphPlanePohVertex *z_info = &get(
                     ctx->vertex_info,
                     frame->z
                 );
-                aven_graph_plane_poh_thread_push_internal(
+                graph_plane_poh_thread_push_internal(
                     ctx,
                     local_frames,
-                    (AvenGraphPlanePohFrame){
+                    (GraphPlanePohFrame){
                         .p_color = path_color,
                         .q_color = frame->p_color,
                         .u = frame->z,
-                        .u_nb_first = aven_graph_adj_next_neighbor_index(
-                            (AvenGraphAdjList){
+                        .u_nb_first = graph_adj_next_neighbor_index(
+                            (GraphAdjList){
                                 .len = z_info->len,
                                 .ptr = z_info->ptr
                             },
@@ -236,10 +236,10 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
                 frame->last_colored = true;
             }
             if (frame->x != frame->u) {
-                aven_graph_plane_poh_thread_push_internal(
+                graph_plane_poh_thread_push_internal(
                     ctx,
                     local_frames,
-                    (AvenGraphPlanePohFrame){
+                    (GraphPlanePohFrame){
                         .p_color = path_color,
                         .q_color = frame->q_color,
                         .u = frame->x,
@@ -264,8 +264,8 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
 
             if (frame->x == frame->u) {
                 frame->x = n;
-                frame->x_nb_first = aven_graph_adj_next_neighbor_index(
-                    (AvenGraphAdjList){
+                frame->x_nb_first = graph_adj_next_neighbor_index(
+                    (GraphAdjList){
                         .len = n_info->len,
                         .ptr = n_info->ptr
                     },
@@ -280,9 +280,9 @@ static inline bool aven_graph_plane_poh_thread_frame_step(
     return false;
 }
 
-static inline void aven_graph_plane_poh_pop_internal(
-    AvenGraphPlanePohThreadCtx *ctx,
-    AvenGraphPlanePohThreadFrameList *local_frames
+static inline void graph_plane_poh_pop_internal(
+    GraphPlanePohThreadCtx *ctx,
+    GraphPlanePohThreadFrameList *local_frames
 ) {
     atomic_fetch_sub_explicit(&ctx->frames_active, 1, memory_order_relaxed);
     for (;;) {
@@ -290,7 +290,7 @@ static inline void aven_graph_plane_poh_pop_internal(
             atomic_load_explicit(&ctx->frames.len, memory_order_relaxed) > 0 or
             atomic_load_explicit(&ctx->frames_active, memory_order_relaxed) == 0
         ) {
-            aven_graph_plane_poh_thread_lock_internal(ctx);
+            graph_plane_poh_thread_lock_internal(ctx);
             size_t frames_available = atomic_load_explicit(
                 &ctx->frames.len,
                 memory_order_relaxed
@@ -313,7 +313,7 @@ static inline void aven_graph_plane_poh_pop_internal(
                     1,
                     memory_order_relaxed
                 );
-                aven_graph_plane_poh_thread_unlock_internal(ctx);
+                graph_plane_poh_thread_unlock_internal(ctx);
                 return;
             } else if (
                 atomic_load_explicit(
@@ -321,10 +321,10 @@ static inline void aven_graph_plane_poh_pop_internal(
                     memory_order_relaxed
                 ) == 0
             ) {
-                aven_graph_plane_poh_thread_unlock_internal(ctx);
+                graph_plane_poh_thread_unlock_internal(ctx);
                 return;
             }
-            aven_graph_plane_poh_thread_unlock_internal(ctx);
+            graph_plane_poh_thread_unlock_internal(ctx);
         }
         while (
             atomic_load_explicit(
@@ -341,30 +341,30 @@ static inline void aven_graph_plane_poh_pop_internal(
 }
 
 typedef struct {
-    AvenGraphPropUint8 coloring;
-    AvenGraphPlanePohThreadCtx *ctx;
+    GraphPropUint8 coloring;
+    GraphPlanePohThreadCtx *ctx;
     uint32_t start_vertex;
     uint32_t end_vertex;
-} AvenGraphPohThreadWorkerArgs;
+} GraphPohThreadWorkerArgs;
 
-static void aven_graph_poh_thread_worker_internal(void *args) {
-    AvenGraphPohThreadWorkerArgs *wargs = args;
-    AvenGraphPlanePohThreadCtx *ctx = wargs->ctx;
+static void graph_poh_thread_worker_internal(void *args) {
+    GraphPohThreadWorkerArgs *wargs = args;
+    GraphPlanePohThreadCtx *ctx = wargs->ctx;
 
     atomic_fetch_add_explicit(&ctx->threads_active, 1, memory_order_relaxed);
     atomic_fetch_add_explicit(&ctx->frames_active, 1, memory_order_relaxed);
 
-    AvenGraphPlanePohFrame local_frame_data[16];
-    AvenGraphPlanePohThreadFrameList local_frames = list_array(
+    GraphPlanePohFrame local_frame_data[16];
+    GraphPlanePohThreadFrameList local_frames = list_array(
         local_frame_data
     );
 
-    aven_graph_plane_poh_pop_internal(ctx, &local_frames);
+    graph_plane_poh_pop_internal(ctx, &local_frames);
 
     while (local_frames.len > 0) {
-        AvenGraphPlanePohFrame cur_frame = list_pop(local_frames);
+        GraphPlanePohFrame cur_frame = list_pop(local_frames);
         while (
-            !aven_graph_plane_poh_thread_frame_step(
+            !graph_plane_poh_thread_frame_step(
                 ctx,
                 &local_frames,
                 &cur_frame
@@ -372,7 +372,7 @@ static void aven_graph_poh_thread_worker_internal(void *args) {
         ) {}
 
         if (local_frames.len == 0) {
-            aven_graph_plane_poh_pop_internal(ctx, &local_frames);
+            graph_plane_poh_pop_internal(ctx, &local_frames);
         }
     }
 
@@ -402,28 +402,28 @@ static void aven_graph_poh_thread_worker_internal(void *args) {
     }
 }
 
-static inline AvenGraphPropUint8 aven_graph_plane_poh_thread(
-    AvenGraph graph,
-    AvenGraphSubset p,
-    AvenGraphSubset q,
+static inline GraphPropUint8 graph_plane_poh_thread(
+    Graph graph,
+    GraphSubset p,
+    GraphSubset q,
     AvenThreadPool *thread_pool,
     size_t nthreads,
     AvenArena *arena
 ) {
-    AvenGraphPropUint8 coloring = { .len = graph.len };
+    GraphPropUint8 coloring = { .len = graph.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
     
-    AvenGraphPlanePohThreadCtx ctx = aven_graph_plane_poh_thread_init(
+    GraphPlanePohThreadCtx ctx = graph_plane_poh_thread_init(
         graph,
         p,
         q,
         &temp_arena
     );
 
-    Slice(AvenGraphPohThreadWorkerArgs) wargs_data = aven_arena_create_slice(
-        AvenGraphPohThreadWorkerArgs,
+    Slice(GraphPohThreadWorkerArgs) wargs_data = aven_arena_create_slice(
+        GraphPohThreadWorkerArgs,
         &temp_arena,
         nthreads
     );
@@ -436,7 +436,7 @@ static inline AvenGraphPropUint8 aven_graph_plane_poh_thread(
             end_vertex = (uint32_t)graph.len;
         }
 
-        get(wargs_data, i) = (AvenGraphPohThreadWorkerArgs){
+        get(wargs_data, i) = (GraphPohThreadWorkerArgs){
             .coloring = coloring,
             .ctx = &ctx,
             .start_vertex = start_vertex,
@@ -447,16 +447,16 @@ static inline AvenGraphPropUint8 aven_graph_plane_poh_thread(
     for (size_t i = 0; i < wargs_data.len - 1; i += 1) {
         aven_thread_pool_submit(
             thread_pool,
-            aven_graph_poh_thread_worker_internal,
+            graph_poh_thread_worker_internal,
             &get(wargs_data, i)
         );
     }
 
-    aven_graph_poh_thread_worker_internal(&get(wargs_data, wargs_data.len - 1));
+    graph_poh_thread_worker_internal(&get(wargs_data, wargs_data.len - 1));
 
     aven_thread_pool_wait(thread_pool);
 
     return coloring;
 }
 
-#endif // AVEN_GRAPH_PLANE_POH_THREAD_H
+#endif // GRAPH_PLANE_POH_THREAD_H

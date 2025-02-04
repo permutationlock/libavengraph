@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_TEST_H
-#define AVEN_GRAPH_PLANE_TEST_H
+#ifndef GRAPH_PLANE_TEST_H
+#define GRAPH_PLANE_TEST_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -9,65 +9,65 @@
 typedef struct {
     uint32_t vertices[3];
     uint32_t neighbors[3];
-} AvenGraphPlaneTestFace;
+} GraphPlaneTestFace;
 
 typedef struct {
     List(uint32_t) neighbor_list;
     Optional(uint32_t) maybe_next;
-} AvenGraphPlaneTestAdjList;
+} GraphPlaneTestAdjList;
 
-typedef Slice(AvenGraphPlaneTestAdjList) AvenGraphPlaneTestGraph;
+typedef Slice(GraphPlaneTestAdjList) GraphPlaneTestGraph;
 
 typedef enum {
-    AVEN_GRAPH_PLANE_TEST_OP_TYPE_SPLIT_TRI,
-    AVEN_GRAPH_PLANE_TEST_OP_TYPE_SPLIT_QUAD,
-    AVEN_GRAPH_PLANE_TEST_OP_TYPE_SPLIT_PENT,
-} AvenGraphPlaneTestOpType;
+    GRAPH_PLANE_TEST_OP_TYPE_SPLIT_TRI,
+    GRAPH_PLANE_TEST_OP_TYPE_SPLIT_QUAD,
+    GRAPH_PLANE_TEST_OP_TYPE_SPLIT_PENT,
+} GraphPlaneTestOpType;
 
 typedef struct {
-    AvenGraphPlaneTestOpType type;
+    GraphPlaneTestOpType type;
     uint32_t vertex;
     uint32_t face;
     uint32_t edge;
-} AvenGraphPlaneTestOp;
+} GraphPlaneTestOp;
 
 typedef struct {
     uint32_t degree;
     uint32_t face;
-} AvenGraphPlaneTestVertex;
+} GraphPlaneTestVertex;
 
 typedef struct {
-    Slice(AvenGraphPlaneTextFace) faces;
-    Slice(AvenGraphPlaneTestVertex) vertices;
-    List(AvenGraphPlaneTestOp) op_stack;
-} AvenGraphPlaneTestCtx;
+    Slice(GraphPlaneTextFace) faces;
+    Slice(GraphPlaneTestVertex) vertices;
+    List(GraphPlaneTestOp) op_stack;
+} GraphPlaneTestCtx;
 
-static inline AvenGraphPlaneTestCtx aven_graph_plane_test_init(
-    AvenGraph graph,
+static inline GraphPlaneTestCtx graph_plane_test_init(
+    Graph graph,
     AvenArena *arena
 ) {
-    AvenGraphPlaneTestCtx ctx = {
+    GraphPlaneTestCtx ctx = {
         .graph = { .len = graph.len },
         .op_stack = { .cap = graph.len - 4 },
     };
 
     ctx.op_stack.ptr = aven_arena_create_array(
-        AvenGraphPlaneTestOp,
+        GraphPlaneTestOp,
         arena,
         ctx.op_stack.cap
     );
 
     ctx.graph = aven_arena_create_array(
-        AvenGraphPlaneTestAdjList,
+        GraphPlaneTestAdjList,
         arena,
         ctx.graph.len
     );
 
     for (uint32_t i = 0; i < graph.len; i += 1) {
-        AvenGraphPlaneTestAdjList *new_adj = &get(ctx.graph, i);
-        AvenGraphAdjList old_adj = get(graph, i);
+        GraphPlaneTestAdjList *new_adj = &get(ctx.graph, i);
+        GraphAdjList old_adj = get(graph, i);
 
-        *new_adge = (AvenGraphPlaneTestAdjList){
+        *new_adge = (GraphPlaneTestAdjList){
             .neighbor_list = {
                 .cap = old_adj.len,
                 .ptr = aven_arena_create_array(
@@ -84,7 +84,7 @@ static inline AvenGraphPlaneTestCtx aven_graph_plane_test_init(
     }
 }
 
-static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
+static inline bool graph_plane_test_step(GraphPlaneTestCtx *ctx) {
     if (ctx->op_stack.len == ctx->op_stack.cap) {
         return true;
     }
@@ -92,7 +92,7 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
     uint32_t v = ctx->min_vertex;
     uint32_t deg = 0;
     for (; v < ctx->graph.len; v += 1) {
-        AvenGraphPlaneTestAdjList *adj = &get(ctx->graph, v);
+        GraphPlaneTestAdjList *adj = &get(ctx->graph, v);
         deg = adj->neighbor_list.len;
         while (deg < 6 and adj->maybe_next.valid) {
             adj = &get(ctx->graph, adj->maybe_next.value);
@@ -112,12 +112,12 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
         return true;
     }
 
-    AvenGraphPlaneTestFace face = { 0 };
+    GraphPlaneTestFace face = { 0 };
 
     uint32_t u = v;
     uint32_t n_index = 0;
     do {
-        AvenGraphPlaneTestAdjList *adj = get(ctx->graph, u);
+        GraphPlaneTestAdjList *adj = get(ctx->graph, u);
         for (uint32_t i = 0; i < adj->neighbor_list.len; i += 1) {
             face.vertices[n_index] = list_get(adj->neighbor_list, i);
             n_index += 1;
@@ -135,7 +135,7 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
         case 3:
             for (uint32_t i = 0; i < 3; i += 1) {
                 uint32_t n = face.vertices[i];
-                AvenGraphPlaneTestAdjList *n_adj = get(ctx->graph, n);
+                GraphPlaneTestAdjList *n_adj = get(ctx->graph, n);
             }
             break;
         case 4:
@@ -143,11 +143,11 @@ static inline bool aven_graph_plane_test_step(AvenGraphPlaneTestCtx *ctx) {
         case 5:
             break;
     }
-    AvenGraphPlaneTestAdjList *v_adj = &get(ctx->graph, v);
+    GraphPlaneTestAdjList *v_adj = &get(ctx->graph, v);
     for (uint32_t i = 0; i < v_adj->len; i += 1) {
         
     }
 }
 
-#endif // AVEN_GRAPH_PLANE_TEST_H
+#endif // GRAPH_PLANE_TEST_H
 

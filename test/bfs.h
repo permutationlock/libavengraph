@@ -5,9 +5,9 @@
 #include <aven/str.h>
 #include <aven/test.h>
 
-#include <aven/graph.h>
-#include <aven/graph/bfs.h>
-#include <aven/graph/gen.h>
+#include <graph.h>
+#include <graph/bfs.h>
+#include <graph/gen.h>
 
 typedef struct {
     uint32_t size;
@@ -17,8 +17,8 @@ typedef struct {
 
 AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
     TestBfsCompleteArgs *args = opaque_args;
-    AvenGraph g = aven_graph_gen_complete(args->size, &arena);
-    AvenGraphSubset path = aven_graph_bfs(g, args->start, args->end, &arena);
+    Graph g = graph_gen_complete(args->size, &arena);
+    GraphSubset path = graph_bfs(g, args->start, args->end, &arena);
 
     size_t expected_len = (args->start == args->end) ? 1 : 2;
 
@@ -96,8 +96,8 @@ typedef struct {
 
 AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
     TestBfsGridArgs *args = opaque_args;
-    AvenGraph g = aven_graph_gen_grid(args->width, args->height, &arena);
-    AvenGraphSubset path = aven_graph_bfs(g, args->start, args->end, &arena);
+    Graph g = graph_gen_grid(args->width, args->height, &arena);
+    GraphSubset path = graph_bfs(g, args->start, args->end, &arena);
 
     bool match = true;
 

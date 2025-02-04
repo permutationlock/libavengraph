@@ -1,21 +1,21 @@
-#ifndef AVEN_GRAPH_PATH_COLOR_H
-#define AVEN_GRAPH_PATH_COLOR_H
+#ifndef GRAPH_PATH_COLOR_H
+#define GRAPH_PATH_COLOR_H
 
 typedef struct {
-    AvenGraph graph;
-    AvenGraphPropUint8 coloring;
-    AvenGraphPropUint8 visited;
+    Graph graph;
+    GraphPropUint8 coloring;
+    GraphPropUint8 visited;
     uint32_t next;
     uint32_t checked;
     Optional(uint32_t) maybe_v;
-} AvenGraphPathColorVerifyCtx;
+} GraphPathColorVerifyCtx;
 
-static inline AvenGraphPathColorVerifyCtx aven_graph_path_color_verify_init(
-    AvenGraph graph,
-    AvenGraphPropUint8 coloring,
+static inline GraphPathColorVerifyCtx graph_path_color_verify_init(
+    Graph graph,
+    GraphPropUint8 coloring,
     AvenArena *arena
 ) {
-    AvenGraphPathColorVerifyCtx ctx = {
+    GraphPathColorVerifyCtx ctx = {
         .graph = graph,
         .coloring = coloring,
         .visited = { .len = graph.len },
@@ -29,8 +29,8 @@ static inline AvenGraphPathColorVerifyCtx aven_graph_path_color_verify_init(
     return ctx;
 }
 
-static inline bool aven_graph_path_color_verify_step(
-    AvenGraphPathColorVerifyCtx *ctx
+static inline bool graph_path_color_verify_step(
+    GraphPathColorVerifyCtx *ctx
 ) {
     while (!ctx->maybe_v.valid and ctx->next < ctx->graph.len) {
         uint32_t v;
@@ -45,7 +45,7 @@ static inline bool aven_graph_path_color_verify_step(
         uint8_t color = get(ctx->coloring, v);
         uint32_t color_degree = 0;
 
-        AvenGraphAdjList v_adj = get(ctx->graph, v);
+        GraphAdjList v_adj = get(ctx->graph, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
             uint32_t n = get(v_adj, i);
             if (get(ctx->coloring, n) == color) {
@@ -73,7 +73,7 @@ static inline bool aven_graph_path_color_verify_step(
     ctx->checked += 1;
     ctx->maybe_v.valid = false;
 
-    AvenGraphAdjList v_adj = get(ctx->graph, v);
+    GraphAdjList v_adj = get(ctx->graph, v);
     for (uint32_t i = 0; i < v_adj.len; i += 1) {
         uint32_t n = get(v_adj, i);
         if (
@@ -92,26 +92,26 @@ static inline bool aven_graph_path_color_verify_step(
     return false;
 }
 
-static inline bool aven_graph_path_color_verify_result(
-    AvenGraphPathColorVerifyCtx *ctx
+static inline bool graph_path_color_verify_result(
+    GraphPathColorVerifyCtx *ctx
 ) {
     return ctx->checked == ctx->graph.len;
 }
 
-static inline bool aven_graph_path_color_verify(
-    AvenGraph graph,
-    AvenGraphPropUint8 coloring,
+static inline bool graph_path_color_verify(
+    Graph graph,
+    GraphPropUint8 coloring,
     AvenArena arena
 ) {
-    AvenGraphPathColorVerifyCtx ctx = aven_graph_path_color_verify_init(
+    GraphPathColorVerifyCtx ctx = graph_path_color_verify_init(
         graph,
         coloring,
         &arena
     );
 
-    while (!aven_graph_path_color_verify_step(&ctx)) {}
+    while (!graph_path_color_verify_step(&ctx)) {}
 
-    return aven_graph_path_color_verify_result(&ctx);
+    return graph_path_color_verify_result(&ctx);
 }
 
-#endif // AVEN_GRAPH_PATH_COLOR_H
+#endif // GRAPH_PATH_COLOR_H

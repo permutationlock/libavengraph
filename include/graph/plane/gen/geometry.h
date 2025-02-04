@@ -1,5 +1,5 @@
-#ifndef AVEN_GRAPH_PLANE_GEN_GEOMETRY_H
-#define AVEN_GRAPH_PLANE_GEN_GEOMETRY_H
+#ifndef GRAPH_PLANE_GEN_GEOMETRY_H
+#define GRAPH_PLANE_GEN_GEOMETRY_H
 
 #include <aven.h>
 #include <aven/arena.h>
@@ -18,46 +18,46 @@ typedef struct {
     float edge_thickness;
     float radius;
     float border_thickness;
-} AvenGraphPlaneGenGeometryTriInfo;
+} GraphPlaneGenGeometryTriInfo;
 
-static inline void aven_graph_plane_gen_geometry_push_tri_ctx(
+static inline void graph_plane_gen_geometry_push_tri_ctx(
     AvenGlShapeGeometry *geometry,
     AvenGlShapeRoundedGeometry *rounded_geometry,
-    AvenGraphPlaneGenTriCtx *ctx,
+    GraphPlaneGenTriCtx *ctx,
     Aff2 trans,
-    AvenGraphPlaneGenGeometryTriInfo *info,
+    GraphPlaneGenGeometryTriInfo *info,
     AvenArena arena
 ) {
-    AvenGraphPlaneGenTriData tri_data = aven_graph_plane_gen_tri_data_alloc(
+    GraphPlaneGenTriData tri_data = graph_plane_gen_tri_data_alloc(
         (uint32_t)ctx->embedding.len,
         &arena
     );
 
-    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(ctx, &tri_data);
+    GraphPlaneGenData data = graph_plane_gen_tri_data(ctx, &tri_data);
 
-    if (ctx->active_face != AVEN_GRAPH_PLANE_GEN_FACE_INVALID) {
-        AvenGraphPlaneGeometryEdge active_edge_info = {
+    if (ctx->active_face != GRAPH_PLANE_GEN_FACE_INVALID) {
+        GraphPlaneGeometryEdge active_edge_info = {
             .thickness = info->edge_thickness + info->border_thickness,
         };
         vec4_copy(active_edge_info.color, info->active_color);
 
-        AvenGraphPlaneGeometryNode active_node_info = {
+        GraphPlaneGeometryNode active_node_info = {
             .mat = {
                 { info->radius + info->border_thickness, 0.0f },
                 { 0.0f, info->radius + info->border_thickness }
             },
-            .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+            .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
         vec4_copy(active_node_info.color, info->active_color);
 
-        AvenGraphPlaneGenFace face = list_get(
+        GraphPlaneGenFace face = list_get(
             ctx->faces,
             ctx->active_face
         );
         for (uint32_t i = 0; i < 3; i += 1) {
             uint32_t j = (i + 1) % 3;
-            aven_graph_plane_geometry_push_edge(
+            graph_plane_geometry_push_edge(
                 geometry,
                 data.embedding,
                 face.vertices[i],
@@ -67,7 +67,7 @@ static inline void aven_graph_plane_gen_geometry_push_tri_ctx(
             );
         }
         for (uint32_t i = 0; i < 3; i += 1) {
-            aven_graph_plane_geometry_push_vertex(
+            graph_plane_geometry_push_vertex(
                 rounded_geometry,
                 data.embedding,
                 face.vertices[i],
@@ -77,12 +77,12 @@ static inline void aven_graph_plane_gen_geometry_push_tri_ctx(
         }
     }
     
-    AvenGraphPlaneGeometryEdge edge_info = {
+    GraphPlaneGeometryEdge edge_info = {
         .thickness = info->edge_thickness,
     };
     vec4_copy(edge_info.color, info->edge_color);
 
-    aven_graph_plane_geometry_push_edges(
+    graph_plane_geometry_push_edges(
         geometry,
         data.graph,
         data.embedding,
@@ -90,34 +90,34 @@ static inline void aven_graph_plane_gen_geometry_push_tri_ctx(
         &edge_info
     );
 
-    AvenGraphPlaneGeometryNode outline_node_info = {
+    GraphPlaneGeometryNode outline_node_info = {
         .mat = {
             { info->radius, 0.0f },
             { 0.0f, info->radius }
         },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+        .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
     vec4_copy(outline_node_info.color, info->outline_color);
 
-    aven_graph_plane_geometry_push_vertices(
+    graph_plane_geometry_push_vertices(
         rounded_geometry,
         data.embedding,
         trans,
         &outline_node_info
     );
 
-    AvenGraphPlaneGeometryNode node_info = {
+    GraphPlaneGeometryNode node_info = {
         .mat = {
             { info->radius - info->border_thickness, 0.0f },
             { 0.0f, info->radius - info->border_thickness }
         },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+        .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
     vec4_copy(node_info.color, info->node_color);
 
-    aven_graph_plane_geometry_push_vertices(
+    graph_plane_geometry_push_vertices(
         rounded_geometry,
         data.embedding,
         trans,
@@ -125,4 +125,4 @@ static inline void aven_graph_plane_gen_geometry_push_tri_ctx(
     );
 }
 
-#endif // AVEN_GRAPH_PLANE_GEN_GEOMETRY_H
+#endif // GRAPH_PLANE_GEN_GEOMETRY_H

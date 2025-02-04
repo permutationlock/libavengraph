@@ -7,11 +7,11 @@
 #include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/math.h>
-#include <aven/graph.h>
-#include <aven/graph/path_color.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/poh_bfs.h>
-#include <aven/graph/plane/gen.h>
+#include <graph.h>
+#include <graph/path_color.h>
+#include <graph/plane.h>
+#include <graph/plane/poh_bfs.h>
+#include <graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -44,8 +44,8 @@ int main(void) {
         AvenArena temp_arena = arena;
 
         typedef struct {
-            AvenGraph graph;
-            AvenGraphPropUint8 coloring;
+            Graph graph;
+            GraphPropUint8 coloring;
         } CaseData;
 
         Slice(CaseData) cases = { .len = NGRAPHS * (MAX_VERTICES / n) };
@@ -56,7 +56,7 @@ int main(void) {
         );
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenGraph graph = aven_graph_plane_gen_tri_abs(
+            Graph graph = graph_plane_gen_tri_abs(
                 n,
                 rng,
                 &temp_arena
@@ -69,15 +69,15 @@ int main(void) {
 
         uint32_t p_data[] = { 1, 2 };
         uint32_t q_data[] = { 0 };
-        AvenGraphSubset p = slice_array(p_data);
-        AvenGraphSubset q = slice_array(q_data);
+        GraphSubset p = slice_array(p_data);
+        GraphSubset q = slice_array(q_data);
 
         __asm volatile("" ::: "memory");
         AvenTimeInst start_inst = aven_time_now();
         __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            get(cases, i).coloring = aven_graph_plane_poh_bfs(
+            get(cases, i).coloring = graph_plane_poh_bfs(
                 get(cases, i).graph,
                 p,
                 q,
@@ -94,7 +94,7 @@ int main(void) {
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            bool valid = aven_graph_path_color_verify(
+            bool valid = graph_path_color_verify(
                 get(cases, i).graph,
                 get(cases, i).coloring,
                 temp_arena

@@ -8,15 +8,15 @@
 #include <aven/fs.h>
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
-#include <aven/graph.h>
-#include <aven/graph/path_color.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/hartman.h>
-#include <aven/graph/plane/hartman/geometry.h>
-#include <aven/graph/plane/hartman/tikz.h>
-#include <aven/graph/plane/gen.h>
-#include <aven/graph/plane/gen/geometry.h>
-#include <aven/graph/plane/geometry.h>
+#include <graph.h>
+#include <graph/path_color.h>
+#include <graph/plane.h>
+#include <graph/plane/hartman.h>
+#include <graph/plane/hartman/geometry.h>
+#include <graph/plane/hartman/tikz.h>
+#include <graph/plane/gen.h>
+#include <graph/plane/gen/geometry.h>
+#include <graph/plane/geometry.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -87,31 +87,31 @@ typedef enum {
 
 typedef union {
     struct {
-        AvenGraphPlaneGenTriCtx ctx;
-        AvenGraphPlaneGenTriData data;
+        GraphPlaneGenTriCtx ctx;
+        GraphPlaneGenTriData data;
     } gen;
     struct {
-        AvenGraphPlaneHartmanCtx ctx;
-        AvenGraphPlaneHartmanFrameOptional frames[3];
-        AvenGraphPlaneHartmanListProp color_lists;
+        GraphPlaneHartmanCtx ctx;
+        GraphPlaneHartmanFrameOptional frames[3];
+        GraphPlaneHartmanListProp color_lists;
         bool cases_satisfied[12];
     } hartman;
     struct {
-        AvenGraphPropUint8 coloring;
+        GraphPropUint8 coloring;
     } colored;
 } AppData;
 
 typedef struct {
     Vec4 color_data[MAX_COLOR + 1];
-    AvenGraphPlaneHartmanGeometryInfo hartman_geometry_info;
+    GraphPlaneHartmanGeometryInfo hartman_geometry_info;
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
     HelpText help_text;
 #ifdef SHOW_VERTEX_LABELS
     VertexText vertex_text;
 #endif
-    AvenGraph graph;
-    AvenGraphPlaneEmbedding embedding;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
     AvenRngPcg pcg;
     AvenRng rng;
     AppState state;
@@ -138,13 +138,13 @@ static AvenGl gl;
 static AppCtx ctx;
 static AvenArena arena;
 
-static AvenGraphPlaneGenGeometryTriInfo gen_geometry_info;
+static GraphPlaneGenGeometryTriInfo gen_geometry_info;
 
 static void app_reset(void) {
     arena = ctx.init_arena;
     ctx.state = APP_STATE_GEN;
 
-    ctx.data.gen.data = aven_graph_plane_gen_tri_data_alloc(
+    ctx.data.gen.data = graph_plane_gen_tri_data_alloc(
         GRAPH_MAX_VERTICES,
         &arena
     );
@@ -157,7 +157,7 @@ static void app_reset(void) {
 
     Aff2 area_transform;
     aff2_identity(area_transform);
-    ctx.data.gen.ctx = aven_graph_plane_gen_tri_init(
+    ctx.data.gen.ctx = graph_plane_gen_tri_init(
         ctx.embedding,
         area_transform,
         2.0f * (ctx.radius * ctx.radius),
@@ -165,7 +165,7 @@ static void app_reset(void) {
         true,
         &arena
     );
-    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+    GraphPlaneGenData data = graph_plane_gen_tri_data(
         &ctx.data.gen.ctx,
         &ctx.data.gen.data
     );
@@ -175,7 +175,7 @@ static void app_reset(void) {
 
     ctx.count = 0;
 
-    gen_geometry_info = (AvenGraphPlaneGenGeometryTriInfo){
+    gen_geometry_info = (GraphPlaneGenGeometryTriInfo){
         .node_color = { 0.9f, 0.9f, 0.9f, 1.0f },
         .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
         .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
@@ -185,7 +185,7 @@ static void app_reset(void) {
         .edge_thickness = ctx.radius / 2.5f,
     };
 
-    ctx.hartman_geometry_info = (AvenGraphPlaneHartmanGeometryInfo){
+    ctx.hartman_geometry_info = (GraphPlaneHartmanGeometryInfo){
         .colors = slice_array(ctx.color_data),
         .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
         .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
@@ -388,26 +388,26 @@ static void app_update(
         switch (ctx.state) {
             case APP_STATE_GEN:
                 ctx.updates = 0;
-                done = aven_graph_plane_gen_tri_step(
+                done = graph_plane_gen_tri_step(
                     &ctx.data.gen.ctx,
                     ctx.rng
                 );
                 ctx.embedding.len = ctx.data.gen.ctx.embedding.len;
 
                 if (done) {
-                    AvenGraphPlaneGenData data = aven_graph_plane_gen_tri_data(
+                    GraphPlaneGenData data = graph_plane_gen_tri_data(
                         &ctx.data.gen.ctx,
                         &ctx.data.gen.data
                     );
 
-                    AvenGraphAug aug_graph = aven_graph_aug(data.graph, &arena);
+                    GraphAug aug_graph = graph_aug(data.graph, &arena);
 
                     ctx.graph = data.graph;
                     ctx.embedding = data.embedding;
                     ctx.state = APP_STATE_HARTMAN;
 
                     uint32_t outer_face_data[4];
-                    AvenGraphSubset outer_face = {
+                    GraphSubset outer_face = {
                         .len = countof(outer_face_data),
                         .ptr = outer_face_data,
                     };
@@ -424,13 +424,13 @@ static void app_update(
 
                     ctx.data.hartman.color_lists.len = aug_graph.len;
                     ctx.data.hartman.color_lists.ptr = aven_arena_create_array(
-                        AvenGraphPlaneHartmanList,
+                        GraphPlaneHartmanList,
                         &arena,
                         ctx.data.hartman.color_lists.len
                     );
 
                     for (uint32_t i = 0; i < aug_graph.len; i += 1) {
-                        AvenGraphPlaneHartmanList list = {
+                        GraphPlaneHartmanList list = {
                             .len = 3,
                             .ptr = {
                                 1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
@@ -458,13 +458,13 @@ static void app_update(
                         get(ctx.data.hartman.color_lists, i) = list;
                     }
                     
-                    ctx.data.hartman.ctx = aven_graph_plane_hartman_init(
+                    ctx.data.hartman.ctx = graph_plane_hartman_init(
                         ctx.data.hartman.color_lists,
                         aug_graph,
                         outer_face,
                         &arena
                     );
-                    ctx.data.hartman.frames[0] = aven_graph_plane_hartman_next_frame(
+                    ctx.data.hartman.frames[0] = graph_plane_hartman_next_frame(
                         &ctx.data.hartman.ctx
                     );
                     for (
@@ -474,7 +474,7 @@ static void app_update(
                     ) {
                         ctx.data.hartman.cases_satisfied[j] = 0;
                     }
-                    aven_graph_plane_hartman_tikz(
+                    graph_plane_hartman_tikz(
                         ctx.embedding,
                         &ctx.data.hartman.ctx,
                         &ctx.data.hartman.frames[0].value,
@@ -488,7 +488,7 @@ static void app_update(
                         i += 1
                     ) {
                         ctx.data.hartman.frames[i] =
-                            (AvenGraphPlaneHartmanFrameOptional){ 0 };
+                            (GraphPlaneHartmanFrameOptional){ 0 };
                     }
                 }
                 break;
@@ -500,16 +500,16 @@ static void app_update(
                     i < ctx.threads;
                     i += 1
                 ) {
-                    AvenGraphPlaneHartmanFrameOptional *frame =
+                    GraphPlaneHartmanFrameOptional *frame =
                         &ctx.data.hartman.frames[i];
                     if (frame->valid) {
                         ctx.data.hartman.cases_satisfied[
-                            aven_graph_plane_hartman_frame_case(
+                            graph_plane_hartman_frame_case(
                                 &ctx.data.hartman.ctx,
                                 &frame->value
                             )
                         ] = true;
-                        frame->valid = !aven_graph_plane_hartman_frame_step(
+                        frame->valid = !graph_plane_hartman_frame_step(
                             &ctx.data.hartman.ctx,
                             &frame->value
                         );
@@ -520,7 +520,7 @@ static void app_update(
                             j > 0;
                             j -= 1
                         ) {
-                            AvenGraphPlaneHartmanFrame *nframe = &list_get(
+                            GraphPlaneHartmanFrame *nframe = &list_get(
                                 ctx.data.hartman.ctx.frames,
                                 j - 1
                             );
@@ -542,7 +542,7 @@ static void app_update(
                         }
                     }
 
-                    aven_graph_plane_hartman_tikz(
+                    graph_plane_hartman_tikz(
                         ctx.embedding,
                         &ctx.data.hartman.ctx,
                         &frame->value,
@@ -577,7 +577,7 @@ static void app_update(
                     }
 
                     ctx.state = APP_STATE_COLORED;
-                    AvenGraphPropUint8 coloring = { .len = ctx.graph.len };
+                    GraphPropUint8 coloring = { .len = ctx.graph.len };
                     coloring.ptr = aven_arena_create_array(
                         uint8_t,
                         &arena,
@@ -602,7 +602,7 @@ static void app_update(
                 ) {
                     ctx.updates = 0;
                     if (
-                        aven_graph_path_color_verify(
+                        graph_path_color_verify(
                             ctx.graph,
                             ctx.data.colored.coloring, arena
                         )
@@ -679,7 +679,7 @@ static void app_update(
 
     switch (ctx.state) {
         case APP_STATE_GEN:
-            aven_graph_plane_gen_geometry_push_tri_ctx(
+            graph_plane_gen_geometry_push_tri_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 &ctx.data.gen.ctx,
@@ -689,21 +689,21 @@ static void app_update(
             );
             break;
         case APP_STATE_HARTMAN: {
-            AvenGraphPlaneHartmanFrame valid_frame_data[
+            GraphPlaneHartmanFrame valid_frame_data[
                 countof(ctx.data.hartman.frames)
             ];
-            List(AvenGraphPlaneHartmanFrame) valid_frames = list_array(
+            List(GraphPlaneHartmanFrame) valid_frames = list_array(
                 valid_frame_data
             );
             for (size_t i = 0; i < countof(ctx.data.hartman.frames); i += 1) {
-                AvenGraphPlaneHartmanFrameOptional *frame =
+                GraphPlaneHartmanFrameOptional *frame =
                     &ctx.data.hartman.frames[i];
                 if (frame->valid) {
                     list_push(valid_frames) = frame->value;
                 }
             }
-            AvenGraphPlaneHartmanFrameSlice vf_slice = slice_list(valid_frames);
-            aven_graph_plane_hartman_geometry_push_ctx(
+            GraphPlaneHartmanFrameSlice vf_slice = slice_list(valid_frames);
+            graph_plane_hartman_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
@@ -715,14 +715,14 @@ static void app_update(
             break;
         }
         case APP_STATE_COLORED: {
-            AvenGraphPlaneGeometryEdge simple_edge_info = {
+            GraphPlaneGeometryEdge simple_edge_info = {
                 .thickness = ctx.hartman_geometry_info.edge_thickness,
             };
             vec4_copy(
                 simple_edge_info.color,
                 ctx.hartman_geometry_info.uncolored_edge_color
             );
-            aven_graph_plane_geometry_push_uncolored_edges(
+            graph_plane_geometry_push_uncolored_edges(
                 &ctx.edge_shapes.geometry,
                 ctx.graph,
                 ctx.embedding,
@@ -730,8 +730,8 @@ static void app_update(
                 graph_transform,
                 &simple_edge_info
             );
-            AvenGraphPlaneGeometryEdge colored_edge_data[MAX_COLOR];
-            AvenGraphPlaneGeometryEdgeSlice colored_edges = slice_array(
+            GraphPlaneGeometryEdge colored_edge_data[MAX_COLOR];
+            GraphPlaneGeometryEdgeSlice colored_edges = slice_array(
                 colored_edge_data
             );
             for (uint32_t i = 0; i < colored_edges.len; i += 1) {
@@ -742,7 +742,7 @@ static void app_update(
                     get(ctx.hartman_geometry_info.colors, i + 1)
                 );
             }
-            aven_graph_plane_geometry_push_colored_edges(
+            graph_plane_geometry_push_colored_edges(
                 &ctx.edge_shapes.geometry,
                 ctx.graph,
                 ctx.embedding,
@@ -751,7 +751,7 @@ static void app_update(
                 colored_edges
             );
 
-            AvenGraphPlaneGeometryNode vertex_outline = {
+            GraphPlaneGeometryNode vertex_outline = {
                 .mat = {
                     { ctx.hartman_geometry_info.radius, 0.0f },
                     { 0.0f, ctx.hartman_geometry_info.radius },
@@ -763,21 +763,21 @@ static void app_update(
                 vertex_outline.color,
                 ctx.hartman_geometry_info.outline_color
             );
-            aven_graph_plane_geometry_push_vertices(
+            graph_plane_geometry_push_vertices(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 graph_transform,
                 &vertex_outline
             );
 
-            AvenGraphPlaneGeometryNode colored_vertex_data[MAX_COLOR + 1];
-            AvenGraphPlaneGeometryNodeSlice colored_vertices = slice_array(
+            GraphPlaneGeometryNode colored_vertex_data[MAX_COLOR + 1];
+            GraphPlaneGeometryNodeSlice colored_vertices = slice_array(
                 colored_vertex_data
             );
             float radius = ctx.hartman_geometry_info.radius -
                 ctx.hartman_geometry_info.border_thickness;
             for (uint32_t i = 0; i < colored_vertices.len; i += 1) {
-                get(colored_vertices, i) = (AvenGraphPlaneGeometryNode) {
+                get(colored_vertices, i) = (GraphPlaneGeometryNode) {
                     .mat = {
                         { radius, 0.0f, },
                         { 0.0f, radius },
@@ -790,7 +790,7 @@ static void app_update(
                     get(ctx.hartman_geometry_info.colors, i)
                 );
             }
-            aven_graph_plane_geometry_push_colored_vertices(
+            graph_plane_geometry_push_colored_vertices(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 ctx.data.colored.coloring,
@@ -802,7 +802,7 @@ static void app_update(
     }
 
 #ifdef SHOW_VERTEX_LABELS
-    aven_graph_plane_geometry_push_labels(
+    graph_plane_geometry_push_labels(
         &ctx.vertex_text.geometry,
         &ctx.vertex_text.font,
         ctx.embedding,
@@ -995,7 +995,7 @@ static void key_callback(
                     list_push(ctx.data.hartman.ctx.frames) =
                         ctx.data.hartman.frames[i].value;
                     ctx.data.hartman.frames[i] =
-                        (AvenGraphPlaneHartmanFrameOptional){ 0 };
+                        (GraphPlaneHartmanFrameOptional){ 0 };
                 }
             }
             ctx.threads = 1;
@@ -1067,7 +1067,7 @@ int main(void) {
     window = glfwCreateWindow(
         (int)width,
         (int)height,
-        "AvenGraph BFS Example",
+        "Graph BFS Example",
         NULL,
         NULL
     );

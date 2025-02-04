@@ -7,10 +7,10 @@
 #include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/math.h>
-#include <aven/graph.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/bfs.h>
-#include <aven/graph/plane/gen.h>
+#include <graph.h>
+#include <graph/plane.h>
+#include <graph/bfs.h>
+#include <graph/plane/gen.h>
 #include <aven/path.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -43,10 +43,10 @@ int main(void) {
         AvenArena temp_arena = arena;
 
         typedef struct {
-            AvenGraph graph;
+            Graph graph;
             uint32_t root;
             uint32_t target;
-            AvenGraphSubset path;
+            GraphSubset path;
         } CaseData;
 
         Slice(CaseData) cases = { .len = NGRAPHS * (MAX_VERTICES / n) };
@@ -57,7 +57,7 @@ int main(void) {
         );
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenGraph graph = aven_graph_plane_gen_tri_abs(
+            Graph graph = graph_plane_gen_tri_abs(
                 n,
                 rng,
                 &temp_arena
@@ -77,7 +77,7 @@ int main(void) {
         __asm volatile("" ::: "memory");
 
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            get(cases, i).path = aven_graph_bfs(
+            get(cases, i).path = graph_bfs(
                 get(cases, i).graph,
                 get(cases, i).root,
                 get(cases, i).target,
@@ -94,7 +94,7 @@ int main(void) {
 
         uint32_t nvalid = 0;
         for (uint32_t i = 0; i < cases.len; i += 1) {
-            AvenGraphSubset path = get(cases, i).path;
+            GraphSubset path = get(cases, i).path;
             bool valid = (get(path, 0) == get(cases, i).target) and
                 (get(path, path.len - 1) == get(cases, i).root);
             if (valid) {

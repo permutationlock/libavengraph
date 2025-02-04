@@ -7,11 +7,11 @@
 #include <aven/fs.h>
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
-#include <aven/graph.h>
-#include <aven/graph/plane.h>
-#include <aven/graph/plane/gen.h>
-#include <aven/graph/plane/geometry.h>
-#include <aven/graph/bfs.h>
+#include <graph.h>
+#include <graph/plane.h>
+#include <graph/plane/gen.h>
+#include <graph/plane/geometry.h>
+#include <graph/bfs.h>
 #include <aven/path.h>
 #include <aven/time.h>
 
@@ -46,11 +46,11 @@ typedef struct {
 typedef struct {
     VertexShapes vertex_shapes;
     EdgeShapes edge_shapes;
-    AvenGraph graph;
-    AvenGraphPlaneEmbedding embedding;
-    AvenGraphSubset path_space;
-    AvenGraphBfsCtx bfs_ctx;
-    Optional(AvenGraphSubset) bfs_path;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
+    GraphSubset path_space;
+    GraphBfsCtx bfs_ctx;
+    Optional(GraphSubset) bfs_path;
     AvenTimeInst last_update;
     int64_t elapsed;
 } AppCtx;
@@ -87,7 +87,7 @@ static void app_init(void) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-    AvenGraphPlaneGenData gen_data = aven_graph_plane_gen_grid(5, 5, &arena);
+    GraphPlaneGenData gen_data = graph_plane_gen_grid(5, 5, &arena);
     ctx.graph = gen_data.graph;
     ctx.embedding = gen_data.embedding;
 
@@ -98,7 +98,7 @@ static void app_init(void) {
         ctx.path_space.len
     );
 
-    ctx.bfs_ctx = aven_graph_bfs_init(
+    ctx.bfs_ctx = graph_bfs_init(
         ctx.graph,
         0,
         &arena
@@ -144,9 +144,9 @@ static void app_update(
             break;
         }
 
-        bool done = aven_graph_bfs_step(&ctx.bfs_ctx);
+        bool done = graph_bfs_step(&ctx.bfs_ctx);
         if (done) {
-            ctx.bfs_path.value = aven_graph_bfs_path(
+            ctx.bfs_path.value = graph_bfs_path(
                 ctx.path_space,
                 &ctx.bfs_ctx,
                 (uint32_t)ctx.graph.len - 1
@@ -166,12 +166,12 @@ static void app_update(
         graph_transform
     );
 
-    AvenGraphPlaneGeometryEdge edge_info = {
+    GraphPlaneGeometryEdge edge_info = {
         .color = { 0.0f, 0.0f, 0.0f, 1.0f },
         .thickness = VERTEX_RADIUS / 4.0f,
     };
 
-    aven_graph_plane_geometry_push_edges(
+    graph_plane_geometry_push_edges(
         &ctx.edge_shapes.geometry,
         ctx.graph,
         ctx.embedding,
@@ -180,15 +180,15 @@ static void app_update(
     );
 
     if (ctx.bfs_path.valid) {
-        AvenGraphSubset path = ctx.bfs_path.value;
+        GraphSubset path = ctx.bfs_path.value;
         assert(path.len != 0);
 
-        AvenGraphPlaneGeometryEdge path_edge_info = {
+        GraphPlaneGeometryEdge path_edge_info = {
             .color = { 1.0f, 0.0f, 0.0f, 1.0f },
             .thickness = VERTEX_RADIUS / 3.0f,
         };
 
-        aven_graph_plane_geometry_push_path_edges(
+        graph_plane_geometry_push_path_edges(
             &ctx.edge_shapes.geometry,
             ctx.embedding,
             path,
@@ -196,7 +196,7 @@ static void app_update(
             &path_edge_info
         );
     } else {
-        AvenGraphPlaneGeometryEdge visited_edge_info = {
+        GraphPlaneGeometryEdge visited_edge_info = {
             .color = { 0.0f, 1.0f, 0.0f, 1.0f },
             .thickness = VERTEX_RADIUS / 3.0f,
         };
@@ -204,7 +204,7 @@ static void app_update(
         for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
             uint32_t parent = get(ctx.bfs_ctx.parents, v);
             if (parent != AVEN_GRAPH_BFS_VERTEX_INVALID) {
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     &ctx.edge_shapes.geometry,
                     ctx.embedding,
                     v,
@@ -215,16 +215,16 @@ static void app_update(
             }
         }
 
-        AvenGraphPlaneGeometryEdge active_edge_info = {
+        GraphPlaneGeometryEdge active_edge_info = {
             .color = { 0.0f, 0.0f, 1.0f, 1.0f },
             .thickness = VERTEX_RADIUS / 3.0f,
         };
 
         if (ctx.bfs_ctx.vertex != AVEN_GRAPH_BFS_VERTEX_INVALID) {
-            AvenGraphAdjList adj = get(ctx.graph, ctx.bfs_ctx.vertex);
+            GraphAdjList adj = get(ctx.graph, ctx.bfs_ctx.vertex);
             if (ctx.bfs_ctx.neighbor < adj.len) {
                 uint32_t neighbor = get(adj, ctx.bfs_ctx.neighbor);
-                aven_graph_plane_geometry_push_edge(
+                graph_plane_geometry_push_edge(
                     &ctx.edge_shapes.geometry,
                     ctx.embedding,
                     ctx.bfs_ctx.vertex,
@@ -236,7 +236,7 @@ static void app_update(
         }
     }
 
-    AvenGraphPlaneGeometryNode node_outline_info = {
+    GraphPlaneGeometryNode node_outline_info = {
         .color = { 0.0f, 0.0f, 0.0f, 1.0f },
         .mat = {
             { 1.25f * VERTEX_RADIUS, 0.0f },
@@ -246,14 +246,14 @@ static void app_update(
         .roundness = 1.0f,
     };
 
-    AvenGraphPlaneGeometryNode node_empty_info = {
+    GraphPlaneGeometryNode node_empty_info = {
         .color = { 0.9f, 0.9f, 0.9f, 1.0f },
         .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
         .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
 
-    aven_graph_plane_geometry_push_vertices(
+    graph_plane_geometry_push_vertices(
         &ctx.vertex_shapes.geometry,
         ctx.embedding,
         graph_transform,
@@ -261,24 +261,24 @@ static void app_update(
     );
 
     if (ctx.bfs_path.valid) {
-        AvenGraphSubset path = ctx.bfs_path.value;
+        GraphSubset path = ctx.bfs_path.value;
         assert(path.len != 0);
 
-        aven_graph_plane_geometry_push_vertices(
+        graph_plane_geometry_push_vertices(
             &ctx.vertex_shapes.geometry,
             ctx.embedding,
             graph_transform,
             &node_empty_info
         ); 
 
-        AvenGraphPlaneGeometryNode path_node_info = {
+        GraphPlaneGeometryNode path_node_info = {
             .color = { 1.0f, 0.0f, 0.0f, 1.0f },
             .mat = { { VERTEX_RADIUS, 0.0f, }, { 0.0f, VERTEX_RADIUS } },
             .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
 
-        aven_graph_plane_geometry_push_subset_vertices(
+        graph_plane_geometry_push_subset_vertices(
             &ctx.vertex_shapes.geometry,
             ctx.embedding,
             path,
@@ -286,7 +286,7 @@ static void app_update(
             &path_node_info
         );
     } else {
-        aven_graph_plane_geometry_push_marked_vertices(
+        graph_plane_geometry_push_marked_vertices(
             &ctx.vertex_shapes.geometry,
             ctx.embedding,
             ctx.bfs_ctx.parents,
@@ -295,21 +295,21 @@ static void app_update(
             &node_empty_info
         );
 
-        AvenGraphPlaneGeometryNode visited_node_info = {
+        GraphPlaneGeometryNode visited_node_info = {
             .color = { 0.0f, 1.0f, 0.0f, 1.0f },
             .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
             .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
 
-        AvenGraphPlaneGeometryNode active_node_info = {
+        GraphPlaneGeometryNode active_node_info = {
             .color = { 0.0f, 0.0f, 1.0f, 1.0f },
             .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
             .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
 
-        aven_graph_plane_geometry_push_unmarked_vertices(
+        graph_plane_geometry_push_unmarked_vertices(
             &ctx.vertex_shapes.geometry,
             ctx.embedding,
             ctx.bfs_ctx.parents,
@@ -319,7 +319,7 @@ static void app_update(
         );
 
         if (ctx.bfs_ctx.vertex != AVEN_GRAPH_BFS_VERTEX_INVALID) {
-            aven_graph_plane_geometry_push_vertex(
+            graph_plane_geometry_push_vertex(
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 ctx.bfs_ctx.vertex,
@@ -329,14 +329,14 @@ static void app_update(
         }
     }
 
-    AvenGraphPlaneGeometryNode target_node_info = {
+    GraphPlaneGeometryNode target_node_info = {
         .color = { 1.0f, 0.0f, 1.0f, 1.0f },
         .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
         .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
 
-    aven_graph_plane_geometry_push_vertex(
+    graph_plane_geometry_push_vertex(
         &ctx.vertex_shapes.geometry,
         ctx.embedding,
         (uint32_t)ctx.graph.len - 1,
@@ -456,7 +456,7 @@ int main(void) {
     window = glfwCreateWindow(
         (int)width,
         (int)height,
-        "AvenGraph BFS Example",
+        "Graph BFS Example",
         NULL,
         NULL
     );
