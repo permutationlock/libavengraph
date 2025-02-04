@@ -13,8 +13,6 @@ typedef Slice(uint32_t) GraphPropUint32;
 typedef Slice(uint16_t) GraphPropUint16;
 typedef Slice(uint8_t) GraphPropUint8;
 
-typedef Slice(uint8_t) GraphColorSlice;
-
 typedef struct{
     uint32_t vertex;
     uint32_t back_index;

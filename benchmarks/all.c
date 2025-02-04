@@ -7,6 +7,12 @@
 #include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/math.h>
+#include <aven/path.h>
+#include <aven/rng.h>
+#include <aven/rng/pcg.h>
+#include <aven/time.h>
+#include <aven/thread_pool.h>
+
 #include <graph.h>
 #include <graph/path_color.h>
 #include <graph/plane.h>
@@ -17,11 +23,6 @@
 #include <graph/plane/hartman.h>
 #include <graph/plane/hartman/thread.h>
 #include <graph/plane/gen.h>
-#include <aven/path.h>
-#include <aven/rng.h>
-#include <aven/rng/pcg.h>
-#include <aven/time.h>
-#include <aven/thread_pool.h>
 
 #include <float.h>
 #include <stdio.h>
