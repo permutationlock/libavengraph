@@ -229,45 +229,6 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep gen_tri_obj_step = aven_build_common_step_cc_ex(
-        &opts,
-        graphics_includes,
-        macros,
-        aven_path(&arena, root_path.ptr, "examples", "gen_tri.c", NULL),
-        &work_dir_step,
-        &arena
-    );
-
-    AvenBuildStep *gen_tri_obj_data[5];
-    List(AvenBuildStep *) gen_tri_obj_list = list_array(gen_tri_obj_data);
-
-    list_push(gen_tri_obj_list) = &gen_tri_obj_step;
-    list_push(gen_tri_obj_list) = &stb_obj_step;
-    
-    if (winutf8_obj_step.valid) {
-        list_push(gen_tri_obj_list) = &winutf8_obj_step.value;
-    }
-
-    if (winpthreads_obj_step.valid) {
-        list_push(gen_tri_obj_list) = &winpthreads_obj_step.value;
-    }
-
-    if (glfw_obj_step.valid) {
-        list_push(gen_tri_obj_list) = &glfw_obj_step.value;
-    }
-
-    AvenBuildStepPtrSlice gen_tri_objs = slice_list(gen_tri_obj_list);
-
-    AvenBuildStep gen_tri_exe_step = aven_build_common_step_ld_exe_ex(
-        &opts,
-        libavengl_opts.syslibs,
-        gen_tri_objs,
-        &out_dir_step,
-        aven_str("gen_tri"),
-        true,
-        &arena
-    );
-
     AvenBuildStep p3color_obj_step = aven_build_common_step_cc_ex(
         &opts,
         graphics_includes,
@@ -415,14 +376,11 @@ int main(int argc, char **argv) {
     );
 
     AvenBuildStep root_step = aven_build_step_root();
-    // aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
-    // (void)gen_tri_exe_step;
-    // aven_build_step_add_dep(&root_step, &p3color_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &p3color_exe_step, &arena);
     aven_build_step_add_dep(&root_step, &p3choose_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
-    // (void)p3choose_exe_step;
+    aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
 
     // Build steps for tests
 
@@ -476,111 +434,6 @@ int main(int argc, char **argv) {
 
     AvenStrSlice bench_args =  { 0 };
 
-    AvenBuildStep bench_gen_tri_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "gen_tri.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep gen_tri_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&gen_tri_root_step, &bench_gen_tri_step, &arena);
-
-    AvenBuildStep bench_p3color_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "p3color_bfs.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep p3color_bfs_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&p3color_bfs_root_step, &bench_p3color_bfs_step, &arena);
-
-    AvenBuildStep bench_p3color_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "p3color.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep p3color_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&p3color_root_step, &bench_p3color_step, &arena);
-
-    AvenBuildStep bench_p3choose_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "p3choose.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep p3choose_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&p3choose_root_step, &bench_p3choose_step, &arena);
-
-    AvenBuildStep bench_p3color_thread_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "p3color_thread.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep p3color_thread_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&p3color_thread_root_step, &bench_p3color_thread_step, &arena);
-
-    AvenBuildStep bench_p3choose_thread_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "p3choose_thread.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep p3choose_thread_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&p3choose_thread_root_step, &bench_p3choose_thread_step, &arena);
-
-    AvenBuildStep bench_bfs_step = aven_build_common_step_cc_ld_run_exe_ex(
-        &opts,
-        includes,
-        macros,
-        syslibs,
-        bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "bfs.c", NULL),
-        &bench_dir_step,
-        false,
-        bench_args,
-        &arena
-    );
-    AvenBuildStep bfs_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&bfs_root_step, &bench_bfs_step, &arena);
-
     AvenBuildStep bench_all_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
         includes,
@@ -612,15 +465,8 @@ int main(int argc, char **argv) {
     aven_build_step_add_dep(&pyramid_root_step, &bench_pyramid_step, &arena);
 
     AvenBuildStep bench_root_step = aven_build_step_root();
-    // aven_build_step_add_dep(&bench_root_step, &pyramid_root_step, &arena);
+    aven_build_step_add_dep(&bench_root_step, &pyramid_root_step, &arena);
     aven_build_step_add_dep(&bench_root_step, &all_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &p3choose_thread_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &p3choose_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &p3color_thread_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &p3color_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &p3color_bfs_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &bfs_root_step, &arena);
-    // aven_build_step_add_dep(&bench_root_step, &gen_tri_root_step, &arena);
 
     // Run build steps according to args
 
