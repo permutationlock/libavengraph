@@ -40,7 +40,7 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
     float edge_thickness,
     GraphPlaneP3ChooseGeometryFrame *info
 ) {
-    GraphPlaneP3ChooseVertex z_info = *graph_plane_p3choose_vinfo(
+    GraphPlaneP3ChooseVertexLoc z_loc = *graph_plane_p3choose_vloc(
         ctx,
         frame,
         frame->z
@@ -74,12 +74,12 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
     };
     vec4_copy(active_edge_info.color, info->active_color);
 
-    GraphAugAdjList z_adj = get(ctx->graph, frame->z);
+    GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
 
-    if (z_info.nb.last != z_info.nb.first) {
+    if (z_loc.nb.last != z_loc.nb.first) {
         uint32_t v = get(
             z_adj,
-            graph_aug_adj_next(z_adj, z_info.nb.first)
+            graph_aug_adj_next(z_adj, z_loc.nb.first)
         ).vertex;
         graph_plane_geometry_push_edge(
             geometry,
@@ -90,7 +90,7 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
             &active_edge_info
         );
     } else {
-        uint32_t u = get(z_adj, z_info.nb.first).vertex;
+        uint32_t u = get(z_adj, z_loc.nb.first).vertex;
         graph_plane_geometry_push_edge(
             geometry,
             embedding,
@@ -115,8 +115,8 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
     Vec4 outline_color,
     GraphPlaneP3ChooseGeometryFrame *info
 ) {
-    uint32_t x_mark = get(ctx->marks, frame->x_info.mark);
-    uint32_t y_mark = get(ctx->marks, frame->y_info.mark);
+    uint32_t x_mark = get(ctx->marks, frame->x_loc.mark);
+    uint32_t y_mark = get(ctx->marks, frame->y_loc.mark);
 
     // Draw edges of outer cycle including active edge
     {
@@ -134,10 +134,10 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
         vec4_copy(cycle_edge_info.color, info->cycle_color);
 
         uint32_t v = frame->x;
-        GraphPlaneP3ChooseNeighbors v_nb = frame->x_info.nb;
-        uint32_t v_mark = get(ctx->marks, frame->x_info.mark);
+        GraphPlaneP3ChooseNeighbors v_nb = frame->x_loc.nb;
+        uint32_t v_mark = get(ctx->marks, frame->x_loc.mark);
         do {
-            GraphAugAdjList v_aug_adj = get(ctx->graph, v);
+            GraphAugAdjList v_aug_adj = get(ctx->vertex_info, v).adj;
             Vec2 v_pos;
             vec2_copy(v_pos, get(embedding, v));
             aff2_transform(v_pos, trans, v_pos);
@@ -222,10 +222,9 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
 
             GraphAugAdjListNode vu_node = get(v_aug_adj, v_nb.last);
             uint32_t u = vu_node.vertex;
-            GraphPlaneP3ChooseVertex u_info =
-                *graph_plane_p3choose_vinfo(ctx, frame, u);
-            uint32_t u_mark = get(ctx->marks, u_info.mark);
-            // GraphAugAdjList u_aug_adj = get(ctx->graph, u);
+            GraphPlaneP3ChooseVertexLoc u_loc =
+                *graph_plane_p3choose_vloc(ctx, frame, u);
+            uint32_t u_mark = get(ctx->marks, u_loc.mark);
 
             assert(u_mark != 0);
 
@@ -259,7 +258,7 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
             }
 
             v = u;
-            v_nb = u_info.nb;
+            v_nb = u_loc.nb;
             v_mark = u_mark;
         } while (v != frame->x);
 
@@ -268,17 +267,17 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
                 .thickness = edge_thickness + border_thickness,
             };
             vec4_copy(active_edge_info.color, info->active_color);
-            GraphPlaneP3ChooseVertex *z_info = graph_plane_p3choose_vinfo(
+            GraphPlaneP3ChooseVertexLoc *z_loc = graph_plane_p3choose_vloc(
                 ctx,
                 frame,
                 frame->z
             );
-            GraphAugAdjList z_adj = get(ctx->graph, frame->z);
-            uint32_t u = get(z_adj, z_info->nb.first).vertex;
-            if (z_info->nb.first != z_info->nb.last) {
+            GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
+            uint32_t u = get(z_adj, z_loc->nb.first).vertex;
+            if (z_loc->nb.first != z_loc->nb.last) {
                 u = get(
                     z_adj,
-                    graph_aug_adj_next(z_adj, z_info->nb.first)
+                    graph_aug_adj_next(z_adj, z_loc->nb.first)
                 ).vertex;
             }
 
@@ -299,15 +298,15 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
 
         v = frame->x;
         do {
-            GraphPlaneP3ChooseVertex *v_info = graph_plane_p3choose_vinfo(
+            GraphPlaneP3ChooseVertexLoc *v_loc = graph_plane_p3choose_vloc(
                 ctx,
                 frame,
                 v
             );
-            GraphAugAdjList v_adj = get(ctx->graph, v);
+            GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
             for (
-                uint32_t i = v_info->nb.first;
-                i != v_info->nb.last;
+                uint32_t i = v_loc->nb.first;
+                i != v_loc->nb.last;
                 i = graph_aug_adj_next(v_adj, i)
             ) {
                 uint32_t u = get(v_adj, i).vertex;
@@ -323,8 +322,8 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
                     &edge_info
                 );
             }
-            if (v_info->nb.first == v_info->nb.last) {
-                uint32_t u = get(v_adj, v_info->nb.last).vertex;
+            if (v_loc->nb.first == v_loc->nb.last) {
+                uint32_t u = get(v_adj, v_loc->nb.last).vertex;
                 // if (u >= v) {
                 graph_plane_geometry_push_edge(
                     geometry,
@@ -336,7 +335,7 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
                 );
                 // }
             }
-            v = get(v_adj, v_info->nb.last).vertex;
+            v = get(v_adj, v_loc->nb.last).vertex;
         } while (v != frame->x);
     }
 }
@@ -359,8 +358,8 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
         };
 
         vec4_copy(edge_info.color, info->uncolored_edge_color);
-        for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            GraphAugAdjList v_adj = get(ctx->graph, v);
+        for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+            GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
 
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
@@ -439,8 +438,8 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
         }
 
         vec4_copy(edge_info.color, info->edge_color);
-        for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            GraphAugAdjList v_adj = get(ctx->graph, v);
+        for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+            GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
 
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
@@ -449,8 +448,8 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
                 }
 
                 if (
-                    get(ctx->vertex_info, v).mark != 0 or
-                    get(ctx->vertex_info, u).mark != 0
+                    get(ctx->vertex_info, v).loc.mark != 0 or
+                    get(ctx->vertex_info, u).loc.mark != 0
                 ) {
                     continue;
                 }
@@ -466,18 +465,18 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
             }
         }
 
-        for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
-            GraphAugAdjList v_adj = get(ctx->graph, v);
-            GraphPlaneP3ChooseList *v_colors = &get(ctx->color_lists, v);
+        for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+            GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
+            GraphPlaneP3ChooseList *v_colors = &get(ctx->vertex_info, v).colors;
             for (uint32_t i = 0; i < v_adj.len; i += 1) {
                 uint32_t u = get(v_adj, i).vertex;
                 if (u < v) {
                     continue;
                 }
                 GraphPlaneP3ChooseList *u_colors = &get(
-                    ctx->color_lists,
+                    ctx->vertex_info,
                     u
-                );
+                ).colors;
                 if (
                     v_colors->len == 1 and
                     u_colors->len == 1 and
@@ -502,7 +501,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
 
     // Draw vertex color lists
 
-    for (uint32_t v = 0; v < ctx->graph.len; v += 1) {
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
         Vec2 v_pos;
         vec2_copy(v_pos, get(embedding, v));
         aff2_transform(v_pos, trans, v_pos);
@@ -522,7 +521,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
             info->outline_color
         );
 
-        GraphPlaneP3ChooseList v_list = get(ctx->color_lists, v);
+        GraphPlaneP3ChooseList v_list = get(ctx->vertex_info, v).colors;
         switch (v_list.len) {
             case 1: {
                 Aff2 node_trans;

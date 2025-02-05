@@ -13,7 +13,6 @@
 #include <graph/plane.h>
 #include <graph/plane/p3choose.h>
 #include <graph/plane/p3choose/geometry.h>
-#include <graph/plane/p3choose/tikz.h>
 #include <graph/plane/gen.h>
 #include <graph/plane/gen/geometry.h>
 #include <graph/plane/geometry.h>
@@ -124,7 +123,6 @@ typedef struct {
     int64_t timestep;
     size_t threads;
     int64_t count;
-    int tikz_count;
     float radius;
     int updates;
     bool paused;
@@ -429,38 +427,38 @@ static void app_update(
                         ctx.data.p3choose.color_lists.len
                     );
 
-                    for (uint32_t i = 0; i < aug_graph.len; i += 1) {
-                        GraphPlaneP3ChooseList list = {
-                            .len = 3,
-                            .ptr = {
-                                1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
-                                1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
-                                1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR),
-                            },
-                        };
+                    for (uint32_t j = 0; j < aug_graph.len; j += 1) {
+                        GraphPlaneP3ChooseList list = { .len = 3 };
+                        get(list, 0) = (uint8_t)(
+                            1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR)
+                        );
+                        get(list, 1) = (uint8_t)(
+                            1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR)
+                        );
+                        get(list, 2) = (uint8_t)(
+                            1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR)
+                        );
 
                         while (get(list, 1) == get(list, 0)) {
-                            get(list, 1) = 1 + aven_rng_rand_bounded(
-                                ctx.rng,
-                                MAX_COLOR
+                            get(list, 1) = (uint8_t)(
+                                1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR)
                             );
                         }
                         while (
                             get(list, 2) == get(list, 1) or
                             get(list, 2) == get(list, 0)
                         ) {
-                            get(list, 2) = 1 + aven_rng_rand_bounded(
-                                ctx.rng,
-                                MAX_COLOR
+                            get(list, 2) = (uint8_t)(
+                                1 + aven_rng_rand_bounded(ctx.rng, MAX_COLOR)
                             );
                         }
 
-                        get(ctx.data.p3choose.color_lists, i) = list;
+                        get(ctx.data.p3choose.color_lists, j) = list;
                     }
                     
                     ctx.data.p3choose.ctx = graph_plane_p3choose_init(
-                        ctx.data.p3choose.color_lists,
                         aug_graph,
+                        ctx.data.p3choose.color_lists,
                         outer_face,
                         &arena
                     );
@@ -474,14 +472,6 @@ static void app_update(
                     ) {
                         ctx.data.p3choose.cases_satisfied[j] = 0;
                     }
-                    graph_plane_p3choose_tikz(
-                        ctx.embedding,
-                        &ctx.data.p3choose.ctx,
-                        &ctx.data.p3choose.frames[0].value,
-                        (Vec2){ 4.5f, 4.0f },
-                        arena
-                    );
-                    ctx.tikz_count += 1;
                     for (
                         size_t i = 1;
                         i < countof(ctx.data.p3choose.frames);
@@ -526,9 +516,9 @@ static void app_update(
                             );
                             if (
                                 get(
-                                    ctx.data.p3choose.ctx.color_lists,
+                                    ctx.data.p3choose.ctx.vertex_info,
                                     nframe->z
-                                ).len == 1
+                                ).colors.len == 1
                             ) {
                                 frame->value = *nframe;
                                 frame->valid = true;
@@ -542,19 +532,6 @@ static void app_update(
                         }
                     }
 
-                    graph_plane_p3choose_tikz(
-                        ctx.embedding,
-                        &ctx.data.p3choose.ctx,
-                        &frame->value,
-                        (Vec2){ 4.5f, 4.0f },
-                        arena
-                    );
-                    ctx.tikz_count += 1;
-                    if (ctx.tikz_count % 2 == 0) {
-                        printf("\n");
-                    } else {
-                        printf("$\\qquad$");
-                    }
                     if (frame->valid) {
                         done = false;
                     }
@@ -584,8 +561,8 @@ static void app_update(
                         coloring.len
                     );
                     for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
-                        get(coloring, v) = (uint8_t)get(
-                            get(ctx.data.p3choose.ctx.color_lists, v),
+                        get(coloring, v) = get(
+                            get(ctx.data.p3choose.ctx.vertex_info, v).colors,
                             0
                         );
                     }
@@ -756,7 +733,7 @@ static void app_update(
                     { ctx.p3choose_geometry_info.radius, 0.0f },
                     { 0.0f, ctx.p3choose_geometry_info.radius },
                 },
-                .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+                .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
                 .roundness = 1.0f,
             };
             vec4_copy(
@@ -782,7 +759,7 @@ static void app_update(
                         { radius, 0.0f, },
                         { 0.0f, radius },
                     },
-                    .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+                    .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
                     .roundness = 1.0f,
                 };
                 vec4_copy(

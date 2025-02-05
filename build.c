@@ -418,8 +418,8 @@ int main(int argc, char **argv) {
     // aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
     // aven_build_step_add_dep(&root_step, &gen_tri_exe_step, &arena);
     // (void)gen_tri_exe_step;
-    aven_build_step_add_dep(&root_step, &p3color_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3choose_exe_step, &arena);
+    // aven_build_step_add_dep(&root_step, &p3color_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &p3choose_exe_step, &arena);
     // aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
     // aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
     // (void)p3choose_exe_step;
