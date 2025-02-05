@@ -29,8 +29,8 @@
 
 #define ARENA_SIZE (4096UL * 4000000UL)
 
-#define FULL_RUNS 10
-#define NGRAPHS 10
+#define NGRAPHS 1
+#define FULL_RUNS 1
 #define MAX_VERTICES 10000001
 #define START_VERTICES 1000
 
@@ -48,7 +48,7 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
-    const char *bench_names[NBENCHES] = {
+    const char *bench_names[] = {
         "BFS",
         "Augment Adjacency Lists",
         "Path 3-Color w/ BFS",
@@ -61,6 +61,10 @@ int main(void) {
         "Path 3-Choose (3 threads)",
         "Path 3-Choose (4 threads)",
     };
+
+    if (countof(bench_names) != NBENCHES) {
+        aven_panic("invalid benchmark count");
+    }
 
     typedef Slice(double) DoubleSlice;
     Slice(DoubleSlice) bench_times = aven_arena_create_slice(
@@ -99,8 +103,8 @@ int main(void) {
     );
     aven_thread_pool_run(&thread_pool);
     
-    uint32_t p_data[] = { 1, 2 };
-    uint32_t q_data[] = { 0 };
+    uint32_t p_data[] = { 0 };
+    uint32_t q_data[] = { 2, 1 };
     GraphSubset p = slice_array(p_data);
     GraphSubset q = slice_array(q_data);
 
@@ -112,10 +116,13 @@ int main(void) {
 
     for (size_t r = 0; r < FULL_RUNS; r += 1) {
         size_t n_count = 0;
-        for (uint32_t n = START_VERTICES; n < MAX_VERTICES; n *= 10) {
+        for (uint32_t na = START_VERTICES; na < MAX_VERTICES; na *= 10) {
             AvenArena loop_arena = arena;
 
             size_t bench_index = 0;
+
+            uint32_t ka = (uint32_t)sqrtf(((float)na - 3.0f) * 2.0f);
+            uint32_t n = (ka * (ka + 1)) / 2 + 3;
 
             typedef struct {
                 Graph graph;
@@ -127,9 +134,9 @@ int main(void) {
                 uint32_t target;
             } CaseData;
 
-            size_t nruns = MAX_VERTICES / n;
+            size_t nruns = 1;
 
-            Slice(CaseData) cases = { .len = NGRAPHS };
+            Slice(CaseData) cases = { .len = NGRAPHS * max(MAX_VERTICES / n, 1) };
             cases.ptr = aven_arena_create_array(
                 CaseData,
                 &loop_arena,
@@ -137,9 +144,8 @@ int main(void) {
             );
 
             for (uint32_t i = 0; i < cases.len; i += 1) {
-                Graph graph = graph_plane_gen_tri_abs(
-                    n,
-                    rng,
+                Graph graph = graph_plane_gen_pyramid_abs(
+                    ka,
                     &loop_arena
                 );
                 get(cases, i).graph = graph;
@@ -342,17 +348,17 @@ int main(void) {
             }
             {
                 AvenArena temp_arena = loop_arena;
-
-                size_t bfs_nruns = max(nruns / 10, 1);
         
                 __asm volatile("" ::: "memory");
                 AvenTimeInst start_inst = aven_time_now();
                 __asm volatile("" ::: "memory");
 
-                for (size_t k = 0; k < bfs_nruns; k += 1) {
+                size_t ncases = max(cases.len / 10, 1);
+
+                for (size_t k = 0; k < nruns; k += 1) {
                     __asm volatile("" ::: "memory");
                     temp_arena = loop_arena;
-                    for (uint32_t i = 0; i < cases.len; i += 1) {
+                    for (uint32_t i = 0; i < ncases; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color_bfs(
                             get(cases, i).graph,
                             p,
@@ -368,11 +374,10 @@ int main(void) {
                 __asm volatile("" ::: "memory");
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns /
-                    (double)(cases.len * bfs_nruns);
+                double ns_per_graph = (double)elapsed_ns / (double)(ncases * nruns);
 
                 uint32_t nvalid = 0;
-                for (uint32_t i = 0; i < cases.len; i += 1) {
+                for (uint32_t i = 0; i < ncases; i += 1) {
                     bool valid = graph_path_color_verify(
                         get(cases, i).graph,
                         get(cases, i).coloring,
@@ -383,7 +388,7 @@ int main(void) {
                     }
                 }
 
-                if (nvalid < cases.len) {
+                if (nvalid < ncases) {
                     aven_panic("invalid 3-coloring (bfs)");
                 }
 
@@ -392,7 +397,7 @@ int main(void) {
                     "\tvalid 3-colorings: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
-                    (unsigned long)cases.len,
+                    (unsigned long)ncases,
                     (unsigned long)n,
                     (unsigned long)nvalid,
                     ns_per_graph,

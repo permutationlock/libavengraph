@@ -8,6 +8,7 @@ typedef Slice(uint32_t) GraphAdjList;
 typedef Slice(GraphAdjList) Graph;
 
 typedef Slice(uint32_t) GraphSubset;
+
 typedef Slice(uint64_t) GraphPropUint64;
 typedef Slice(uint32_t) GraphPropUint32;
 typedef Slice(uint16_t) GraphPropUint16;
