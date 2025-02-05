@@ -246,7 +246,7 @@ AvenArg aven_build_common_args_data[] = {
     },
     {
         .name = "-windresflags",
-        .description = "Archiver common flags",
+        .description = "Windows resource compiler common flags",
         .type = AVEN_ARG_TYPE_STRING,
         .value = {
             .type = AVEN_ARG_TYPE_STRING,
