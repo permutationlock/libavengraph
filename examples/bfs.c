@@ -202,13 +202,13 @@ static void app_update(
         };
 
         for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
-            uint32_t parent = get(ctx.bfs_ctx.parents, v);
-            if (parent != AVEN_GRAPH_BFS_VERTEX_INVALID) {
+            uint32_t parent = get(ctx.bfs_ctx.vertex_info, v).parent;
+            if (parent != 0) {
                 graph_plane_geometry_push_edge(
                     &ctx.edge_shapes.geometry,
                     ctx.embedding,
                     v,
-                    parent,
+                    parent - 1,
                     graph_transform,
                     &visited_edge_info
                 );
@@ -220,19 +220,17 @@ static void app_update(
             .thickness = VERTEX_RADIUS / 3.0f,
         };
 
-        if (ctx.bfs_ctx.vertex != AVEN_GRAPH_BFS_VERTEX_INVALID) {
-            GraphAdjList adj = get(ctx.graph, ctx.bfs_ctx.vertex);
-            if (ctx.bfs_ctx.neighbor < adj.len) {
-                uint32_t neighbor = get(adj, ctx.bfs_ctx.neighbor);
-                graph_plane_geometry_push_edge(
-                    &ctx.edge_shapes.geometry,
-                    ctx.embedding,
-                    ctx.bfs_ctx.vertex,
-                    neighbor,
-                    graph_transform,
-                    &active_edge_info
-                );
-            }
+        GraphAdjList adj = get(ctx.graph, ctx.bfs_ctx.vertex);
+        if (ctx.bfs_ctx.edge_index < adj.len) {
+            uint32_t neighbor = get(adj, ctx.bfs_ctx.edge_index);
+            graph_plane_geometry_push_edge(
+                &ctx.edge_shapes.geometry,
+                ctx.embedding,
+                ctx.bfs_ctx.vertex,
+                neighbor,
+                graph_transform,
+                &active_edge_info
+            );
         }
     }
 
@@ -242,14 +240,14 @@ static void app_update(
             { 1.25f * VERTEX_RADIUS, 0.0f },
             { 0.0f, 1.25f * VERTEX_RADIUS }
         },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+        .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
 
     GraphPlaneGeometryNode node_empty_info = {
         .color = { 0.9f, 0.9f, 0.9f, 1.0f },
         .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+        .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
 
@@ -274,7 +272,7 @@ static void app_update(
         GraphPlaneGeometryNode path_node_info = {
             .color = { 1.0f, 0.0f, 0.0f, 1.0f },
             .mat = { { VERTEX_RADIUS, 0.0f, }, { 0.0f, VERTEX_RADIUS } },
-            .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+            .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
 
@@ -286,53 +284,59 @@ static void app_update(
             &path_node_info
         );
     } else {
-        graph_plane_geometry_push_marked_vertices(
-            &ctx.vertex_shapes.geometry,
-            ctx.embedding,
-            ctx.bfs_ctx.parents,
-            AVEN_GRAPH_BFS_VERTEX_INVALID,
-            graph_transform,
-            &node_empty_info
-        );
+        for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
+            uint32_t parent = get(ctx.bfs_ctx.vertex_info, v).parent;
+            if (parent == 0) {
+                graph_plane_geometry_push_vertex(
+                    &ctx.vertex_shapes.geometry,
+                    ctx.embedding,
+                    v,
+                    graph_transform,
+                    &node_empty_info
+                );
+            }
+        }
 
         GraphPlaneGeometryNode visited_node_info = {
             .color = { 0.0f, 1.0f, 0.0f, 1.0f },
             .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
-            .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+            .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
 
         GraphPlaneGeometryNode active_node_info = {
             .color = { 0.0f, 0.0f, 1.0f, 1.0f },
             .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
-            .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+            .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
             .roundness = 1.0f,
         };
 
-        graph_plane_geometry_push_unmarked_vertices(
+        for (uint32_t v = 0; v < ctx.graph.len; v += 1) {
+            uint32_t parent = get(ctx.bfs_ctx.vertex_info, v).parent;
+            if (parent != 0) {
+                graph_plane_geometry_push_vertex(
+                    &ctx.vertex_shapes.geometry,
+                    ctx.embedding,
+                    v,
+                    graph_transform,
+                    &visited_node_info
+                );
+            }
+        }
+
+        graph_plane_geometry_push_vertex(
             &ctx.vertex_shapes.geometry,
             ctx.embedding,
-            ctx.bfs_ctx.parents,
-            AVEN_GRAPH_BFS_VERTEX_INVALID,
+            ctx.bfs_ctx.vertex,
             graph_transform,
-            &visited_node_info
+            &active_node_info
         );
-
-        if (ctx.bfs_ctx.vertex != AVEN_GRAPH_BFS_VERTEX_INVALID) {
-            graph_plane_geometry_push_vertex(
-                &ctx.vertex_shapes.geometry,
-                ctx.embedding,
-                ctx.bfs_ctx.vertex,
-                graph_transform,
-                &active_node_info
-            );
-        }
     }
 
     GraphPlaneGeometryNode target_node_info = {
         .color = { 1.0f, 0.0f, 1.0f, 1.0f },
         .mat = { { VERTEX_RADIUS, 0.0f }, { 0.0f, VERTEX_RADIUS } },
-        .shape = AVEN_GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
+        .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
         .roundness = 1.0f,
     };
 

@@ -6,8 +6,6 @@
 
 #include "../graph.h"
 
-#define GRAPH_BFS_VERTEX_INVALID 0xffffffffU
-
 typedef struct {
     uint32_t len;
     uint32_t parent;

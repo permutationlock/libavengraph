@@ -112,7 +112,7 @@ int main(void) {
             &temp_arena
         );
 
-        bool cases[AVEN_GRAPH_PLANE_P3COLOR_CASE_MAX] = { 0 };
+        bool cases[GRAPH_PLANE_P3COLOR_CASE_MAX] = { 0 };
 
         GraphPlaneP3ColorFrameOptional frame =
             graph_plane_p3color_next_frame(&test_case.ctx);

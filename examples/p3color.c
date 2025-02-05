@@ -4,8 +4,6 @@
 
 //#define SHOW_VERTEX_LABELS
 
-#define AVEN_GRAPH_PLANE_P3COLOR_PTHREAD
-
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
 #include <aven/fs.h>
@@ -361,8 +359,16 @@ static void app_update(
     aven_gl_text_geometry_clear(&ctx.vertex_text.geometry);
 #endif
 
+    float border_padding = 2.0f * VERTEX_RADIUS;
+    float scale = 1.0f / (1.0f + border_padding);
+
     Aff2 graph_transform;
     aff2_identity(graph_transform);
+    aff2_stretch(
+        graph_transform,
+        (Vec2){ scale, scale },
+        graph_transform
+    );
 
     switch (ctx.state) {
         case APP_STATE_GEN:
@@ -409,17 +415,14 @@ static void app_update(
     gl.Clear(GL_COLOR_BUFFER_BIT);
     assert(gl.GetError() == 0);
 
-    float border_padding = 2.0f * VERTEX_RADIUS;
-    float scale = 1.0f / (1.0f + border_padding);
 
     Aff2 cam_transform;
     aff2_camera_position(
         cam_transform,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ norm_width + border_padding, norm_height + border_padding },
+        (Vec2){ norm_width, norm_height },
         0.0f
     );
-    aff2_stretch(cam_transform, (Vec2){ scale, scale }, cam_transform);
 
     aven_gl_shape_buffer_update(
         &gl,
