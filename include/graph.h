@@ -22,33 +22,6 @@ typedef struct{
 typedef Slice(GraphAugAdjListNode) GraphAugAdjList;
 typedef Slice(GraphAugAdjList) GraphAug;
 
-static inline uint32_t graph_adj_neighbor_index(
-    GraphAdjList adj,
-    uint32_t neighbor
-) {
-    for (uint32_t i = 0; i < adj.len; i += 1) {
-        if (get(adj, i) == neighbor) {
-            return i;
-        }
-    }
-    assert(false);
-    return 0xffffffff;
-}
-
-static inline uint32_t graph_adj_next_neighbor_index(
-    GraphAdjList adj,
-    uint32_t neighbor
-) {
-    for (uint32_t i = 0; i + 1 < adj.len; i += 1) {
-        if (get(adj, i) == neighbor) {
-            return i + 1;
-        }
-    }
-    assert(get(adj, adj.len - 1) == neighbor);
-
-    return 0;
-}
-
 static inline uint32_t graph_adj_next(
     GraphAdjList adj,
     uint32_t i
@@ -71,17 +44,27 @@ static inline uint32_t graph_adj_prev(
     return i - 1;
 }
 
-static inline uint32_t graph_aug_adj_neighbor_index(
-    GraphAugAdjList adj,
+static inline uint32_t graph_adj_neighbor_index(
+    GraphAdjList adj,
     uint32_t neighbor
 ) {
     for (uint32_t i = 0; i < adj.len; i += 1) {
-        if (get(adj, i).vertex == neighbor) {
+        if (get(adj, i) == neighbor) {
             return i;
         }
     }
     assert(false);
     return 0xffffffff;
+}
+
+static inline uint32_t graph_adj_next_neighbor_index(
+    GraphAdjList adj,
+    uint32_t neighbor
+) {
+    return graph_adj_next(
+        adj,
+        graph_adj_neighbor_index(adj, neighbor)
+    );
 }
 
 static inline uint32_t graph_aug_adj_next(
@@ -104,6 +87,29 @@ static inline uint32_t graph_aug_adj_prev(
     }
 
     return i - 1;
+}
+
+static inline uint32_t graph_aug_adj_neighbor_index(
+    GraphAugAdjList adj,
+    uint32_t neighbor
+) {
+    for (uint32_t i = 0; i < adj.len; i += 1) {
+        if (get(adj, i).vertex == neighbor) {
+            return i;
+        }
+    }
+    assert(false);
+    return 0xffffffff;
+}
+
+static inline uint32_t graph_aug_adj_next_neighbor_index(
+    GraphAugAdjList adj,
+    uint32_t neighbor
+) {
+    return graph_aug_adj_next(
+        adj,
+        graph_aug_adj_neighbor_index(adj, neighbor)
+    );
 }
 
 static inline GraphAug graph_aug(Graph graph, AvenArena *arena) {
