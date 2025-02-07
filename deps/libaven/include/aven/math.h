@@ -183,11 +183,14 @@ static inline bool vec2_point_in_rect(
     Vec2 dim,
     Vec2 point
 ) {
-    Vec2 opp;
-    vec2_add(opp, pos, dim);
+    Vec2 c1;
+    vec2_sub(c1, pos, dim);
 
-    return (point[0] >= pos[0] and point[0] <= opp[0]) and
-        (point[1] >= pos[1] and point[1] <= opp[1]);
+    Vec2 c2;
+    vec2_add(c2, pos, dim);
+
+    return (point[0] >= c1[0] and point[0] <= c2[0]) and
+        (point[1] >= c1[1] and point[1] <= c2[1]);
 }
 
 static inline bool vec2_rect_intersect(
