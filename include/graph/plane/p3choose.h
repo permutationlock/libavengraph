@@ -55,8 +55,8 @@ static inline GraphPlaneP3ChooseCtx graph_plane_p3choose_init(
 ) {
     GraphPlaneP3ChooseCtx ctx = {
         .vertex_info = { .len = graph.len },
-        // Each vertex v receives a new unique mark at most deg(v) times:
-        .marks = { .len = (6 * graph.len - 12) + 1 },
+        // Each new unique results from a different edge of the graph:
+        .marks = { .len = (3 * graph.len - 6) + 1 },
         // A new frame only occurs when splitting across an edge
         .frames = { .cap = 3 * graph.len - 6 },
         .next_mark = 1,
@@ -248,7 +248,7 @@ static inline bool graph_plane_p3choose_frame_step(
         frame->z = u;
 
         frame->x_loc.mark = ctx->next_mark++;
-        frame->y_loc.mark = ctx->next_mark++;
+        frame->y_loc.mark = frame->x_loc.mark;
 
         return false;
     }

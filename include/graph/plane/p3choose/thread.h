@@ -58,10 +58,10 @@ static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
 ) {
    GraphPlaneP3ChooseThreadCtx ctx = {
         .vertex_info = { .len = graph.len },
-        // Each vertex v receives a new unique mark at most deg(v) times:
+        // Each unique mark results from a diferent edge of the graph:
         .marks = {
             .len = nthreads * GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE +
-                   (6 * graph.len - 12) + 1
+                   (3 * graph.len - 6) + 1
         },
         // A new frame only occurs when splitting across an edge
         .entry_pool = { .cap = 3 * graph.len - 6 },
@@ -435,10 +435,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
             ctx,
             mark_set
         );
-        frame->y_loc.mark = graph_plane_p3choose_thread_next_mark(
-            ctx,
-            mark_set
-        );
+        frame->y_loc.mark = frame->x_loc.mark;
 
         return false;
     }
