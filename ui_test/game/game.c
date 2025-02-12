@@ -109,9 +109,9 @@ static void game_info_alg_setup(
     }
 }
 
-static bool game_info_alg_step(GameInfoAlg *info_alg) {
+static void game_info_alg_step(GameInfoAlg *info_alg) {
     if (info_alg->done) {
-        return true;
+        return;
     }
 
     info_alg->steps += 1;
@@ -141,10 +141,10 @@ static bool game_info_alg_step(GameInfoAlg *info_alg) {
             if (finished) {
                 info_alg->done = true;
             }
-            return finished;
+            break;
         }
         case GAME_DATA_ALG_TYPE_P3COLOR_BFS: {
-            return true;
+            break;
         }
         case GAME_DATA_ALG_TYPE_P3CHOOSE: {
             GameInfoAlgP3Choose *alg = &info_alg->data.p3choose;
@@ -186,7 +186,7 @@ static bool game_info_alg_step(GameInfoAlg *info_alg) {
             if (finished) {
                 info_alg->done = true;
             }
-            return finished;
+            break;
         }
     }
 }
@@ -496,13 +496,12 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
     ctx.last_update = aven_time_now();
 
     ctx.pcg = aven_rng_pcg_seed(0xdead, 0xbeef);
-    ctx.rng = aven_rng_pcg(&ctx.pcg);
 
     game_info_setup(
         &ctx.info,
         &ctx.session_opts,
         GAME_ALG_ARENA_SIZE,
-        ctx.rng
+        aven_rng_pcg(&ctx.pcg)
     );
     game_info_alg_setup(
         &ctx.info.session,
@@ -915,7 +914,7 @@ int game_update(
                         &ctx->info,
                         &ctx->session_opts,
                         GAME_ALG_ARENA_SIZE,
-                        ctx->rng
+                        aven_rng_pcg(&ctx->pcg)
                     );
                     game_info_alg_setup(
                         &ctx->info.session,
