@@ -494,9 +494,9 @@ static inline void aven_gl_ui_push_play(
     aven_gl_shape_rounded_geometry_push_triangle(
         &ctx->shape.geometry,
         trans,
+        (Vec2){ -0.6f, 0.75f },
         (Vec2){ 0.9f, 0.0f },
         (Vec2){ -0.6f, -0.75f },
-        (Vec2){ -0.6f, 0.75f },
         0.25f,
         colors->primary
     );
@@ -544,9 +544,9 @@ static inline void aven_gl_ui_push_right(
     aven_gl_shape_rounded_geometry_push_triangle(
         &ctx->shape.geometry,
         trans,
+        (Vec2){ -0.5f, 0.75f },
         (Vec2){ 0.75f, 0.0f },
         (Vec2){ -0.5f, -0.75f },
-        (Vec2){ -0.5f, 0.75f },
         0.1f,
         colors->primary
     );
@@ -562,6 +562,48 @@ static inline void aven_gl_ui_push_left(
     aff2_stretch(rtrans, (Vec2){ -1.0f, 1.0f }, rtrans);
     aff2_compose(rtrans, trans, rtrans);
     aven_gl_ui_push_right(ctx, rtrans, colors);
+}
+
+static inline void aven_gl_ui_push_end(
+    AvenGlUi *ctx,
+    Aff2 trans,
+    AvenGlUiColors* colors
+) {
+    aven_gl_shape_rounded_geometry_push_triangle(
+        &ctx->shape.geometry,
+        trans,
+        (Vec2){ -0.5f, 0.75f },
+        (Vec2){ 0.75f, 0.0f },
+        (Vec2){ -0.5f, -0.75f },
+        0.1f,
+        colors->primary
+    );
+    Aff2 line_trans;
+    aff2_position(
+        line_trans,
+        (Vec2){ 0.475f, 0.0f },
+        (Vec2){ -0.2f, 0.75f },
+        0.0f
+    );
+    aff2_compose(line_trans, trans, line_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        line_trans,
+        0.1f,
+        colors->primary
+    );
+}
+
+static inline void aven_gl_ui_push_start(
+    AvenGlUi *ctx,
+    Aff2 trans,
+    AvenGlUiColors* colors
+) {
+    Aff2 rtrans;
+    aff2_identity(rtrans);
+    aff2_stretch(rtrans, (Vec2){ -1.0f, 1.0f }, rtrans);
+    aff2_compose(rtrans, trans, rtrans);
+    aven_gl_ui_push_end(ctx, rtrans, colors);
 }
 
 static inline void aven_gl_ui_push_right_arrow(
@@ -586,9 +628,9 @@ static inline void aven_gl_ui_push_right_arrow(
     aven_gl_shape_rounded_geometry_push_triangle(
         &ctx->shape.geometry,
         trans,
+        (Vec2){ -0.1f, 0.75f },
         (Vec2){ 0.9f, 0.0f },
         (Vec2){ -0.1f, -0.75f },
-        (Vec2){ -0.1f, 0.75f },
         0.25f,
         colors->primary
     );
@@ -614,18 +656,18 @@ static inline void aven_gl_ui_push_fastforward(
     aven_gl_shape_rounded_geometry_push_triangle(
         &ctx->shape.geometry,
         trans,
+        (Vec2){ -0.75f, 0.75f },
         (Vec2){ 0.35f, 0.0f },
         (Vec2){ -0.75f, -0.75f },
-        (Vec2){ -0.75f, 0.75f },
         0.25f,
         colors->primary
     );
     aven_gl_shape_rounded_geometry_push_triangle(
         &ctx->shape.geometry,
         trans,
+        (Vec2){ -0.1f, 0.75f },
         (Vec2){ 1.0f, 0.0f },
         (Vec2){ -0.1f, -0.75f },
-        (Vec2){ -0.1f, 0.75f },
         0.25f,
         colors->primary
     );
@@ -721,6 +763,8 @@ typedef enum {
     AVEN_GL_UI_BUTTON_TYPE_LEFT_ARROW,
     AVEN_GL_UI_BUTTON_TYPE_FASTFORWARD,
     AVEN_GL_UI_BUTTON_TYPE_REWIND,
+    AVEN_GL_UI_BUTTON_TYPE_END,
+    AVEN_GL_UI_BUTTON_TYPE_START,
     AVEN_GL_UI_BUTTON_TYPE_PLUS,
     AVEN_GL_UI_BUTTON_TYPE_MINUS,
     AVEN_GL_UI_BUTTON_TYPE_THREAD,
@@ -818,6 +862,14 @@ static inline void aven_gl_ui_push_button(
         }
         case AVEN_GL_UI_BUTTON_TYPE_REWIND: {
             aven_gl_ui_push_rewind(ctx, inner_trans, colors);
+            break;
+        }
+        case AVEN_GL_UI_BUTTON_TYPE_END: {
+            aven_gl_ui_push_end(ctx, inner_trans, colors);
+            break;
+        }
+        case AVEN_GL_UI_BUTTON_TYPE_START: {
+            aven_gl_ui_push_start(ctx, inner_trans, colors);
             break;
         }
         case AVEN_GL_UI_BUTTON_TYPE_PLUS: {

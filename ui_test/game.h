@@ -31,7 +31,12 @@
 #define GAME_VERTEX_RADIUS (0.12f)
 #define GAME_MIN_COEFF (0.01f)
 #define GAME_MIN_AREA (GAME_VERTEX_RADIUS * GAME_VERTEX_RADIUS * 2.0f)
-#define GAME_TIME_STEP (AVEN_TIME_NSEC_PER_SEC / 2)
+
+#define GAME_MIN_TIME_STEP (16 * (AVEN_TIME_NSEC_PER_SEC / 1000))
+#define GAME_MAX_TIME_STEP (128 * GAME_MIN_TIME_STEP)
+#define GAME_TIME_STEP (32 * GAME_MIN_TIME_STEP)
+
+#define GAME_PREVIEW_EDGES (8)
 
 typedef enum {
     GAME_DATA_ALG_TYPE_P3COLOR,
@@ -126,7 +131,12 @@ typedef enum {
     GAME_UI_WINDOW_NONE,
     GAME_UI_WINDOW_THREAD,
     GAME_UI_WINDOW_RADIUS,
+    GAME_UI_WINDOW_PREVIEW,
 } GameUiWindow;
+
+typedef struct {
+    uint32_t edge_index;
+} GamePreview;
 
 typedef struct {
     GameText text;
@@ -145,7 +155,7 @@ typedef struct {
     GameInfoSessionOpts session_opts;
     GameInfoAlgOpts alg_opts;
     GameUiWindow active_window;
-    bool alg_running;
+    GamePreview preview;
 } GameCtx;
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena);
