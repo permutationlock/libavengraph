@@ -37,7 +37,9 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
     GraphPlaneP3ChooseFrame *frame,
     Aff2 trans,
     float radius,
+    float border_thickness,
     float edge_thickness,
+    Vec4 edge_color,
     GraphPlaneP3ChooseGeometryFrame *info
 ) {
     GraphPlaneP3ChooseVertexLoc z_loc = *graph_plane_p3choose_vloc(
@@ -54,7 +56,7 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
     aff2_identity(node_active_trans);
     aff2_stretch(
         node_active_trans,
-        (Vec2){ radius, radius },
+        (Vec2){ radius + border_thickness, radius + border_thickness },
         node_active_trans
     );
     aff2_add_vec2(
@@ -70,9 +72,14 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
     );
 
     GraphPlaneGeometryEdge active_edge_info = {
-        .thickness = edge_thickness,
+        .thickness = edge_thickness + border_thickness,
     };
     vec4_copy(active_edge_info.color, info->active_color);
+
+    GraphPlaneGeometryEdge simple_edge_info = {
+        .thickness = edge_thickness,
+    };
+    vec4_copy(simple_edge_info.color, edge_color);
 
     GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
 
@@ -89,6 +96,14 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
             trans,
             &active_edge_info
         );
+        graph_plane_geometry_push_edge(
+            geometry,
+            embedding,
+            v,
+            frame->z,
+            trans,
+            &simple_edge_info
+        );
     } else {
         uint32_t u = get(z_adj, z_loc.nb.first).vertex;
         graph_plane_geometry_push_edge(
@@ -98,6 +113,14 @@ static inline void graph_plane_p3choose_geometry_push_frame_active(
             frame->z,
             trans,
             &active_edge_info
+        );
+        graph_plane_geometry_push_edge(
+            geometry,
+            embedding,
+            u,
+            frame->z,
+            trans,
+            &simple_edge_info
         );
     }
 }
@@ -228,7 +251,12 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
 
             assert(u_mark != 0);
 
-            if (u_mark == v_mark and u_mark == y_mark) {
+            if (
+                v == frame->z and
+                graph_aug_adj_next(v_aug_adj, v_nb.first) == v_nb.last
+            ) {
+                // active edge, outline already drawn
+            } else if (u_mark == v_mark and u_mark == y_mark) {
                 graph_plane_geometry_push_edge(
                     geometry,
                     embedding,
@@ -262,34 +290,34 @@ static inline void graph_plane_p3choose_geometry_push_frame_outline(
             v_mark = u_mark;
         } while (v != frame->x);
 
-        {
-            GraphPlaneGeometryEdge active_edge_info = {
-                .thickness = edge_thickness + border_thickness,
-            };
-            vec4_copy(active_edge_info.color, info->active_color);
-            GraphPlaneP3ChooseVertexLoc *z_loc = graph_plane_p3choose_vloc(
-                ctx,
-                frame,
-                frame->z
-            );
-            GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
-            uint32_t u = get(z_adj, z_loc->nb.first).vertex;
-            if (z_loc->nb.first != z_loc->nb.last) {
-                u = get(
-                    z_adj,
-                    graph_aug_adj_next(z_adj, z_loc->nb.first)
-                ).vertex;
-            }
+        // {
+        //     GraphPlaneGeometryEdge active_edge_info = {
+        //         .thickness = edge_thickness + border_thickness,
+        //     };
+        //     vec4_copy(active_edge_info.color, info->active_color);
+        //     GraphPlaneP3ChooseVertexLoc *z_loc = graph_plane_p3choose_vloc(
+        //         ctx,
+        //         frame,
+        //         frame->z
+        //     );
+        //     GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
+        //     uint32_t u = get(z_adj, z_loc->nb.first).vertex;
+        //     if (z_loc->nb.first != z_loc->nb.last) {
+        //         u = get(
+        //             z_adj,
+        //             graph_aug_adj_next(z_adj, z_loc->nb.first)
+        //         ).vertex;
+        //     }
 
-            graph_plane_geometry_push_edge(
-                geometry,
-                embedding,
-                frame->z,
-                u,
-                trans,
-                &active_edge_info
-            );
-        }
+        //     graph_plane_geometry_push_edge(
+        //         geometry,
+        //         embedding,
+        //         frame->z,
+        //         u,
+        //         trans,
+        //         &active_edge_info
+        //     );
+        // }
 
         GraphPlaneGeometryEdge edge_info = {
             .thickness = edge_thickness,
@@ -347,7 +375,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
     AvenGlShapeRoundedGeometry *rounded_geometry,
     GraphPlaneEmbedding embedding,
     GraphPlaneP3ChooseCtx *ctx,
-    GraphPlaneP3ChooseFrameSlice active_frames,
+    GraphPlaneP3ChooseFrameOptionalSlice active_frames,
     Aff2 trans,
     GraphPlaneP3ChooseGeometryInfo *info
 ) {
@@ -377,19 +405,19 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
             }
         }
 
-        for (size_t i = 0; i < ctx->frames.len; i += 1) {
-            graph_plane_p3choose_geometry_push_frame_active(
-                geometry,
-                rounded_geometry,
-                embedding,
-                ctx,
-                &list_get(ctx->frames, i),
-                trans,
-                info->radius + info->border_thickness,
-                info->edge_thickness,
-                &info->inactive_frame
-            );
-        }
+        // for (size_t i = 0; i < ctx->frames.len; i += 1) {
+        //     graph_plane_p3choose_geometry_push_frame_active(
+        //         geometry,
+        //         rounded_geometry,
+        //         embedding,
+        //         ctx,
+        //         &list_get(ctx->frames, i),
+        //         trans,
+        //         info->radius + info->border_thickness,
+        //         info->edge_thickness,
+        //         &info->inactive_frame
+        //     );
+        // }
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
             graph_plane_p3choose_geometry_push_frame_outline(
@@ -408,33 +436,39 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
         }
 
         for (size_t i = 0; i < active_frames.len; i += 1) {
-            graph_plane_p3choose_geometry_push_frame_active(
-                geometry,
-                rounded_geometry,
-                embedding,
-                ctx,
-                &get(active_frames, i),
-                trans,
-                info->radius + info->border_thickness,
-                info->edge_thickness + info->border_thickness,
-                &info->active_frame
-            );
+            if (get(active_frames, i).valid) {
+                graph_plane_p3choose_geometry_push_frame_outline(
+                    geometry,
+                    rounded_geometry,
+                    embedding,
+                    ctx,
+                    &get(active_frames, i).value,
+                    trans,
+                    info->radius + info->border_thickness,
+                    info->edge_thickness,
+                    info->border_thickness,
+                    info->outline_color,
+                    &info->active_frame
+                );
+            }
         }
 
         for (size_t i = 0; i < active_frames.len; i += 1) {
-            graph_plane_p3choose_geometry_push_frame_outline(
-                geometry,
-                rounded_geometry,
-                embedding,
-                ctx,
-                &get(active_frames, i),
-                trans,
-                info->radius + info->border_thickness,
-                info->edge_thickness,
-                info->border_thickness,
-                info->outline_color,
-                &info->active_frame
-            );
+            if (get(active_frames, i).valid) {
+                graph_plane_p3choose_geometry_push_frame_active(
+                    geometry,
+                    rounded_geometry,
+                    embedding,
+                    ctx,
+                    &get(active_frames, i).value,
+                    trans,
+                    info->radius,
+                    info->border_thickness,
+                    info->edge_thickness,
+                    info->edge_color,
+                    &info->active_frame
+                );
+            }
         }
 
         vec4_copy(edge_info.color, info->edge_color);

@@ -18,6 +18,17 @@
 #include "font.h"
 
 #include <graph/plane/gen.h>
+#include <graph/plane/p3color/geometry.h>
+#include <graph/plane/p3choose/geometry.h>
+
+static const float vertex_radii[] = {
+     0.15f,
+     0.10f,
+     0.075f,
+     0.05f,
+     0.025f,
+     0.015f,
+};
 
 static GameInfoAlg game_info_alg_init(
     size_t alg_arena_size,
@@ -40,29 +51,28 @@ static GameInfoAlg game_info_alg_init(
 static void game_info_alg_setup(
     GameInfoSession *info_session,
     GameInfoAlg *info_alg,
-    GameInfoAlgType type,
-    size_t nthreads
+    GameInfoSessionOpts *session_opts
 ) {
     info_alg->arena = info_alg->init_arena;
-    info_alg->type = type;
+    info_alg->type = session_opts->alg_type;
     info_alg->steps = 0;
     info_alg->done = false;
 
     switch (info_alg->type) {
-        case GAME_DATA_ALG_TYPE_NONE: {
-            break;
-        }
         case GAME_DATA_ALG_TYPE_P3COLOR: {
             GameInfoAlgP3Color *alg = &info_alg->data.p3color;
 
             *alg = (GameInfoAlgP3Color){
-                .frames = { .len = nthreads },
+                .frames = { .len = session_opts->nthreads },
             };
             alg->frames.ptr = aven_arena_create_array(
                 GraphPlaneP3ColorFrameOptional,
                 &info_alg->arena,
                 alg->frames.len
             );
+            for (size_t i = 0; i < alg->frames.len; i += 1) {
+                get(alg->frames, i).valid = false;
+            }
             alg->ctx = graph_plane_p3color_init(
                 info_session->graph,
                 info_session->p1,
@@ -72,25 +82,41 @@ static void game_info_alg_setup(
             break;
         }
         case GAME_DATA_ALG_TYPE_P3COLOR_BFS: {
-            info_alg->type = GAME_DATA_ALG_TYPE_NONE;
             break;
         }
         case GAME_DATA_ALG_TYPE_P3CHOOSE: {
-            info_alg->type = GAME_DATA_ALG_TYPE_NONE;
+            GameInfoAlgP3Choose *alg = &info_alg->data.p3choose;
+
+            *alg = (GameInfoAlgP3Choose){
+                .frames = { .len = session_opts->nthreads },
+            };
+            alg->frames.ptr = aven_arena_create_array(
+                GraphPlaneP3ChooseFrameOptional,
+                &info_alg->arena,
+                alg->frames.len
+            );
+            for (size_t i = 0; i < alg->frames.len; i += 1) {
+                get(alg->frames, i).valid = false;
+            }
+            alg->ctx = graph_plane_p3choose_init(
+                info_session->aug_graph,
+                info_session->color_lists,
+                info_session->outer_cycle,
+                &info_alg->arena
+            );
             break;
         }
     }
 }
 
 static bool game_info_alg_step(GameInfoAlg *info_alg) {
-    if (!info_alg->done) {
-        info_alg->steps += 1;
+    if (info_alg->done) {
+        return true;
     }
 
+    info_alg->steps += 1;
+
     switch (info_alg->type) {
-        case GAME_DATA_ALG_TYPE_NONE: {
-            return true;
-        }
         case GAME_DATA_ALG_TYPE_P3COLOR: {
             GameInfoAlgP3Color *alg = &info_alg->data.p3color;
             GraphPlaneP3ColorCtx *ctx = &alg->ctx;
@@ -100,16 +126,16 @@ static bool game_info_alg_step(GameInfoAlg *info_alg) {
                 GraphPlaneP3ColorFrameOptional *frame = &get(alg->frames, i);
                 if (!frame->valid) {
                     *frame = graph_plane_p3color_next_frame(ctx);
-                }
-                if (!frame->valid) {
-                    continue;
-                }
+                    if (frame->valid) {
+                        finished = false;
+                    }
+                } else {
+                    finished = false;
 
-                finished = false;
-
-                bool done = graph_plane_p3color_frame_step(ctx, &frame->value);
-                if (done) {
-                    frame->valid = false;
+                    bool done = graph_plane_p3color_frame_step(ctx, &frame->value);
+                    if (done) {
+                        frame->valid = false;
+                    }
                 }
             }
             if (finished) {
@@ -121,7 +147,46 @@ static bool game_info_alg_step(GameInfoAlg *info_alg) {
             return true;
         }
         case GAME_DATA_ALG_TYPE_P3CHOOSE: {
-            return true;
+            GameInfoAlgP3Choose *alg = &info_alg->data.p3choose;
+            GraphPlaneP3ChooseCtx *ctx = &alg->ctx;
+
+            bool finished = true;
+            for (size_t i = 0; i < alg->frames.len; i += 1) {
+                GraphPlaneP3ChooseFrameOptional *frame = &get(alg->frames, i);
+                if (!frame->valid) {
+                    for (
+                        size_t j = ctx->frames.len;
+                        j > 0;
+                        j -= 1
+                    ) {
+                        GraphPlaneP3ChooseFrame *nframe = &get(
+                            ctx->frames,
+                            j - 1
+                        );
+                        if (get(ctx->vertex_info, nframe->z).colors.len == 1) {
+                            frame->valid = true;
+                            frame->value = *nframe;
+                            *nframe = get(ctx->frames, ctx->frames.len - 1);
+                            ctx->frames.len -= 1;
+                            break;
+                        }
+                    }
+                    if (frame->valid) {
+                        finished = false;
+                    }
+                } else {
+                    finished = false;
+
+                    bool done = graph_plane_p3choose_frame_step(ctx, &frame->value);
+                    if (done) {
+                        frame->valid = false;
+                    }
+                }
+            }
+            if (finished) {
+                info_alg->done = true;
+            }
+            return finished;
         }
     }
 }
@@ -144,71 +209,67 @@ static GameInfo game_info_init(
     return info;
 }
 
-static void game_info_setup(
-    GameInfo *info,
-    uint32_t graph_size,
-    uint8_t color_divisions,
-    float min_area,
-    float min_coeff,
-    size_t alg_arena_size,
-    AvenRng rng
+static GameInfoSession game_info_session_init(
+    GameInfoSessionOpts *session_opts,
+    AvenRng rng,
+    AvenArena *arena
 ) {
-    info->arena = info->init_arena;
-
-    info->alg = game_info_alg_init(
-        alg_arena_size,
-        &info->arena
-    );
-
     GameInfoSession session = { 0 };
+
+    float radius = vertex_radii[
+        min(session_opts->radius, countof(vertex_radii))
+    ];
+
     Aff2 identity;
     aff2_identity(identity);
     GraphPlaneGenData gen_data = graph_plane_gen_tri(
-        graph_size,
+        GAME_MAX_VERTICES,
         identity,
-        min_area,
-        min_coeff,
+        1.8f * (radius * radius),
+        GAME_MIN_COEFF,
         true,
         rng,
-        &info->arena
+        arena
     );
     session.graph = gen_data.graph;
     session.embedding = gen_data.embedding;
-    session.aug_graph = graph_aug(session.graph, &info->arena);
+    session.aug_graph = graph_aug(session.graph, arena);
 
     uint32_t v1 = aven_rng_rand_bounded(rng, 4);
     uint32_t p1_len = 1 + aven_rng_rand_bounded(rng, 3);
 
-    List(uint32_t) p1_list = aven_arena_create_list(uint32_t, &info->arena, 4);
+    List(uint32_t) p1_list = aven_arena_create_list(uint32_t, arena, 4);
     for (uint32_t i = 0; i < p1_len; i += 1) {
         list_push(p1_list) = (v1 + i) % 4;
     }
     GraphSubset p1 = slice_list(p1_list);
     session.p1 = p1;
 
-    List(uint32_t) p2_list = aven_arena_create_list(uint32_t, &info->arena, 4);
+    List(uint32_t) p2_list = aven_arena_create_list(uint32_t, arena, 4);
     for (uint32_t i = 0; i < 4 - p1_len; i += 1) {
-        list_push(p2_list) = (v1 + p1_len + i) % 4;
+        list_push(p2_list) = (v1 + 3 + i) % 4;
     }
     GraphSubset p2 = slice_list(p2_list);
     session.p2 = p2;
 
-    GraphSubset outer_face = aven_arena_create_slice(uint32_t, &info->arena, 4);
+    GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 4);
     for (uint32_t i = 0; i < 4; i += 1) {
         get(outer_face, i) = (v1 + i) % 4;
     }
     session.outer_cycle = outer_face;
 
+    uint32_t color_divisions = GAME_COLOR_DIVISIONS;
     uint32_t max_color = ((color_divisions + 2) * (color_divisions + 1)) / 2U;
     assert(max_color < 256);
 
-    GraphPlaneP3ChooseListProp color_lists = aven_arena_create_slice(
+    session.color_lists.len = session.graph.len;
+    session.color_lists.ptr = aven_arena_create_array(
         GraphPlaneP3ChooseList,
-        &info->arena,
-        session.graph.len
+        arena,
+        session.color_lists.len
     );
 
-    for (uint32_t v = 0; v < color_lists.len; v += 1) {
+    for (uint32_t v = 0; v < session.color_lists.len; v += 1) {
         GraphPlaneP3ChooseList list = { .len = 3 };
         get(list, 0) = (uint8_t)(
             1 + aven_rng_rand_bounded(rng, max_color)
@@ -234,17 +295,22 @@ static void game_info_setup(
             );
         }
 
-        get(color_lists, v) = list;
+        get(session.color_lists, v) = list;
     }
 
-    session.colors.len = max_color;
+    session.colors.len = max_color + 1;
     session.colors.ptr = aven_arena_create_array(
         Vec4,
-        &info->arena,
-        max_color
+        arena,
+        session.colors.len
     );
 
-    size_t color_index = 0;
+    vec4_copy(
+        get(session.colors, 0),
+        (Vec4){ 0.9f, 0.9f, 0.9f, 1.0f}
+    );
+
+    size_t color_index = 1;
     for (uint8_t i = 0; i <= color_divisions; i += 1) {
         for (uint8_t j = i; j <= color_divisions; j += 1) {
             float coeffs[3] = {
@@ -271,6 +337,28 @@ static void game_info_setup(
             color_index += 1;
         }
     }
+
+    return session;
+}
+
+static void game_info_setup(
+    GameInfo *info,
+    GameInfoSessionOpts *session_opts,
+    size_t alg_arena_size,
+    AvenRng rng
+) {
+    info->arena = info->init_arena;
+
+    info->alg = game_info_alg_init(
+        alg_arena_size,
+        &info->arena
+    );
+
+    info->session = game_info_session_init(
+        session_opts,
+        rng,
+        &info->arena
+    );
 }
 
 #if !defined(HOT_RELOAD)
@@ -309,43 +397,66 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
-    ctx->shapes.ctx = aven_gl_shape_rounded_ctx_init(gl);
-    ctx->shapes.geometry = aven_gl_shape_rounded_geometry_init(
-        128,
-        192,
+    ctx->shapes.ctx = aven_gl_shape_ctx_init(gl);
+    ctx->shapes.geometry = aven_gl_shape_geometry_init(
+        GAME_GEOMETRY_VERTICES,
+        (GAME_GEOMETRY_VERTICES * 6) / 4,
         &ctx->arena
     );
-    ctx->shapes.buffer = aven_gl_shape_rounded_buffer_init(
+    ctx->shapes.buffer = aven_gl_shape_buffer_init(
         gl,
         &ctx->shapes.geometry,
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
+    ctx->rounded_shapes.ctx = aven_gl_shape_rounded_ctx_init(gl);
+    ctx->rounded_shapes.geometry = aven_gl_shape_rounded_geometry_init(
+        GAME_ROUNDED_GEOMETRY_VERTICES,
+        (GAME_ROUNDED_GEOMETRY_VERTICES * 6) / 4,
+        &ctx->arena
+    );
+    ctx->rounded_shapes.buffer = aven_gl_shape_rounded_buffer_init(
+        gl,
+        &ctx->rounded_shapes.geometry,
+        AVEN_GL_BUFFER_USAGE_DYNAMIC
+    );
+
     AvenGlUiColors base_colors = {
-        .background = { 0.45f, 0.45f, 0.45f, 1.0f },
+        .background = { 0.55f, 0.55f, 0.55f, 1.0f },
         .primary = { 0.15f, 0.25f, 0.05f, 1.0f },
         .secondary = { 0.25f, 0.05f, 0.15f, 1.0f },
     };
     AvenGlUiColors hovered_colors = {
-        .background = { 0.475f, 0.475f, 0.475f, 1.0f },
+        .background = { 0.575f, 0.575f, 0.575f, 1.0f },
         .primary = { 0.175f, 0.275f, 0.075f, 1.0f },
         .secondary = { 0.275f, 0.075f, 0.175f, 1.0f },
     };
     AvenGlUiColors clicked_colors = base_colors;
+    AvenGlUiColors disabled_colors = {
+        .background = { 0.55f, 0.55f, 0.55f, 1.0f },
+        .primary = { 0.175f, 0.175f, 0.175f, 1.0f },
+        .secondary = { 0.275f, 0.275f, 0.275f, 1.0f },
+    };
     ctx->ui = aven_gl_ui_init(
         gl,
         128,
         base_colors,
         hovered_colors,
         clicked_colors,
+        disabled_colors,
         &ctx->arena
     );
 }
 
 static void game_unload(GameCtx *ctx, AvenGl *gl) {
     aven_gl_ui_deinit(gl, &ctx->ui);
-    aven_gl_shape_rounded_buffer_deinit(gl, &ctx->shapes.buffer);
-    aven_gl_shape_rounded_ctx_deinit(gl, &ctx->shapes.ctx);
+
+    aven_gl_shape_rounded_buffer_deinit(gl, &ctx->rounded_shapes.buffer);
+    aven_gl_shape_rounded_ctx_deinit(gl, &ctx->rounded_shapes.ctx);
+    ctx->rounded_shapes = (GameRoundedShapes){ 0 };
+
+    aven_gl_shape_buffer_deinit(gl, &ctx->shapes.buffer);
+    aven_gl_shape_ctx_deinit(gl, &ctx->shapes.ctx);
     ctx->shapes = (GameShapes){ 0 };
 
     aven_gl_text_buffer_deinit(gl, &ctx->text.buffer);
@@ -354,7 +465,16 @@ static void game_unload(GameCtx *ctx, AvenGl *gl) {
 }
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena) {
-    GameCtx ctx = { 0 };
+    GameCtx ctx = {
+        .session_opts = {
+            .alg_type = GAME_DATA_ALG_TYPE_P3CHOOSE,
+            .nthreads = 1,
+            .radius = 0,
+        },
+        .alg_opts = {
+            .time_step = GAME_TIME_STEP,
+        },
+    };
 
     ctx.init_arena = aven_arena_init(
         aven_arena_alloc(
@@ -377,6 +497,18 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
 
     ctx.pcg = aven_rng_pcg_seed(0xdead, 0xbeef);
     ctx.rng = aven_rng_pcg(&ctx.pcg);
+
+    game_info_setup(
+        &ctx.info,
+        &ctx.session_opts,
+        GAME_ALG_ARENA_SIZE,
+        ctx.rng
+    );
+    game_info_alg_setup(
+        &ctx.info.session,
+        &ctx.info.alg,
+        &ctx.session_opts
+    );
 
     return ctx;
 }
@@ -437,113 +569,675 @@ int game_update(
 ) {
     (void)arena;
     AvenTimeInst now = aven_time_now();
-    int64_t elapsed = aven_time_since(now, ctx->last_update);
+    ctx->elapsed += aven_time_since(now, ctx->last_update);
     ctx->last_update = now;
 
     float screen_ratio = (float)width / (float)height;
+
+    float norm_height = 1.0f;
+    float norm_width = screen_ratio;
     float pixel_size = 2.0f / (float)height;
+    float free_space = norm_width - norm_height;
+
+    if (screen_ratio < 1.0f) {
+        norm_height = 1.0f / screen_ratio;
+        norm_width = 1.0f;
+        pixel_size = 2.0f / (float)width;
+        free_space = norm_height - norm_width;
+    }
 
     ctx->width = width;
     ctx->height = height;
 
-    bool changed;
-
-    if (ctx->paused) {
-    } else {
-        while (elapsed >= ctx->time_step) {
-            elapsed -= ctx->time_step;
-
-            if (
-                ctx->info.alg.type == GAME_DATA_ALG_TYPE_NONE or
-                ctx->info.alg.done
-            ) {
-                GameInfoAlgType last_type = ctx->info.alg.type;
-                game_info_setup(
-                    &ctx->info,
-                    ctx->nvertices,
-                    ctx->color_divisions,
-                    ctx->min_area,
-                    ctx->min_coeff,
-                    GAME_ALG_ARENA_SIZE,
-                    ctx->rng
-                );
+    if (!ctx->alg_running or !ctx->alg_opts.playing) {
+        if (!ctx->alg_running) {
+            if (ctx->info.alg.done) {
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
-                    last_type, ctx->nthreads
+                    &ctx->session_opts
                 );
-                ctx->paused = true;
-            } else {
-                bool done = game_info_alg_step(&ctx->info.alg);
-                if (done) {
-                    ctx->paused = true;
-                }
+            }
+        }
+        if (ctx->elapsed >= ctx->alg_opts.time_step) {
+            ctx->elapsed -= ctx->alg_opts.time_step;
+        }
+    } else {
+        if (ctx->alg_running) {
+            ctx->active_window = GAME_UI_WINDOW_NONE;
+        }
+        if (ctx->elapsed >= ctx->alg_opts.time_step) {
+            ctx->elapsed -= ctx->alg_opts.time_step;
+
+            game_info_alg_step(&ctx->info.alg);
+            if (ctx->info.alg.done) {
+                ctx->alg_opts.playing = false;
             }
         }
     }
 
-    gl->Viewport(0, 0, width, height);
-    assert(gl->GetError() == 0);
-    gl->ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-    assert(gl->GetError() == 0);
-    gl->Clear(GL_COLOR_BUFFER_BIT);
-    assert(gl->GetError() == 0);
+    float ui_width = 2.0f / 12.0f;
+    float graph_offset = 0.0f;
+    float ui_offset = -1.0f;
+    float graph_scale = 1.0f;
+
+    {
+        float dw = min(2.0f, 2.0f + free_space - ui_width);
+        graph_scale = dw / 2.0f;
+        graph_offset = ui_width / 2.0f;
+        ui_offset = -(2.0f + 2.0f * free_space - ui_width) / 2.0f;
+    }
 
     Aff2 cam_trans;
     aff2_camera_position(
         cam_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ screen_ratio, 1.0f },
+        (Vec2){ norm_width, norm_height },
         0.0f
     );
 
     aven_gl_text_geometry_clear(&ctx->text.geometry);
-    aven_gl_shape_rounded_geometry_clear(&ctx->shapes.geometry);
+    aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
+    aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
 
-    // Draw UI
+    // Generate UI geometry and evaluate UI logic
 
-    Aff2 button_transform;
+    float draw_angle = 0.0f;
+    if (norm_width < norm_height) {
+        draw_angle = AVEN_MATH_PI_F / 2.0f;
+    }
+
+    Aff2 ui_trans;
     aff2_position(
-        button_transform,
-        (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 1.0f / 10.0f, 1.0f / 10.0f },
+        ui_trans,
+        (Vec2){ ui_offset, 0.0f },
+        (Vec2){ 1.0f, 1.0f },
         0.0f
     );
-    if (ctx->info.threaded) {
-        if (
-            aven_gl_ui_button(
-                &ctx->ui,
-                button_transform,
-                AVEN_GL_UI_BUTTON_TYPE_MULTITHREAD
-            )
-        ) {
-            ctx->info.threaded = false;
-        }
-    } else {
-        if (
-            aven_gl_ui_button(
-                &ctx->ui,
-                button_transform,
-                AVEN_GL_UI_BUTTON_TYPE_THREAD
-            )
-        ) {
-            ctx->info.threaded = true;
+    aff2_rotate(ui_trans, ui_trans, draw_angle);
+
+    {
+        Aff2 backdrop_trans;
+        aff2_position(
+            backdrop_trans,
+            (Vec2){ 0.0f, 0.0f },
+            (Vec2){ ui_width / 2.0f, 1.0f },
+            0.0f
+        );
+        aff2_compose(backdrop_trans, ui_trans, backdrop_trans);
+        if (aven_gl_ui_window(&ctx->ui, backdrop_trans)) {
+            ctx->active_window = GAME_UI_WINDOW_NONE;
         }
     }
 
-    // Draw graphs
+    float button_count = 0;
+    if (ctx->active_window == GAME_UI_WINDOW_THREAD) {
+        Aff2 window_trans;
+        aff2_position(
+            window_trans,
+            (Vec2){
+                2.0f * ui_width + ui_width / 2.0f,
+                1.0f - (button_count * ui_width) - ui_width / 2.0f
+            },
+            (Vec2){ 2.0f * ui_width, ui_width / 2.0f },
+            -draw_angle
+        );
+        aff2_compose(window_trans, ui_trans, window_trans);
+        aven_gl_ui_window(&ctx->ui, window_trans);
+        {
+            Aff2 button_trans;
+            aff2_position(
+                button_trans,
+                (Vec2){
+                    ui_width,
+                    1.0f - (button_count * ui_width) - ui_width / 2.0f
+                },
+                (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                -draw_angle
+            );
+            aff2_compose(button_trans, ui_trans, button_trans);
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_THREAD
+                )
+            ) {
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->session_opts.nthreads = 1;
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+            }
+        }
+        {
+            Aff2 button_trans;
+            aff2_position(
+                button_trans,
+                (Vec2){
+                    2.0f * ui_width,
+                    1.0f - (button_count * ui_width) - ui_width / 2.0f
+                },
+                (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                -draw_angle
+            );
+            aff2_compose(button_trans, ui_trans, button_trans);
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_DOUBLE_THREAD
+                )
+            ) {
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->session_opts.nthreads = 2;
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+            }
+        }
+        {
+            Aff2 button_trans;
+            aff2_position(
+                button_trans,
+                (Vec2){
+                    3.0f * ui_width,
+                    1.0f - (button_count * ui_width) - ui_width / 2.0f
+                },
+                (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                -draw_angle
+            );
+            aff2_compose(button_trans, ui_trans, button_trans);
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_TRIPLE_THREAD
+                )
+            ) {
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->session_opts.nthreads = 3;
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+            }
+        }
+        {
+            Aff2 button_trans;
+            aff2_position(
+                button_trans,
+                (Vec2){
+                    4.0f * ui_width,
+                    1.0f - (button_count * ui_width) - ui_width / 2.0f
+                },
+                (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                -draw_angle
+            );
+            aff2_compose(button_trans, ui_trans, button_trans);
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_QUADRA_THREAD
+                )
+            ) {
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->session_opts.nthreads = 4;
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+            }
+        }
+    }
+    {
+        Aff2 button_trans;
+        aff2_position(
+            button_trans,
+            (Vec2){
+                0.0f,
+                1.0f - (button_count * ui_width) - ui_width / 2.0f
+            },
+            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+            -draw_angle
+        );
+        aff2_compose(button_trans, ui_trans, button_trans);
+        switch (ctx->session_opts.nthreads) {
+            case 1: {
+                if (
+                    aven_gl_ui_button_maybe(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_THREAD,
+                        !ctx->alg_running and
+                            ctx->active_window != GAME_UI_WINDOW_THREAD
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                }
+                break;
+            }
+            case 2: {
+                if (
+                    aven_gl_ui_button_maybe(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_DOUBLE_THREAD,
+                        !ctx->alg_running and
+                            ctx->active_window == GAME_UI_WINDOW_NONE
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                }
+                break;
+            }
+            case 3: {
+                if (
+                    aven_gl_ui_button_maybe(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_TRIPLE_THREAD,
+                        !ctx->alg_running and
+                            ctx->active_window == GAME_UI_WINDOW_NONE
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                }
+                break;
+            }
+            case 4: {
+                if (
+                    aven_gl_ui_button_maybe(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_QUADRA_THREAD,
+                        !ctx->alg_running and
+                            ctx->active_window == GAME_UI_WINDOW_NONE
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                }
+                break;
+            }
+            case 5: {
+                assert(false);
+            }
+        }
+        button_count += 1;
+    }
 
-    aven_gl_shape_rounded_buffer_update(
+    if (ctx->active_window == GAME_UI_WINDOW_RADIUS) {
+        size_t nbuttons = countof(vertex_radii);
+
+        Aff2 window_trans;
+        aff2_position(
+            window_trans,
+            (Vec2){
+                (float)nbuttons * 0.5f * ui_width + ui_width / 2.0f,
+                1.0f - (button_count * ui_width) - ui_width / 2.0f
+            },
+            (Vec2){ (float)nbuttons * 0.5f * ui_width, ui_width / 2.0f },
+            -draw_angle
+        );
+        aff2_compose(window_trans, ui_trans, window_trans);
+        aven_gl_ui_window(&ctx->ui, window_trans);
+        {
+            size_t nradii = countof(vertex_radii);
+            for (
+                size_t radius_count = 0;
+                radius_count < nradii;
+                radius_count += 1
+            ) {
+                Aff2 button_trans;
+                aff2_position(
+                    button_trans,
+                    (Vec2){
+                        (float)(1 + radius_count) * ui_width,
+                        1.0f - (button_count * ui_width) - ui_width / 2.0f
+                    },
+                    (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                    -draw_angle
+                );
+                aff2_compose(button_trans, ui_trans, button_trans);
+                if (
+                    aven_gl_ui_button_uid(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_NONE,
+                        radius_count
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_NONE;
+                    ctx->session_opts.radius = radius_count;
+                    game_info_setup(
+                        &ctx->info,
+                        &ctx->session_opts,
+                        GAME_ALG_ARENA_SIZE,
+                        ctx->rng
+                    );
+                    game_info_alg_setup(
+                        &ctx->info.session,
+                        &ctx->info.alg,
+                        &ctx->session_opts
+                    );
+                }
+                Vec2 dim;
+                vec2_lerp(
+                    dim,
+                    (Vec2){ 0.8f, 0.8f },
+                    (Vec2){ 0.1f, 0.1f },
+                    (float)radius_count / (float)nradii
+                );
+                Aff2 circle_trans;
+                aff2_position(
+                    circle_trans,
+                    (Vec2){ 0.0f, 0.0f },
+                    dim,
+                    0.0f
+                );
+                aff2_compose(circle_trans, button_trans, circle_trans);
+                aven_gl_shape_rounded_geometry_push_square(
+                    &ctx->ui.shape.geometry,
+                    circle_trans,
+                    1.0f,
+                    ctx->ui.base_colors.primary
+                );
+            }
+        }
+    }
+    {
+        Aff2 button_trans;
+        aff2_position(
+            button_trans,
+            (Vec2){
+                0.0f,
+                1.0f - (button_count * ui_width) - ui_width / 2.0f
+            },
+            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+            -draw_angle
+        );
+        aff2_compose(button_trans, ui_trans, button_trans);
+        bool enabled = !ctx->alg_running and
+            ctx->active_window != GAME_UI_WINDOW_RADIUS;
+        if (
+            aven_gl_ui_button_maybe(
+                &ctx->ui,
+                button_trans,
+                AVEN_GL_UI_BUTTON_TYPE_NONE,
+                enabled
+            )
+        ) {
+            ctx->active_window = GAME_UI_WINDOW_RADIUS;
+        }
+
+        size_t nradii = countof(vertex_radii);
+        Vec2 dim;
+        vec2_lerp(
+            dim,
+            (Vec2){ 0.8f, 0.8f },
+            (Vec2){ 0.1f, 0.1f },
+            (float)ctx->session_opts.radius / (float)nradii
+        );
+        Aff2 circle_trans;
+        aff2_position(
+            circle_trans,
+            (Vec2){ 0.0f, 0.0f },
+            dim,
+            0.0f
+        );
+        aff2_compose(circle_trans, button_trans, circle_trans);
+        aven_gl_shape_rounded_geometry_push_square(
+            &ctx->ui.shape.geometry,
+            circle_trans,
+            1.0f,
+            enabled ? ctx->ui.base_colors.primary :
+                ctx->ui.disabled_colors.primary
+        );
+
+        button_count += 1;
+    }
+
+    {
+        Aff2 button_trans;
+        aff2_position(
+            button_trans,
+            (Vec2){ 0.0f, 1.0f - (button_count * ui_width) - ui_width / 2.0f },
+            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+            -draw_angle
+        );
+        aff2_compose(button_trans, ui_trans, button_trans);
+        if (ctx->alg_running) {
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_CROSS
+                )
+            ) {
+                ctx->alg_running = false;
+                ctx->alg_opts.playing = false;
+                ctx->info.alg.done = true;
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+            }
+        } else {
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_CHECK
+                )
+            ) {
+                ctx->alg_running = true;
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+            }
+        }
+
+        button_count += 1;
+    }
+
+    button_count += 1;
+
+    {
+        Aff2 button_trans;
+        aff2_position(
+            button_trans,
+            (Vec2){ 0.0f, 1.0f - (button_count * ui_width) - ui_width / 2.0f },
+            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+            -draw_angle
+        );
+        aff2_compose(button_trans, ui_trans, button_trans);
+        {
+            Aff2 left_trans;
+            aff2_position(
+                left_trans,
+                (Vec2){ -0.5f, 0.0f },
+                (Vec2){ 0.5f, 1.0f },
+                0.0f
+            );
+            aff2_compose(left_trans, button_trans, left_trans);
+            if (
+                aven_gl_ui_button_maybe(
+                    &ctx->ui,
+                    left_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_LEFT,
+                    ctx->alg_running and
+                        !ctx->alg_opts.playing and
+                        ctx->info.alg.steps > 0
+                )
+            ) {
+                size_t steps = ctx->info.alg.steps - 1;
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                }
+            }
+        }
+        {
+            Aff2 right_trans;
+            aff2_position(
+                right_trans,
+                (Vec2){ 0.5f, 0.0f },
+                (Vec2){ 0.5f, 1.0f },
+                0.0f
+            );
+            aff2_compose(right_trans, button_trans, right_trans);
+            if (
+                aven_gl_ui_button_maybe(
+                    &ctx->ui,
+                    right_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_RIGHT,
+                    ctx->alg_running and
+                        !ctx->alg_opts.playing and
+                        !ctx->info.alg.done
+                )
+            ) {
+                game_info_alg_step(&ctx->info.alg);
+            }
+        }
+
+        button_count += 1;
+    }
+
+    {
+        Aff2 button_trans;
+        aff2_position(
+            button_trans,
+            (Vec2){ 0.0f, 1.0f - (button_count * ui_width) - ui_width / 2.0f },
+            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+            -draw_angle
+        );
+        aff2_compose(button_trans, ui_trans, button_trans);
+        if (ctx->alg_opts.playing) {
+            if (
+                aven_gl_ui_button_maybe(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_PAUSE,
+                    ctx->alg_running
+                )
+            ) {
+                ctx->alg_opts.playing = false;
+            }
+        } else {
+            if (
+                aven_gl_ui_button_maybe(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_PLAY,
+                    ctx->alg_running and !ctx->info.alg.done
+                )
+            ) {
+                ctx->alg_opts.playing = true;
+            }
+        }
+
+        button_count += 1;
+    }
+
+    if (ctx->ui.empty_click) {
+        ctx->active_window = GAME_UI_WINDOW_NONE;
+    }
+
+    // Generate graph geometry
+    float radius = vertex_radii[
+        min(ctx->session_opts.radius, countof(vertex_radii))
+    ];
+
+    float border_padding = 1.5f * radius + 5.0f * pixel_size;
+    graph_scale *= 1.0f / (1.0f + border_padding);
+
+    Aff2 graph_trans;
+    aff2_position(
+        graph_trans,
+        (Vec2){ graph_offset, 0.0f },
+        (Vec2){ graph_scale, graph_scale },
+        -draw_angle
+    );
+    aff2_rotate(graph_trans, graph_trans, draw_angle);
+
+    switch (ctx->info.alg.type) {
+        case GAME_DATA_ALG_TYPE_P3CHOOSE: {
+            GraphPlaneP3ChooseGeometryInfo geometry_info = {
+                .colors = {
+                    .ptr = ctx->info.session.colors.ptr,
+                    .len = ctx->info.session.colors.len,
+                },
+                .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+                .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+                .uncolored_edge_color = { 0.5f, 0.5f, 0.5f, 1.0f },
+                .active_frame = {
+                    .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
+                    .xp_color = { 0.55f, 0.65f, 0.15f, 1.0f },
+                    .py_color = { 0.15f, 0.6f, 0.6f, 1.0f },
+                    .cycle_color = { 0.65f, 0.25f, 0.15f, 1.0f },
+                },
+                .inactive_frame = {
+                    .active_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                    .xp_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                    .py_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                    .cycle_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                },
+                .edge_thickness = radius / 4.0f,
+                .border_thickness = radius * 0.25f,
+                .radius = radius,
+            };
+            GameInfoAlgP3Choose *alg = &ctx->info.alg.data.p3choose;
+            graph_plane_p3choose_geometry_push_ctx(
+                &ctx->shapes.geometry,
+                &ctx->rounded_shapes.geometry,
+                ctx->info.session.embedding,
+                &alg->ctx,
+                alg->frames,
+                graph_trans,
+                &geometry_info
+            );
+        }
+        default:
+            break;
+    }
+
+    // Push geometry to GPU and draw to screen
+
+    aven_gl_shape_buffer_update(
         gl,
         &ctx->shapes.buffer,
         &ctx->shapes.geometry
     );
+    aven_gl_shape_rounded_buffer_update(
+        gl,
+        &ctx->rounded_shapes.buffer,
+        &ctx->rounded_shapes.geometry
+    );
     aven_gl_text_buffer_update(gl, &ctx->text.buffer, &ctx->text.geometry);
 
-    aven_gl_shape_rounded_draw(
+    gl->Viewport(0, 0, width, height);
+    assert(gl->GetError() == 0);
+    gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
+    assert(gl->GetError() == 0);
+    gl->Clear(GL_COLOR_BUFFER_BIT);
+    assert(gl->GetError() == 0);
+
+    aven_gl_shape_draw(
         gl,
         &ctx->shapes.ctx,
         &ctx->shapes.buffer,
+        cam_trans
+    );
+    aven_gl_shape_rounded_draw(
+        gl,
+        &ctx->rounded_shapes.ctx,
+        &ctx->rounded_shapes.buffer,
         pixel_size,
         cam_trans
     );
@@ -554,7 +1248,6 @@ int game_update(
         &ctx->text.font,
         cam_trans
     );
-
     aven_gl_ui_draw(
         gl,
         &ctx->ui,

@@ -147,6 +147,13 @@ static inline float vec2_dist(Vec2 a, Vec2 b) {
     return vec2_mag(ab);
 }
 
+static inline void vec2_lerp(Vec2 dest, Vec2 a, Vec2 b, float r) {
+    vec2_scale(dest, (1.0f - r), a);
+    Vec2 bscale;
+    vec2_scale(bscale, r, b);
+    vec2_add(dest, dest, bscale);
+}
+
 static inline float vec2_angle(Vec2 a, Vec2 b) {
     Vec2 an;
     vec2_scale(an, 1.0f / vec2_mag(a), a);
@@ -179,18 +186,12 @@ static inline float vec2_triangle_area(Vec2 p1, Vec2 p2, Vec2 p3) {
 }
 
 static inline bool vec2_point_in_rect(
-    Vec2 pos,
-    Vec2 dim,
+    Vec2 p1,
+    Vec2 p2,
     Vec2 point
 ) {
-    Vec2 c1;
-    vec2_sub(c1, pos, dim);
-
-    Vec2 c2;
-    vec2_add(c2, pos, dim);
-
-    return (point[0] >= c1[0] and point[0] <= c2[0]) and
-        (point[1] >= c1[1] and point[1] <= c2[1]);
+    return (point[0] >= p1[0] and point[0] <= p2[0]) and
+        (point[1] >= p1[1] and point[1] <= p2[1]);
 }
 
 static inline bool vec2_rect_intersect(

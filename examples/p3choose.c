@@ -666,26 +666,15 @@ static void app_update(
             );
             break;
         case APP_STATE_P3CHOOSE: {
-            GraphPlaneP3ChooseFrame valid_frame_data[
-                countof(ctx.data.p3choose.frames)
-            ];
-            List(GraphPlaneP3ChooseFrame) valid_frames = list_array(
-                valid_frame_data
+            GraphPlaneP3ChooseFrameOptionalSlice frames = slice_array(
+                ctx.data.p3choose.frames
             );
-            for (size_t i = 0; i < countof(ctx.data.p3choose.frames); i += 1) {
-                GraphPlaneP3ChooseFrameOptional *frame =
-                    &ctx.data.p3choose.frames[i];
-                if (frame->valid) {
-                    list_push(valid_frames) = frame->value;
-                }
-            }
-            GraphPlaneP3ChooseFrameSlice vf_slice = slice_list(valid_frames);
             graph_plane_p3choose_geometry_push_ctx(
                 &ctx.edge_shapes.geometry,
                 &ctx.vertex_shapes.geometry,
                 ctx.embedding,
                 &ctx.data.p3choose.ctx,
-                vf_slice,
+                frames,
                 graph_transform,
                 &ctx.p3choose_geometry_info
             );

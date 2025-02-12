@@ -37,6 +37,8 @@ typedef struct {
     GraphPlaneP3ChooseVertexLoc z_loc;
 } GraphPlaneP3ChooseFrame;
 typedef Optional(GraphPlaneP3ChooseFrame) GraphPlaneP3ChooseFrameOptional;
+typedef Slice(GraphPlaneP3ChooseFrameOptional)
+    GraphPlaneP3ChooseFrameOptionalSlice;
 
 typedef struct {
     Slice(GraphPlaneP3ChooseVertex) vertex_info;

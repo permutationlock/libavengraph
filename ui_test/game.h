@@ -18,26 +18,31 @@
 #include <graph/plane/p3choose.h>
 
 #define GAME_GL_ARENA_SIZE (4096 * 2000)
-#define GAME_LEVEL_ARENA_SIZE (4096 * 2000)
 #define GAME_ALG_ARENA_SIZE (4096 * 2000)
+#define GAME_LEVEL_ARENA_SIZE (GAME_ALG_ARENA_SIZE + (4096 * 2000))
 
-typedef struct {
-    Graph graph;
-    GraphAug aug_graph;
-    GraphPlaneEmbedding embedding;
-    GraphSubset p1;
-    GraphSubset p2;
-    GraphSubset outer_cycle;
-    Slice(Vec4) colors;
-    GraphPlaneP3ChooseListProp color_lists;
-} GameInfoSession;
+#define GAME_MAX_VERTICES (500)
+#define GAME_MAX_EDGES (3 * GAME_MAX_VERTICES - 6)
+#define GAME_COLOR_DIVISIONS (2)
+
+#define GAME_ROUNDED_GEOMETRY_VERTICES  ((GAME_MAX_VERTICES + 3) * 4 * 10)
+#define GAME_GEOMETRY_VERTICES (GAME_MAX_EDGES * 4 * 10)
+
+#define GAME_VERTEX_RADIUS (0.12f)
+#define GAME_MIN_COEFF (0.01f)
+#define GAME_MIN_AREA (GAME_VERTEX_RADIUS * GAME_VERTEX_RADIUS * 2.0f)
+#define GAME_TIME_STEP (AVEN_TIME_NSEC_PER_SEC / 2)
 
 typedef enum {
-    GAME_DATA_ALG_TYPE_NONE = 0,
     GAME_DATA_ALG_TYPE_P3COLOR,
     GAME_DATA_ALG_TYPE_P3COLOR_BFS,
     GAME_DATA_ALG_TYPE_P3CHOOSE,
 } GameInfoAlgType;
+
+typedef struct {
+    bool playing;
+    int64_t time_step;
+} GameInfoAlgOpts;
 
 typedef struct {
     GraphPlaneP3ColorCtx ctx;
@@ -51,7 +56,7 @@ typedef struct {
 
 typedef struct {
     GraphPlaneP3ChooseCtx ctx;
-    Slice(GraphPlaneP3ChooseFrameOptional) frames;
+    GraphPlaneP3ChooseFrameOptionalSlice frames;
 } GameInfoAlgP3Choose;
 
 typedef struct {
@@ -67,6 +72,30 @@ typedef struct {
     bool done;
 } GameInfoAlg;
 
+typedef enum {
+    GAME_INFO_GRAPH_TYPE_RAND = 0,
+    GAME_INFO_GRAPH_TYPE_PYRAMID,
+    GAME_INFO_GRAPH_TYPE_GRID,
+} GameInfoGraphType;
+
+typedef struct {
+    size_t nthreads;
+    size_t radius;
+    GameInfoGraphType graph_type;
+    GameInfoAlgType alg_type;
+} GameInfoSessionOpts;
+
+typedef struct {
+    Graph graph;
+    GraphAug aug_graph;
+    GraphPlaneEmbedding embedding;
+    GraphSubset p1;
+    GraphSubset p2;
+    GraphSubset outer_cycle;
+    Slice(Vec4) colors;
+    GraphPlaneP3ChooseListProp color_lists;
+} GameInfoSession;
+
 typedef struct {
     GameInfoSession session;
     GameInfoAlg alg;
@@ -75,10 +104,16 @@ typedef struct {
 } GameInfo;
 
 typedef struct {
+    AvenGlShapeCtx ctx;
+    AvenGlShapeGeometry geometry;
+    AvenGlShapeBuffer buffer;
+} GameShapes;
+
+typedef struct {
     AvenGlShapeRoundedCtx ctx;
     AvenGlShapeRoundedGeometry geometry;
     AvenGlShapeRoundedBuffer buffer;
-} GameShapes;
+} GameRoundedShapes;
 
 typedef struct {
     AvenGlTextFont font;
@@ -87,9 +122,16 @@ typedef struct {
     AvenGlTextBuffer buffer;
 } GameText;
 
+typedef enum {
+    GAME_UI_WINDOW_NONE,
+    GAME_UI_WINDOW_THREAD,
+    GAME_UI_WINDOW_RADIUS,
+} GameUiWindow;
+
 typedef struct {
     GameText text;
     GameShapes shapes;
+    GameRoundedShapes rounded_shapes;
     AvenGlUi ui;
     AvenArena init_arena;
     AvenArena arena;
@@ -97,16 +139,13 @@ typedef struct {
     GameInfo info;
     AvenRng rng;
     AvenRngPcg pcg;
-    int64_t time_step;
     int64_t elapsed;
     int width;
     int height;
-    size_t nthreads;
-    uint32_t nvertices;
-    float min_area;
-    float min_coeff;
-    uint8_t color_divisions;
-    bool paused;
+    GameInfoSessionOpts session_opts;
+    GameInfoAlgOpts alg_opts;
+    GameUiWindow active_window;
+    bool alg_running;
 } GameCtx;
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena);
