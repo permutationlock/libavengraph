@@ -17,9 +17,9 @@
 #include <graph/plane/p3color_bfs.h>
 #include <graph/plane/p3choose.h>
 
-#define GAME_GL_ARENA_SIZE (4096 * 2000)
-#define GAME_ALG_ARENA_SIZE (4096 * 2000)
-#define GAME_LEVEL_ARENA_SIZE (GAME_ALG_ARENA_SIZE + (4096 * 2000))
+#define GAME_GL_ARENA_SIZE (4096 * 1000)
+#define GAME_ALG_ARENA_SIZE (4096 * 500)
+#define GAME_LEVEL_ARENA_SIZE (GAME_ALG_ARENA_SIZE + (4096 * 1000))
 
 #define GAME_MAX_VERTICES (500)
 #define GAME_MAX_EDGES (3 * GAME_MAX_VERTICES - 6)

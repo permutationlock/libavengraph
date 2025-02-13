@@ -42,6 +42,7 @@ typedef enum {
     AVEN_GL_UI_MOUSE_EVENT_NONE = 0,
     AVEN_GL_UI_MOUSE_EVENT_DOWN,
     AVEN_GL_UI_MOUSE_EVENT_UP,
+    AVEN_GL_UI_MOUSE_EVENT_BOTH,
 } AvenGlUiMouseEvent;
 
 typedef struct {
@@ -115,7 +116,14 @@ static inline void aven_gl_ui_mouse_click(
     AvenGlUi *ctx,
     AvenGlUiMouseEvent event
 ) {
-    ctx->mouse.event = event;
+    if (
+        ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_DOWN and
+        event == AVEN_GL_UI_MOUSE_EVENT_UP
+    ) {
+        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_BOTH;
+    } else {
+        ctx->mouse.event = event;
+    }
     if (event == AVEN_GL_UI_MOUSE_EVENT_UP) {
         ctx->empty_click = true;
     }
@@ -143,7 +151,17 @@ static inline void aven_gl_ui_draw(
 
     // clear ui geometry and set up the next ui state
     aven_gl_shape_rounded_geometry_clear(&ctx->shape.geometry);
-    ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
+    if (!aven_gl_ui_id_eq(ctx->hot_id, ctx->next_hot_id)) {
+        // clicks happened exactly as cursor moved between elements
+        if (ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_UP) {
+            ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
+        }
+    } else if (ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_BOTH) {
+        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_UP;
+        ctx->empty_click = true;
+    } else {
+        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
+    }
     ctx->hot_id = ctx->next_hot_id;
     ctx->next_hot_id = (AvenGlUiId){ 0 };
 }
@@ -1078,7 +1096,7 @@ static inline bool aven_gl_ui_button_internal(
     Vec2 p2 = { 1.0f, 1.0f };
 
     aff2_transform(p1, trans, p1);
-    aff2_transform(p2, trans, p2);
+    aff2_transform(p2, trans, p2); 
 
     bool hot = aven_gl_ui_id_eq(id, ctx->hot_id);
 
@@ -1088,7 +1106,12 @@ static inline bool aven_gl_ui_button_internal(
         ctx->next_hot_id = id;
     }
 
-    if (hot and ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_DOWN) {
+    if (
+        hot and (
+            ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_DOWN or
+            ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_BOTH
+        )
+    ) {
         ctx->active_id = id;
     }
 
@@ -1187,7 +1210,11 @@ static inline bool aven_gl_ui_window_internal(
         ctx->next_hot_id = id;
     }
 
-    if (hot and ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_DOWN) {
+    if (hot and (
+            ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_DOWN or
+            ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_BOTH
+        )
+    ) {
         ctx->active_id = id;
     }
 

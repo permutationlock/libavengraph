@@ -15,7 +15,7 @@
 #include <aven/time.h>
 
 #include "../game.h"
-#include "font.h"
+// #include "font.h"
 
 #include <graph/plane/gen.h>
 #include <graph/plane/p3color/geometry.h>
@@ -379,24 +379,24 @@ const GameTable game_table = {
 static void game_load(GameCtx *ctx, AvenGl *gl) {
     ctx->arena = ctx->init_arena;
 
-    ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
-    ctx->text.font = aven_gl_text_font_init(
-        gl,
-        font_bytes,
-        32.0f,
-        ctx->arena
-    );
+    //ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
+    //ctx->text.font = aven_gl_text_font_init(
+    //    gl,
+    //    font_bytes,
+    //    32.0f,
+    //    ctx->arena
+    //);
 
-    ctx->text.ctx = aven_gl_text_ctx_init(gl);
-    ctx->text.geometry = aven_gl_text_geometry_init(
-        128,
-        &ctx->arena
-    );
-    ctx->text.buffer = aven_gl_text_buffer_init(
-        gl,
-        &ctx->text.geometry,
-        AVEN_GL_BUFFER_USAGE_DYNAMIC
-    );
+    //ctx->text.ctx = aven_gl_text_ctx_init(gl);
+    //ctx->text.geometry = aven_gl_text_geometry_init(
+    //    128,
+    //    &ctx->arena
+    //);
+    //ctx->text.buffer = aven_gl_text_buffer_init(
+    //    gl,
+    //    &ctx->text.geometry,
+    //    AVEN_GL_BUFFER_USAGE_DYNAMIC
+    //);
 
     ctx->shapes.ctx = aven_gl_shape_ctx_init(gl);
     ctx->shapes.geometry = aven_gl_shape_geometry_init(
@@ -466,9 +466,9 @@ static void game_unload(GameCtx *ctx, AvenGl *gl) {
     aven_gl_shape_ctx_deinit(gl, &ctx->shapes.ctx);
     ctx->shapes = (GameShapes){ 0 };
 
-    aven_gl_text_buffer_deinit(gl, &ctx->text.buffer);
-    aven_gl_text_ctx_deinit(gl, &ctx->text.ctx);
-    ctx->text = (GameText){ 0 };
+    //aven_gl_text_buffer_deinit(gl, &ctx->text.buffer);
+    //aven_gl_text_ctx_deinit(gl, &ctx->text.ctx);
+    //ctx->text = (GameText){ 0 };
 }
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena) {
@@ -524,7 +524,7 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
 }
 
 void game_deinit(GameCtx *ctx, AvenGl *gl) {
-    aven_gl_text_font_deinit(gl, &ctx->text.font);
+    //aven_gl_text_font_deinit(gl, &ctx->text.font);
     game_unload(ctx, gl);
     *ctx = (GameCtx){ 0 };
 }
@@ -592,6 +592,7 @@ int game_update(
     if (screen_ratio < 1.0f) {
         norm_height = 1.0f / screen_ratio;
         norm_width = 1.0f;
+        screen_ratio = 1.0f / screen_ratio;
         pixel_size = 2.0f / (float)width;
         free_space = norm_height - norm_width;
     }
@@ -600,7 +601,7 @@ int game_update(
     ctx->height = height;
 
     if (!ctx->alg_opts.playing) {
-        if (ctx->elapsed >= ctx->alg_opts.time_step) {
+        while (ctx->elapsed >= ctx->alg_opts.time_step) {
             ctx->elapsed -= ctx->alg_opts.time_step;
             ctx->preview.edge_index += 1;
             if (ctx->preview.edge_index == GAME_PREVIEW_EDGES) {
@@ -611,7 +612,7 @@ int game_update(
         ctx->active_window = GAME_UI_WINDOW_NONE;
         ctx->preview.edge_index = 0;
 
-        if (ctx->elapsed >= ctx->alg_opts.time_step) {
+        while (ctx->elapsed >= ctx->alg_opts.time_step) {
             ctx->elapsed -= ctx->alg_opts.time_step;
 
             game_info_alg_step(&ctx->info.alg);
@@ -621,7 +622,7 @@ int game_update(
         }
     }
 
-    float ui_width = (2.0f - 0.02f) / 10.0f;
+    float ui_width = (2.0f - 0.02f) / 8.0f;
     float ui_window_width = ui_width + 0.02f;
     float graph_offset = 0.0f;
     float ui_offset = -1.0f;
@@ -642,7 +643,7 @@ int game_update(
         0.0f
     );
 
-    aven_gl_text_geometry_clear(&ctx->text.geometry);
+    //aven_gl_text_geometry_clear(&ctx->text.geometry);
     aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
     aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
 
@@ -1165,46 +1166,6 @@ int game_update(
         button_count += 1;
     }
 
-    // {
-    //     Aff2 button_trans;
-    //     aff2_position(
-    //         button_trans,
-    //         (Vec2){ 0.0f, 1.0f - (button_count * ui_width) - ui_width / 2.0f },
-    //         (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
-    //         -draw_angle
-    //     );
-    //     aff2_compose(button_trans, ui_trans, button_trans);
-    //     if (ctx->alg_running) {
-    //         if (
-    //             aven_gl_ui_button(
-    //                 &ctx->ui,
-    //                 button_trans,
-    //                 AVEN_GL_UI_BUTTON_TYPE_CROSS
-    //             )
-    //         ) {
-    //             ctx->alg_running = false;
-    //             ctx->alg_opts.playing = false;
-    //             ctx->info.alg.done = true;
-    //             ctx->active_window = GAME_UI_WINDOW_NONE;
-    //         }
-    //     } else {
-    //         if (
-    //             aven_gl_ui_button(
-    //                 &ctx->ui,
-    //                 button_trans,
-    //                 AVEN_GL_UI_BUTTON_TYPE_CHECK
-    //             )
-    //         ) {
-    //             ctx->alg_running = true;
-    //             ctx->active_window = GAME_UI_WINDOW_NONE;
-    //         }
-    //     }
-
-    //     button_count += 1;
-    // }
-
-    button_count += 2;
-
     {
         Aff2 button_trans;
         aff2_position(
@@ -1327,43 +1288,6 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 game_info_alg_step(&ctx->info.alg);
-            }
-        }
-
-        button_count += 1;
-    }
-
-    {
-        Aff2 button_trans;
-        aff2_position(
-            button_trans,
-            (Vec2){ 0.0f, left_x - (button_count * ui_width) - ui_width / 2.0f },
-            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
-            -draw_angle
-        );
-        aff2_compose(button_trans, ui_trans, button_trans);
-        if (ctx->alg_opts.playing) {
-            if (
-                aven_gl_ui_button(
-                    &ctx->ui,
-                    button_trans,
-                    AVEN_GL_UI_BUTTON_TYPE_PAUSE
-                )
-            ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->alg_opts.playing = false;
-            }
-        } else {
-            if (
-                aven_gl_ui_button_maybe(
-                    &ctx->ui,
-                    button_trans,
-                    AVEN_GL_UI_BUTTON_TYPE_PLAY,
-                    !ctx->info.alg.done
-                )
-            ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->alg_opts.playing = true;
             }
         }
 
@@ -1562,6 +1486,43 @@ int game_update(
         button_count += 1;
     }
 
+    {
+        Aff2 button_trans;
+        aff2_position(
+            button_trans,
+            (Vec2){ 0.0f, left_x - (button_count * ui_width) - ui_width / 2.0f },
+            (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+            -draw_angle
+        );
+        aff2_compose(button_trans, ui_trans, button_trans);
+        if (ctx->alg_opts.playing) {
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_PAUSE
+                )
+            ) {
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->alg_opts.playing = false;
+            }
+        } else {
+            if (
+                aven_gl_ui_button_maybe(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_PLAY,
+                    !ctx->info.alg.done
+                )
+            ) {
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->alg_opts.playing = true;
+            }
+        }
+
+        button_count += 1;
+    }
+
     if (ctx->ui.empty_click) {
         ctx->active_window = GAME_UI_WINDOW_NONE;
     }
@@ -1668,7 +1629,7 @@ int game_update(
         &ctx->rounded_shapes.buffer,
         &ctx->rounded_shapes.geometry
     );
-    aven_gl_text_buffer_update(gl, &ctx->text.buffer, &ctx->text.geometry);
+    //aven_gl_text_buffer_update(gl, &ctx->text.buffer, &ctx->text.geometry);
 
     gl->Viewport(0, 0, width, height);
     assert(gl->GetError() == 0);
@@ -1690,19 +1651,28 @@ int game_update(
         pixel_size,
         cam_trans
     );
-    aven_gl_text_geometry_draw(
-        gl,
-        &ctx->text.ctx,
-        &ctx->text.buffer,
-        &ctx->text.font,
-        cam_trans
-    );
+    //aven_gl_text_geometry_draw(
+    //    gl,
+    //    &ctx->text.ctx,
+    //    &ctx->text.buffer,
+    //    &ctx->text.font,
+    //    cam_trans
+    //);
     aven_gl_ui_draw(
         gl,
         &ctx->ui,
         pixel_size,
         cam_trans
     );
+
+    gl->ColorMask(false, false, false, true);
+    assert(gl->GetError() == 0);
+    gl->ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    assert(gl->GetError() == 0);
+    gl->Clear(GL_COLOR_BUFFER_BIT);
+    assert(gl->GetError() == 0);
+    gl->ColorMask(true, true, true, true);
+    assert(gl->GetError() == 0);
 
     return 0;
 }

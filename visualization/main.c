@@ -102,8 +102,11 @@ static void click_callback(
     int action,
     int mods
 ) {
-    (void)w;
     (void)mods;
+    double xpos;
+    double ypos;
+    glfwGetCursorPos(w, &xpos, &ypos);
+    vinfo.vtable.mouse_move(&ctx, (Vec2){ (float)xpos, (float)ypos });
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             vinfo.vtable.mouse_click(&ctx, AVEN_GL_UI_MOUSE_EVENT_DOWN);
@@ -129,6 +132,10 @@ static void cursor_callback(
     #ifdef HOT_RELOAD
         #error "hot reloading dll incompatible with emcc"
     #endif
+
+    void on_resize(int width, int height) {
+        glfwSetWindowSize(window, width, height);
+    }
 
     void main_loop(void) {
         int width;
