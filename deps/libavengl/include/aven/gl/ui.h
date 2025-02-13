@@ -26,21 +26,6 @@ static bool aven_gl_ui_id_eq(AvenGlUiId id1, AvenGlUiId id2) {
         (id1.index == id2.index);
 }
 
-// typedef enum {
-//     AVEN_GL_UI_ELEMENT_TYPE_BUTTON,
-// } AvenGlUiElementType;
-
-// typedef union {
-//     struct {
-//         AvenStr text;
-//     } button;
-// } AvenGlUiElementData;
-
-// typedef struct {
-//     AvenGlUiElementType type;
-//     AvenGlUiElementData data;
-// } AvenGlUiElement;
-
 typedef struct {
     Vec4 background;
     Vec4 primary;
@@ -53,17 +38,6 @@ typedef struct {
     AvenGlShapeRoundedBuffer buffer;
 } AvenGlUiShape;
 
-// typedef struct {
-//     ByteSlice font_bytes;
-//     AvenArena font_arena;
-//     AvenGlTextFont font;
-//     AvenGlTextCtx ctx;
-//     AvenGlTextGeometry geometry;
-//     AvenGlTextBuffer buffer;
-//     Vec4 color;
-//     float norm_height;
-// } AvenGlUiText;
-
 typedef enum {
     AVEN_GL_UI_MOUSE_EVENT_NONE = 0,
     AVEN_GL_UI_MOUSE_EVENT_DOWN,
@@ -75,26 +49,14 @@ typedef struct {
     AvenGlUiMouseEvent event;
 } AvenGlUiMouse;
 
-
-// #define AVEN_GL_UI_KEYBOARD_MAX (348)
-// 
-// typedef struct {
-//     enum {
-//         AVEN_GL_UI_KEYBOARD_NONE = 0,
-//         AVEN_GL_UI_KEYBOARD_DOWN,
-//         AVEN_GL_UI_KEYBOARD_UP,
-//     } keys[AVEN_GL_UI_KEYBOARD_MAX];
-//     bool captured;
-// } AvenGlUiKeyboard;
-
 typedef struct {
     AvenGlUiShape shape;
+    AvenGlUiColors window_colors;
     AvenGlUiColors base_colors;
     AvenGlUiColors hovered_colors;
     AvenGlUiColors clicked_colors;
     AvenGlUiColors disabled_colors;
     AvenGlUiMouse mouse;
-    // AvenGlUiKeyboard keyboard;
     AvenGlUiId active_id;
     AvenGlUiId hot_id;
     AvenGlUiId next_hot_id;
@@ -105,6 +67,7 @@ typedef struct {
 static inline AvenGlUi aven_gl_ui_init(
     AvenGl *gl,
     size_t max_elems,
+    AvenGlUiColors window_colors,
     AvenGlUiColors base_colors,
     AvenGlUiColors hovered_colors,
     AvenGlUiColors clicked_colors,
@@ -112,6 +75,7 @@ static inline AvenGlUi aven_gl_ui_init(
     AvenArena *arena
 ) {
     AvenGlUi ctx = {
+        .window_colors = window_colors,
         .base_colors = base_colors,
         .clicked_colors = clicked_colors,
         .hovered_colors = hovered_colors,
@@ -486,6 +450,68 @@ static inline void aven_gl_ui_push_zoomout(
     aven_gl_ui_push_minus(ctx, plus_trans, colors);
 }
 
+static inline void aven_gl_ui_push_circle(
+    AvenGlUi *ctx,
+    Aff2 trans,
+    AvenGlUiColors* colors
+) {
+    Aff2 circle_trans;
+    aff2_position(
+        circle_trans,
+        (Vec2){ 0.0f, 0.0f },
+        (Vec2){ 0.75f, 0.75f },
+        0.0f
+    );
+    aff2_compose(circle_trans, trans, circle_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        circle_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        circle_trans,
+        (Vec2){ 0.0f, 0.0f },
+        (Vec2){ 0.6f, 0.6f },
+        0.0f
+    );
+    aff2_compose(circle_trans, trans, circle_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        circle_trans,
+        1.0f,
+        colors->background
+    );
+}
+
+static inline void aven_gl_ui_push_pie(
+    AvenGlUi *ctx,
+    Aff2 trans,
+    AvenGlUiColors* colors
+) {
+    aven_gl_ui_push_circle(ctx, trans, colors);
+    float angle = 2.0f * AVEN_MATH_PI_F / 3.0f;
+    for (size_t i = 0; i < 3; i += 1) {
+        Aff2 circle_trans;
+        aff2_position(
+            circle_trans,
+            (Vec2){
+                0.3f * cosf((float)i * angle),
+                0.3f * sinf((float)i * angle),
+            },
+            (Vec2){ 0.3f, 0.075f },
+            (float)i * angle
+        );
+        aff2_compose(circle_trans, trans, circle_trans);
+        aven_gl_shape_rounded_geometry_push_square(
+            &ctx->shape.geometry,
+            circle_trans,
+            0.0f,
+            colors->primary
+        );
+    }
+}
+
 static inline void aven_gl_ui_push_play(
     AvenGlUi *ctx,
     Aff2 trans,
@@ -753,8 +779,109 @@ static inline void aven_gl_ui_push_check(
     );
 }
 
+static inline void aven_gl_ui_push_dice(
+    AvenGlUi *ctx,
+    Aff2 trans,
+    AvenGlUiColors* colors
+) {
+    Aff2 dice_trans;
+    aff2_position(
+        dice_trans,
+        (Vec2){ 0.0f, 0.0f },
+        (Vec2){ 0.75f, 0.75f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        0.1f,
+        colors->primary
+    );
+    aff2_position(
+        dice_trans,
+        (Vec2){ 0.0f, 0.0f },
+        (Vec2){ 0.6f, 0.6f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        0.1f,
+        colors->background
+    );
+    aff2_position(
+        dice_trans,
+        (Vec2){ 0.0f, 0.0f },
+        (Vec2){ 0.15f, 0.15f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        dice_trans,
+        (Vec2){ -0.3f, -0.3f },
+        (Vec2){ 0.15f, 0.15f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        dice_trans,
+        (Vec2){ 0.3f, -0.3f },
+        (Vec2){ 0.15f, 0.15f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        dice_trans,
+        (Vec2){ 0.3f, 0.3f },
+        (Vec2){ 0.15f, 0.15f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        dice_trans,
+        (Vec2){ -0.3f, 0.3f },
+        (Vec2){ 0.15f, 0.15f },
+        0.0f
+    );
+    aff2_compose(dice_trans, trans, dice_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        dice_trans,
+        1.0f,
+        colors->primary
+    );
+}
+
 typedef enum {
     AVEN_GL_UI_BUTTON_TYPE_NONE = 0,
+    AVEN_GL_UI_BUTTON_TYPE_CIRCLE,
+    AVEN_GL_UI_BUTTON_TYPE_PIE,
     AVEN_GL_UI_BUTTON_TYPE_PLAY,
     AVEN_GL_UI_BUTTON_TYPE_PAUSE,
     AVEN_GL_UI_BUTTON_TYPE_RIGHT,
@@ -775,6 +902,7 @@ typedef enum {
     AVEN_GL_UI_BUTTON_TYPE_ZOOMOUT,
     AVEN_GL_UI_BUTTON_TYPE_CROSS,
     AVEN_GL_UI_BUTTON_TYPE_CHECK,
+    AVEN_GL_UI_BUTTON_TYPE_DICE,
     AVEN_GL_UI_BUTTON_TYPE_MAX,
 } AvenGlUiButtonType;
 
@@ -830,6 +958,14 @@ static inline void aven_gl_ui_push_button(
         }
         case AVEN_GL_UI_BUTTON_TYPE_MAX: {
             assert(false);
+            break;
+        }
+        case AVEN_GL_UI_BUTTON_TYPE_CIRCLE: {
+            aven_gl_ui_push_circle(ctx, inner_trans, colors);
+            break;
+        }
+        case AVEN_GL_UI_BUTTON_TYPE_PIE: {
+            aven_gl_ui_push_pie(ctx, inner_trans, colors);
             break;
         }
         case AVEN_GL_UI_BUTTON_TYPE_PLAY: {
@@ -910,6 +1046,10 @@ static inline void aven_gl_ui_push_button(
         }
         case AVEN_GL_UI_BUTTON_TYPE_CHECK: {
             aven_gl_ui_push_check(ctx, inner_trans, colors);
+            break;
+        }
+        case AVEN_GL_UI_BUTTON_TYPE_DICE: {
+            aven_gl_ui_push_dice(ctx, inner_trans, colors);
             break;
         }
     }
@@ -1065,7 +1205,30 @@ static inline bool aven_gl_ui_window_internal(
         &ctx->shape.geometry,
         trans,
         0.0f,
-        ctx->disabled_colors.background
+        ctx->window_colors.primary
+    );
+
+    Vec2 up = { 0.0f, 1.0f };
+    mat2_mul_vec2(up, trans, up);
+    Vec2 right = { 1.0f, 0.0f };
+    mat2_mul_vec2(right, trans, right);
+
+    float y_padding = 0.01f / vec2_mag(up);
+    float x_padding = 0.01f / vec2_mag(right);
+
+    Aff2 inner_trans;
+    aff2_identity(inner_trans);
+    aff2_stretch(
+        inner_trans,
+        (Vec2){ 1.0f / (1.0f + x_padding), 1.0f / (1.0f + y_padding) },
+        inner_trans
+    );
+    aff2_compose(inner_trans, trans, inner_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        inner_trans,
+        0.0f,
+        ctx->window_colors.background
     );
 
     return value;    

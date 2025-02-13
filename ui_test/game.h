@@ -40,7 +40,7 @@
 
 typedef enum {
     GAME_DATA_ALG_TYPE_P3COLOR,
-    GAME_DATA_ALG_TYPE_P3COLOR_BFS,
+//    GAME_DATA_ALG_TYPE_P3COLOR_BFS,
     GAME_DATA_ALG_TYPE_P3CHOOSE,
 } GameInfoAlgType;
 
@@ -51,7 +51,7 @@ typedef struct {
 
 typedef struct {
     GraphPlaneP3ColorCtx ctx;
-    Slice(GraphPlaneP3ColorFrameOptional) frames;
+    GraphPlaneP3ColorFrameOptionalSlice frames;
 } GameInfoAlgP3Color;
 
 typedef struct {
@@ -104,6 +104,7 @@ typedef struct {
 typedef struct {
     GameInfoSession session;
     GameInfoAlg alg;
+    AvenRngPcg pcg;
     AvenArena init_arena;
     AvenArena arena;
 } GameInfo;
@@ -128,9 +129,10 @@ typedef struct {
 } GameText;
 
 typedef enum {
-    GAME_UI_WINDOW_NONE,
+    GAME_UI_WINDOW_NONE = 0,
     GAME_UI_WINDOW_THREAD,
     GAME_UI_WINDOW_RADIUS,
+    GAME_UI_WINDOW_ALG,
     GAME_UI_WINDOW_PREVIEW,
 } GameUiWindow;
 
@@ -147,7 +149,6 @@ typedef struct {
     AvenArena arena;
     AvenTimeInst last_update;
     GameInfo info;
-    AvenRng rng;
     AvenRngPcg pcg;
     int64_t elapsed;
     int width;

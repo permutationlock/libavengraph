@@ -140,6 +140,7 @@ int main(void) {
                 Graph graph = graph_plane_gen_tri_abs(
                     n,
                     rng,
+                    (Vec2){ 0.333f, 0.666f },
                     &loop_arena
                 );
                 get(cases, i).graph = graph;

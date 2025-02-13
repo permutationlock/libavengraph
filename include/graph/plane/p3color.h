@@ -21,6 +21,8 @@ typedef struct {
     bool last_colored;
 } GraphPlaneP3ColorFrame;
 typedef Optional(GraphPlaneP3ColorFrame) GraphPlaneP3ColorFrameOptional;
+typedef Slice(GraphPlaneP3ColorFrameOptional)
+    GraphPlaneP3ColorFrameOptionalSlice;
 
 typedef struct {
     int32_t mark;

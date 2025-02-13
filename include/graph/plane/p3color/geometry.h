@@ -17,6 +17,7 @@ typedef struct {
     Vec4 active_color;
     Vec4 face_color;
     Vec4 below_color;
+    Vec4 inactive_color;
     float edge_thickness;
     float border_thickness;
     float radius;
@@ -27,7 +28,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
     AvenGlShapeRoundedGeometry *rounded_geometry,
     GraphPlaneEmbedding embedding,
     GraphPlaneP3ColorCtx *ctx,
-    GraphPlaneP3ColorFrameOptional *maybe_frame,
+    GraphPlaneP3ColorFrameOptionalSlice active_frames,
     Aff2 trans,
     GraphPlaneP3ColorGeometryInfo *info,
     AvenArena temp_arena
@@ -91,40 +92,46 @@ static inline void graph_plane_p3color_geometry_push_ctx(
     }
 
     for (uint32_t v = 0; v < embedding.len; v += 1) {
-        if (maybe_frame->valid) {
-            GraphPlaneP3ColorFrame *frame = &maybe_frame->value;
-            if (v == frame->u) {
-                graph_plane_geometry_push_vertex(
-                    rounded_geometry,
-                    embedding,
-                    v,
-                    trans,
-                    &active_node_info
-                );
-            } else if (v == frame->z) {
-                graph_plane_geometry_push_vertex(
-                    rounded_geometry,
-                    embedding,
-                    v,
-                    trans,
-                    &below_node_info
-                );
-            } else if (v == frame->y) {
-                graph_plane_geometry_push_vertex(
-                    rounded_geometry,
-                    embedding,
-                    v,
-                    trans,
-                    &face_node_info
-                );
-            } else if (v == frame->x) {
-                graph_plane_geometry_push_vertex(
-                    rounded_geometry,
-                    embedding,
-                    v,
-                    trans,
-                    &below_node_info
-                );
+        for (size_t i = 0; i < active_frames.len; i += 1) {
+            GraphPlaneP3ColorFrameOptional *maybe_frame = &get(
+                active_frames,
+                i
+            );
+            if (maybe_frame->valid) {
+                GraphPlaneP3ColorFrame *frame = &maybe_frame->value;
+                if (v == frame->u) {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &active_node_info
+                    );
+                } else if (v == frame->z) {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &below_node_info
+                    );
+                } else if (v == frame->y) {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &face_node_info
+                    );
+                } else if (v == frame->x) {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &below_node_info
+                    );
+                }
             }
         }
 
@@ -147,7 +154,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         );
     }
 
-    typedef Slice(bool) GraphPlaneP3ColorTikzDrawSlice;
+    typedef Slice(int32_t) GraphPlaneP3ColorTikzDrawSlice;
     typedef Slice(GraphPlaneP3ColorTikzDrawSlice)
         GraphPlaneP3ColorTikzDrawGraph;
 
@@ -160,13 +167,52 @@ static inline void graph_plane_p3color_geometry_push_ctx(
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
         get(draw_graph, v).len = get(ctx->vertex_info, v).len;
         get(draw_graph, v).ptr = aven_arena_create_array(
-            bool,
+            int32_t,
             &temp_arena,
             get(draw_graph, v).len
         );
 
         for (size_t i = 0; i < get(draw_graph, v).len; i += 1) {
-            get(get(draw_graph, v), i) = false;
+            get(get(draw_graph, v), i) = 0;
+        }
+    }
+
+    for (size_t i = 0; i < active_frames.len; i += 1) {
+        GraphPlaneP3ColorFrameOptional *maybe_frame = &get(
+            active_frames,
+            i
+        );
+        if (maybe_frame->valid) {
+            GraphPlaneP3ColorFrame *frame = &maybe_frame->value;
+
+            GraphPlaneP3ColorVertex fu_info = get(ctx->vertex_info, frame->u);
+
+            if (frame->edge_index < fu_info.len) {
+                uint32_t n_index = frame->u_nb_first + frame->edge_index;
+                if (n_index >= fu_info.len) {
+                    n_index -= fu_info.len;
+                }
+
+                if (n_index < fu_info.len) {
+                    uint32_t n = get(fu_info, n_index);
+                    if (n > frame->u) {
+                        get(get(draw_graph, frame->u), n_index) = -3;
+                    } else {
+                        GraphPlaneP3ColorVertex n_info = get(
+                            ctx->vertex_info,
+                            n
+                        );
+                        uint32_t nu_index = graph_adj_neighbor_index(
+                            (GraphAdjList){
+                                .ptr = n_info.ptr,
+                                .len = n_info.len
+                            },
+                            frame->u
+                        );
+                        get(get(draw_graph, n), nu_index) = -3;
+                    }
+                }
+            }
         }
     }
 
@@ -206,18 +252,12 @@ static inline void graph_plane_p3color_geometry_push_ctx(
     vec4_copy(simple_edge_info.color, info->outline_color);
 
     GraphPlaneGeometryEdge inactive_edge_info = {
-        .thickness = max(
-            info->edge_thickness / 2.0f,
-            info->edge_thickness - info->border_thickness
-        ),
+        .thickness = info->edge_thickness,
     };
-    vec4_copy(inactive_edge_info.color, info->outline_color);
+    vec4_copy(inactive_edge_info.color, info->inactive_color);
 
     GraphPlaneGeometryEdge done_edge_info = {
-        .thickness = max(
-            info->edge_thickness / 2.0f,
-            info->edge_thickness - info->border_thickness
-        ),
+        .thickness = info->edge_thickness,
     };
     vec4_copy(done_edge_info.color, info->done_color);
 
@@ -234,66 +274,55 @@ static inline void graph_plane_p3color_geometry_push_ctx(
          vec4_copy(edge_info->color, info->colors[i + 1]);
     }
 
-    if (maybe_frame->valid) {
-        GraphPlaneP3ColorFrame *frame = &maybe_frame->value;
-
-        GraphPlaneP3ColorVertex fu_info = get(ctx->vertex_info, frame->u);
-
-        if (frame->edge_index < fu_info.len) {
-            uint32_t n_index = frame->u_nb_first + frame->edge_index;
-            if (n_index >= fu_info.len) {
-                n_index -= fu_info.len;
-            }
-
-            if (n_index < fu_info.len) {
-                uint32_t n = get(fu_info, n_index);
-                graph_plane_geometry_push_edge(
-                    geometry,
-                    embedding,
-                    frame->u,
-                    n,
-                    trans,
-                    &active_edge_info
-                );
-            }
-        }
-    }
-
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
         if (v_info.mark <= 0) {
             continue;
         }
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
             GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u);
             if (u > v and u_info.mark == v_info.mark) {
-                get(get(draw_graph, v), i) = true;
-                graph_plane_geometry_push_edge(
-                    geometry,
-                    embedding,
-                    v,
-                    u,
-                    trans,
-                    &get(color_edge_infos, (size_t)v_info.mark - 1)
-                );
+                if (get(v_drawn, i) == 0) {
+                    get(v_drawn, i) = v_info.mark;
+                }
             }
         }
     }
 
     Optional(GraphPlaneP3ColorFrame *)maybe_cur_frame = { 0 };
+    bool active = true;
     uint32_t frame_index = 0;
-    if (maybe_frame->valid) {
-        maybe_cur_frame.value = &maybe_frame->value;
-        maybe_cur_frame.valid = true;
-        frame_index -= (uint32_t)1;
-    } else {
-        if (ctx->frames.len > 0) {
-            maybe_cur_frame.value = &get(ctx->frames, frame_index);
-            maybe_cur_frame.valid = true;
+    while (1) {
+        if (active) {
+            while (frame_index < active_frames.len) {
+                if (get(active_frames, frame_index).valid) {
+                    maybe_cur_frame.value = &get(
+                        active_frames,
+                        frame_index
+                    ).value;
+                    maybe_cur_frame.valid = true;
+                    break;
+                }
+                frame_index += 1;
+            }
+            if (frame_index == active_frames.len) {
+                active = false;
+                frame_index = 0;
+            }
         }
-    }
-    while (maybe_cur_frame.valid) {
+        if (!active) {
+            if (frame_index < ctx->frames.len) {
+                maybe_cur_frame.value = &get(ctx->frames, frame_index);
+                maybe_cur_frame.valid = true;
+            }
+        }
+
+        if (!maybe_cur_frame.valid) {
+            break;
+        }
+
         GraphPlaneP3ColorFrame *cur_frame = maybe_cur_frame.value;
         maybe_cur_frame.valid = false;
 
@@ -301,6 +330,9 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         queue_clear(vertices);
 
         uint32_t mark = frame_index + 1;
+        if (!active) {
+            mark += (uint32_t)active_frames.len;
+        }
 
         get(visited, cur_frame->u) = mark;
 
@@ -324,25 +356,10 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                 queue_push(vertices) = n;
             }
             if (n > cur_frame->u and !get(cfu_drawn, n_index)) {
-                get(cfu_drawn, n_index) = true;
-                if (frame_index == 0) {
-                    graph_plane_geometry_push_edge(
-                        geometry,
-                        embedding,
-                        cur_frame->u,
-                        n,
-                        trans,
-                        &simple_edge_info
-                    );
+                if (active) {
+                    get(cfu_drawn, n_index) = -1;
                 } else {
-                    graph_plane_geometry_push_edge(
-                        geometry,
-                        embedding,
-                        cur_frame->u,
-                        n,
-                        trans,
-                        &inactive_edge_info
-                    );
+                    get(cfu_drawn, n_index) = -2;
                 }
             }
         }
@@ -379,25 +396,10 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                 }
 
                 if (u > v and !get(v_drawn, i)) {
-                    get(v_drawn, i) = true;
-                    if (frame_index == 0) {
-                        graph_plane_geometry_push_edge(
-                            geometry,
-                            embedding,
-                            v,
-                            u,
-                            trans,
-                            &simple_edge_info
-                        );
+                    if (active) {
+                        get(v_drawn, i) = -1;
                     } else {
-                        graph_plane_geometry_push_edge(
-                            geometry,
-                            embedding,
-                            v,
-                            u,
-                            trans,
-                            &inactive_edge_info
-                        );
+                        get(v_drawn, i) = -2;
                     }
                 }
             }
@@ -409,7 +411,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
-                if (u < v or get(v_drawn, i)) {
+                if (u < v or get(v_drawn, i) != 0) {
                     continue;
                 }
 
@@ -434,7 +436,10 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                     u_prev == cur_frame->u or
                     u_next == cur_frame->u
                 ) {
-                    bool valid = false;
+                    bool v_valid = false;
+                    bool u_valid = (u == cur_frame->u);
+                    bool up_valid = (u_prev == cur_frame->u);
+                    bool un_valid = (u_next == cur_frame->u);
                     for (
                         uint32_t j = cur_frame->edge_index;
                         j < cfu_info.len;
@@ -446,52 +451,40 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                         }
                         uint32_t n = get(cfu_info, n_index);
                         if (n == v) {
-                            valid = true;
-                            break;
+                            v_valid = true;
+                        }
+                        if (n == u) {
+                            u_valid = true;
+                        }
+                        if (n == u_next) {
+                            un_valid = true;
+                        }
+                        if (n == u_prev) {
+                            up_valid = true;
                         }
                     }
 
-                    if (!valid) {
-                        if (u == cur_frame->u) {
-                            u_visited = false;
-                        }
-                        if (u_prev == cur_frame->u) {
-                            u_prev_visited = false;
-                        }
-                        if (u_next == cur_frame->u) {
-                            u_next_visited = false;
-                        }
+                    if (u == cur_frame->u) {
+                        u_visited = u_visited && v_valid && u_valid;
+                    }
+                    if (u_prev == cur_frame->u) {
+                        u_prev_visited = u_prev_visited
+                            && u_valid && v_valid && up_valid;
+                    }
+                    if (u_next == cur_frame->u) {
+                        u_next_visited = u_next_visited
+                            && u_valid && v_valid && un_valid;
                     }
                 }
 
                 if (u_visited or u_prev_visited or u_next_visited) {
-                    get(v_drawn, i) = true;
-                    if (frame_index == 0) {
-                        graph_plane_geometry_push_edge(
-                            geometry,
-                            embedding,
-                            v,
-                            u,
-                            trans,
-                            &simple_edge_info
-                        );
+                    if (active) {
+                        get(v_drawn, i) = -1;
                     } else {
-                        graph_plane_geometry_push_edge(
-                            geometry,
-                            embedding,
-                            v,
-                            u,
-                            trans,
-                            &inactive_edge_info
-                        );
+                        get(v_drawn, i) = -2;
                     }
                 }
             }
-        }
-
-        if (frame_index < ctx->frames.len) {
-            maybe_cur_frame.value = &get(ctx->frames, frame_index);
-            maybe_cur_frame.valid = true;
         }
     }
 
@@ -501,10 +494,9 @@ static inline void graph_plane_p3color_geometry_push_ctx(
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
-            if (u < v or get(v_drawn, i)) {
+            if (u < v or get(v_drawn, i) != 0) {
                 continue;
             }
-            get(v_drawn, i) = true;
             graph_plane_geometry_push_edge(
                 geometry,
                 embedding,
@@ -513,6 +505,102 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                 trans,
                 &done_edge_info
             );
+        }
+    }
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
+
+        for (uint32_t i = 0; i < v_info.len; i += 1) {
+            uint32_t u = get(v_info, i);
+            if (u < v or get(v_drawn, i) != -2) {
+                continue;
+            }
+            graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &inactive_edge_info
+            );
+        }
+    }
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
+
+        for (uint32_t i = 0; i < v_info.len; i += 1) {
+            uint32_t u = get(v_info, i);
+            if (u < v or get(v_drawn, i) != -1) {
+                continue;
+            }
+            graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &simple_edge_info
+            );
+        }
+    }
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
+
+        for (uint32_t i = 0; i < v_info.len; i += 1) {
+            uint32_t u = get(v_info, i);
+            if (u < v or get(v_drawn, i) <= 0) {
+                continue;
+            }
+            graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &get(color_edge_infos, (size_t)get(v_drawn, i) - 1)
+            );
+        }
+    }
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
+
+        for (uint32_t i = 0; i < v_info.len; i += 1) {
+            uint32_t u = get(v_info, i);
+            if (u < v or get(v_drawn, i) != -3) {
+                continue;
+            }
+            graph_plane_geometry_push_edge(
+                geometry,
+                embedding,
+                v,
+                u,
+                trans,
+                &active_edge_info
+            );
+            GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u);
+            if (v_info.mark > 0 and v_info.mark == u_info.mark) {
+                graph_plane_geometry_push_edge(
+                    geometry,
+                    embedding,
+                    v,
+                    u,
+                    trans,
+                    &get(color_edge_infos, (size_t)v_info.mark - 1)
+                );
+            } else {
+                graph_plane_geometry_push_edge(
+                    geometry,
+                    embedding,
+                    v,
+                    u,
+                    trans,
+                    &simple_edge_info
+                );
+            }
         }
     }
 }

@@ -700,6 +700,7 @@ typedef struct {
 static inline Graph graph_plane_gen_tri_abs(
     uint32_t size,
     AvenRng rng,
+    Vec2 flip_prob,
     AvenArena *arena
 ) {
     assert(size >= 3);
@@ -741,7 +742,15 @@ static inline Graph graph_plane_gen_tri_abs(
             rng,
             (uint32_t)(faces.len - 1)
         );
-        uint32_t edge_flips = aven_rng_rand_bounded(rng, 3);
+
+        float r = aven_rng_randf(rng);
+        uint32_t edge_flips = 0;
+        if (r >= flip_prob[0]) {
+            edge_flips += 1;
+        }
+        if (r >= flip_prob[1]) {
+            edge_flips += 1;
+        }
         uint32_t flip_start = aven_rng_rand_bounded(rng, 3);
 
         GraphPlaneGenAbsFace og_face = get(faces, face_index);
@@ -789,6 +798,7 @@ static inline Graph graph_plane_gen_tri_abs(
             assert(j < 3);
         }
 
+        // avoid creating double edges when flipping
         if (
             edge_flips == 2 and
             neighbor_opposite_vertices[flip_start] ==
