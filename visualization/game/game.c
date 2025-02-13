@@ -116,9 +116,9 @@ static void game_info_alg_setup(
     }
 }
 
-static bool game_info_alg_step(GameInfoAlg *info_alg) {
+static void game_info_alg_step(GameInfoAlg *info_alg) {
     if (info_alg->done) {
-        return true;
+        return;
     }
 
     info_alg->steps += 1;
@@ -148,7 +148,7 @@ static bool game_info_alg_step(GameInfoAlg *info_alg) {
             if (finished) {
                 info_alg->done = true;
             }
-            return finished;
+            break;
         }
         case GAME_DATA_ALG_TYPE_P3CHOOSE: {
             GameInfoAlgP3Choose *alg = &info_alg->data.p3choose;
@@ -190,7 +190,7 @@ static bool game_info_alg_step(GameInfoAlg *info_alg) {
             if (finished) {
                 info_alg->done = true;
             }
-            return finished;
+            break;
         }
     }
 }
