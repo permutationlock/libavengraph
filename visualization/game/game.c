@@ -34,6 +34,7 @@ static const float vertex_radii[] = {
      0.05f,
      0.025f,
      0.015f,
+     0.01f,
 };
 
 static GameInfoAlg game_info_alg_init(
