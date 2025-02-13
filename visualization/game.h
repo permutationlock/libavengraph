@@ -36,6 +36,9 @@
 #define GAME_MAX_TIME_STEP (256 * GAME_MIN_TIME_STEP)
 #define GAME_TIME_STEP (64 * GAME_MIN_TIME_STEP)
 
+#define GAME_SCREEN_UPDATES (4)
+#define GAME_MAX_TIME_NO_REFRESH (AVEN_TIME_NSEC_PER_SEC / 4)
+
 #define GAME_PREVIEW_EDGES (8)
 
 typedef enum {
@@ -151,6 +154,8 @@ typedef struct {
     GameInfo info;
     AvenRngPcg pcg;
     int64_t elapsed;
+    int64_t ns_since_refresh;
+    int screen_updates;
     int width;
     int height;
     GameInfoSessionOpts session_opts;
@@ -163,6 +168,7 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena);
 void game_deinit(GameCtx *ctx, AvenGl *gl);
 int game_reload(GameCtx *ctx, AvenGl *gl);
 int game_update(GameCtx *ctx, AvenGl *gl, int width, int height, AvenArena arena);
+void game_damage(GameCtx *ctx);
 void game_mouse_move(GameCtx *ctx, Vec2 pos);
 void game_mouse_click(GameCtx *ctx, AvenGlUiMouseEvent event);
  
@@ -175,6 +181,7 @@ typedef int (*GameUpdateFn)(
     int height,
     AvenArena arena
 );
+typedef void (*GameDamageFn)(GameCtx *ctx);
 typedef void (*GameDeinitFn)(GameCtx *ctx, AvenGl *gl);
 typedef void (*GameMouseMoveFn)(GameCtx *ctx, Vec2 pos);
 typedef void (*GameMouseClickFn)(GameCtx *ctx, AvenGlUiMouseEvent event);
@@ -183,6 +190,7 @@ typedef struct {
     GameInitFn init;
     GameReloadFn reload;
     GameUpdateFn update;
+    GameDamageFn damage;
     GameDeinitFn deinit;
     GameMouseMoveFn mouse_move;
     GameMouseClickFn mouse_click;

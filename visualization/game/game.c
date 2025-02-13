@@ -372,6 +372,7 @@ const GameTable game_table = {
     .init = game_init,
     .reload = game_reload,
     .update = game_update,
+    .damage = game_damage,
     .deinit = game_deinit,
     .mouse_click = game_mouse_click,
     .mouse_move = game_mouse_move,
@@ -541,6 +542,8 @@ void game_mouse_move(
     GameCtx *ctx,
     Vec2 pos
 ) {
+    ctx->screen_updates = 0;
+
     float side = (float)ctx->height;
     if (ctx->height > ctx->width) {
         side = (float)ctx->width;
@@ -568,6 +571,7 @@ void game_mouse_click(
     GameCtx *ctx,
     AvenGlUiMouseEvent event
 ) {
+    ctx->screen_updates = 0;
     aven_gl_ui_mouse_click(&ctx->ui, event);
 }
 
@@ -580,7 +584,9 @@ int game_update(
 ) {
     (void)arena;
     AvenTimeInst now = aven_time_now();
-    ctx->elapsed += aven_time_since(now, ctx->last_update);
+    int64_t ns_since_update = aven_time_since(now, ctx->last_update);
+    ctx->elapsed += ns_since_update;
+    ctx->ns_since_refresh += ns_since_update;
     ctx->last_update = now;
 
     float screen_ratio = (float)width / (float)height;
@@ -608,6 +614,13 @@ int game_update(
             if (ctx->preview.edge_index == GAME_PREVIEW_EDGES) {
                 ctx->preview.edge_index = 0;
             }
+
+            if (ctx->active_window == GAME_UI_WINDOW_PREVIEW) {
+                ctx->screen_updates = 0;
+            }
+        }
+        if (ctx->ns_since_refresh > GAME_MAX_TIME_NO_REFRESH) {
+            ctx->screen_updates = 0;
         }
     } else {
         ctx->active_window = GAME_UI_WINDOW_NONE;
@@ -615,6 +628,7 @@ int game_update(
 
         while (ctx->elapsed >= ctx->alg_opts.time_step) {
             ctx->elapsed -= ctx->alg_opts.time_step;
+            ctx->screen_updates = 0;
 
             game_info_alg_step(&ctx->info.alg);
             if (ctx->info.alg.done) {
@@ -622,6 +636,13 @@ int game_update(
             }
         }
     }
+
+    if (ctx->screen_updates >= GAME_SCREEN_UPDATES) {
+        return 0;
+    }
+
+    ctx->screen_updates += 1;
+    ctx->ns_since_refresh = 0;
 
     float ui_width = (2.0f - 0.02f) / 8.0f;
     float ui_window_width = ui_width + 0.02f;
@@ -1676,5 +1697,9 @@ int game_update(
     assert(gl->GetError() == 0);
 
     return 0;
+}
+
+void game_damage(GameCtx *ctx) {
+    ctx->screen_updates = 0;
 }
 

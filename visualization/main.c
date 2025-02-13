@@ -82,6 +82,11 @@ static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
 
+static void on_damage(GLFWwindow *w) {
+    (void)w;
+    vinfo.vtable.damage(&ctx);
+}
+
 static void key_callback(
     GLFWwindow* w,
     int key,
@@ -158,7 +163,7 @@ int main(void) {
 #endif // !defined(_MSC_VER)
     aven_fs_utf8_mode();
 
-    // could probably switch to raw page allocation, but malloc is cross
+    // should probably switch to raw page allocation, but malloc is cross
     // platform and we are dynamically linking the system libc anyway
     void *mem = malloc(ARENA_SIZE);
     assert(mem != NULL);
@@ -175,9 +180,7 @@ int main(void) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
     glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
-    // raster msaa sample count should try to match the sample count of 4 used
-    // for multisampling in our shape fragment shaders and stb font textures
-    glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_SAMPLES, 16);
 
     window = glfwCreateWindow(
         (int)width,
@@ -200,6 +203,8 @@ int main(void) {
             return 1;
         }
     }
+
+    glfwSetWindowRefreshCallback(window, on_damage);
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 0);
