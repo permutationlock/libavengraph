@@ -2,7 +2,7 @@
 
 An "adjacency slice" graph library along with implementations
 of a few
-[path coloring algorithms for plane graphs](https://github.com/implpathcol_paper).
+[path coloring algorithms for plane graphs][2].
 
 ## Code organization
 
@@ -57,3 +57,4 @@ To clean build artifacts:
 The visualization compiled with Emscripten is [available online][1].
 
 [1]: https://musing.permutationlock.com/static/triangulate/visualization.html
+[2]: https://github.com/permutationlock/implpathcol_paper
