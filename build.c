@@ -189,159 +189,42 @@ int main(int argc, char **argv) {
         );
         glfw_obj_step.valid = true;
     }
- 
-    AvenBuildStep bfs_obj_step = aven_build_common_step_cc_ex(
+
+    AvenBuildStep visualization_obj_step = aven_build_common_step_cc_ex(
         &opts,
         graphics_includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "bfs.c", NULL),
+        aven_path(&arena, root_path.ptr, "visualization", "main.c", NULL),
         &work_dir_step,
         &arena
     );
 
-    AvenBuildStep *bfs_obj_data[5];
-    List(AvenBuildStep *) bfs_obj_list = list_array(bfs_obj_data);
+    AvenBuildStep *visualization_obj_data[5];
+    List(AvenBuildStep *) visualization_obj_list = list_array(visualization_obj_data);
 
-    list_push(bfs_obj_list) = &bfs_obj_step;
-    list_push(bfs_obj_list) = &stb_obj_step;
+    list_push(visualization_obj_list) = &visualization_obj_step;
+    list_push(visualization_obj_list) = &stb_obj_step;
     
     if (winutf8_obj_step.valid) {
-        list_push(bfs_obj_list) = &winutf8_obj_step.value;
+        list_push(visualization_obj_list) = &winutf8_obj_step.value;
     }
 
     if (winpthreads_obj_step.valid) {
-        list_push(bfs_obj_list) = &winpthreads_obj_step.value;
+        list_push(visualization_obj_list) = &winpthreads_obj_step.value;
     }
 
     if (glfw_obj_step.valid) {
-        list_push(bfs_obj_list) = &glfw_obj_step.value;
+        list_push(visualization_obj_list) = &glfw_obj_step.value;
     }
 
-    AvenBuildStepPtrSlice bfs_objs = slice_list(bfs_obj_list);
+    AvenBuildStepPtrSlice visualization_objs = slice_list(visualization_obj_list);
 
-    AvenBuildStep bfs_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep visualization_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
         libavengl_opts.syslibs,
-        bfs_objs,
+        visualization_objs,
         &out_dir_step,
-        aven_str("bfs"),
-        true,
-        &arena
-    );
-
-    AvenBuildStep p3color_obj_step = aven_build_common_step_cc_ex(
-        &opts,
-        graphics_includes,
-        macros,
-        aven_path(&arena, root_path.ptr, "examples", "p3color.c", NULL),
-        &work_dir_step,
-        &arena
-    );
-
-    AvenBuildStep *p3color_obj_data[5];
-    List(AvenBuildStep *) p3color_obj_list = list_array(p3color_obj_data);
-
-    list_push(p3color_obj_list) = &p3color_obj_step;
-    list_push(p3color_obj_list) = &stb_obj_step;
-    
-    if (winutf8_obj_step.valid) {
-        list_push(p3color_obj_list) = &winutf8_obj_step.value;
-    }
-
-    if (winpthreads_obj_step.valid) {
-        list_push(p3color_obj_list) = &winpthreads_obj_step.value;
-    }
-
-    if (glfw_obj_step.valid) {
-        list_push(p3color_obj_list) = &glfw_obj_step.value;
-    }
-
-    AvenBuildStepPtrSlice p3color_objs = slice_list(p3color_obj_list);
-
-    AvenBuildStep p3color_exe_step = aven_build_common_step_ld_exe_ex(
-        &opts,
-        libavengl_opts.syslibs,
-        p3color_objs,
-        &out_dir_step,
-        aven_str("p3color"),
-        true,
-        &arena
-    );
-
-    AvenBuildStep p3choose_obj_step = aven_build_common_step_cc_ex(
-        &opts,
-        graphics_includes,
-        macros,
-        aven_path(&arena, root_path.ptr, "examples", "p3choose.c", NULL),
-        &work_dir_step,
-        &arena
-    );
-
-    AvenBuildStep *p3choose_obj_data[5];
-    List(AvenBuildStep *) p3choose_obj_list = list_array(p3choose_obj_data);
-
-    list_push(p3choose_obj_list) = &p3choose_obj_step;
-    list_push(p3choose_obj_list) = &stb_obj_step;
-    
-    if (winutf8_obj_step.valid) {
-        list_push(p3choose_obj_list) = &winutf8_obj_step.value;
-    }
-
-    if (winpthreads_obj_step.valid) {
-        list_push(p3choose_obj_list) = &winpthreads_obj_step.value;
-    }
-
-    if (glfw_obj_step.valid) {
-        list_push(p3choose_obj_list) = &glfw_obj_step.value;
-    }
-
-    AvenBuildStepPtrSlice p3choose_objs = slice_list(p3choose_obj_list);
-
-    AvenBuildStep p3choose_exe_step = aven_build_common_step_ld_exe_ex(
-        &opts,
-        libavengl_opts.syslibs,
-        p3choose_objs,
-        &out_dir_step,
-        aven_str("p3choose"),
-        true,
-        &arena
-    );
-
-    AvenBuildStep uitest_obj_step = aven_build_common_step_cc_ex(
-        &opts,
-        graphics_includes,
-        macros,
-        aven_path(&arena, root_path.ptr, "ui_test", "main.c", NULL),
-        &work_dir_step,
-        &arena
-    );
-
-    AvenBuildStep *uitest_obj_data[5];
-    List(AvenBuildStep *) uitest_obj_list = list_array(uitest_obj_data);
-
-    list_push(uitest_obj_list) = &uitest_obj_step;
-    list_push(uitest_obj_list) = &stb_obj_step;
-    
-    if (winutf8_obj_step.valid) {
-        list_push(uitest_obj_list) = &winutf8_obj_step.value;
-    }
-
-    if (winpthreads_obj_step.valid) {
-        list_push(uitest_obj_list) = &winpthreads_obj_step.value;
-    }
-
-    if (glfw_obj_step.valid) {
-        list_push(uitest_obj_list) = &glfw_obj_step.value;
-    }
-
-    AvenBuildStepPtrSlice uitest_objs = slice_list(uitest_obj_list);
-
-    AvenBuildStep uitest_exe_step = aven_build_common_step_ld_exe_ex(
-        &opts,
-        libavengl_opts.syslibs,
-        uitest_objs,
-        &out_dir_step,
-        aven_str("uitest"),
+        aven_str("visualization"),
         true,
         &arena
     );
@@ -415,12 +298,9 @@ int main(int argc, char **argv) {
     );
 
     AvenBuildStep root_step = aven_build_step_root();
-    aven_build_step_add_dep(&root_step, &uitest_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &bfs_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3color_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3choose_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
-    // aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &visualization_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
+    aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
 
     // Build steps for tests
 
