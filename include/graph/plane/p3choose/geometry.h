@@ -403,21 +403,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
                     &edge_info
                 );
             }
-        }
-
-        // for (size_t i = 0; i < ctx->frames.len; i += 1) {
-        //     graph_plane_p3choose_geometry_push_frame_active(
-        //         geometry,
-        //         rounded_geometry,
-        //         embedding,
-        //         ctx,
-        //         &list_get(ctx->frames, i),
-        //         trans,
-        //         info->radius + info->border_thickness,
-        //         info->edge_thickness,
-        //         &info->inactive_frame
-        //     );
-        // }
+        } 
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
             graph_plane_p3choose_geometry_push_frame_outline(
@@ -431,6 +417,22 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
                 info->edge_thickness,
                 info->border_thickness,
                 info->outline_color,
+                &info->inactive_frame
+            );
+        }
+
+        for (size_t i = 0; i < ctx->frames.len; i += 1) {
+            graph_plane_p3choose_geometry_push_frame_active(
+                geometry,
+                rounded_geometry,
+                embedding,
+                ctx,
+                &list_get(ctx->frames, i),
+                trans,
+                info->radius,
+                info->border_thickness,
+                info->edge_thickness,
+                info->edge_color,
                 &info->inactive_frame
             );
         }
