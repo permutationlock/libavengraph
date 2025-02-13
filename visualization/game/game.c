@@ -735,11 +735,18 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 ctx->session_opts.alg_type = GAME_DATA_ALG_TYPE_P3COLOR;
+                size_t steps = ctx->info.alg.steps;
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                    if (ctx->info.alg.done) {
+                        break;
+                    }
+                }
             }
         }
         {
@@ -763,11 +770,18 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 ctx->session_opts.alg_type = GAME_DATA_ALG_TYPE_P3CHOOSE;
+                size_t steps = ctx->info.alg.steps;
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                    if (ctx->info.alg.done) {
+                        break;
+                    }
+                }
             }
         }
     }
@@ -850,11 +864,18 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 1;
+                size_t steps = ctx->info.alg.steps;
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                    if (ctx->info.alg.done) {
+                        break;
+                    }
+                }
             }
         }
         {
@@ -878,11 +899,18 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 2;
+                size_t steps = ctx->info.alg.steps;
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                    if (ctx->info.alg.done) {
+                        break;
+                    }
+                }
             }
         }
         {
@@ -906,11 +934,18 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 3;
+                size_t steps = ctx->info.alg.steps;
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                    if (ctx->info.alg.done) {
+                        break;
+                    }
+                }
             }
         }
         {
@@ -934,11 +969,18 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 4;
+                size_t steps = ctx->info.alg.steps;
                 game_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                for (size_t i = 0; i < steps; i += 1) {
+                    game_info_alg_step(&ctx->info.alg);
+                    if (ctx->info.alg.done) {
+                        break;
+                    }
+                }
             }
         }
     }
