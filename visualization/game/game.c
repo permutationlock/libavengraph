@@ -1574,7 +1574,7 @@ int game_update(
                 .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
                 .face_color = { 0.15f, 0.6f, 0.6f, 1.0f },
                 .below_color = { 0.55f, 0.65f, 0.15f, 1.0f },
-                .inactive_color = { 0.25f, 0.25f, 0.25f, 1.0f },
+                .inactive_color = { 0.1f, 0.1f, 0.1f, 1.0f },
                 .edge_thickness = radius / 4.0f,
                 .border_thickness = radius * 0.25f,
                 .radius = radius,
