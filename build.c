@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "p3color_tikz.c", NULL),
+        aven_path(&arena, root_path.ptr, "tikz", "p3color_tikz.c", NULL),
         &work_dir_step,
         &arena
     );
@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        aven_path(&arena, root_path.ptr, "examples", "p3choose_tikz.c", NULL),
+        aven_path(&arena, root_path.ptr, "tikz", "p3choose_tikz.c", NULL),
         &work_dir_step,
         &arena
     );
