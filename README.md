@@ -1,8 +1,7 @@
 # The Aven Graph Library
 
 An "adjacency slice" graph library along with implementations
-of a few
-[path coloring algorithms for plane graphs][2].
+of a few [path coloring algorithms for plane graphs][2].
 
 ## Code organization
 

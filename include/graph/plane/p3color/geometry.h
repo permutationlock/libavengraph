@@ -361,6 +361,23 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                 } else {
                     get(cfu_drawn, n_index) = -2;
                 }
+            } else {
+                GraphPlaneP3ColorVertex n_info = get(ctx->vertex_info, n);
+                uint32_t nu_index = graph_adj_neighbor_index(
+                    (GraphAdjList){ .len = n_info.len, .ptr = n_info.ptr },
+                    cur_frame->u
+                );
+                GraphPlaneP3ColorTikzDrawSlice n_drawn = get(
+                    draw_graph,
+                    n
+                );
+                if (get(n_drawn, nu_index) == 0) {
+                    if (active) {
+                        get(n_drawn, nu_index) = -1;
+                    } else {
+                        get(n_drawn, nu_index) = -2;
+                    }
+                }
             }
         }
 
@@ -405,84 +422,91 @@ static inline void graph_plane_p3color_geometry_push_ctx(
             }
         }
 
-        for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-            GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
-            GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
+        for (uint32_t i = cur_frame->edge_index; i < cfu_info.len - 1; i += 1) {
+            uint32_t n_index = cur_frame->u_nb_first + i;
+            if (n_index >= cfu_info.len) {
+                n_index -= cfu_info.len;
+            }
 
-            for (uint32_t i = 0; i < v_info.len; i += 1) {
-                uint32_t u = get(v_info, i);
-                if (u < v or get(v_drawn, i) != 0) {
-                    continue;
-                }
+            GraphAdjList v_adj = { .len = cfu_info.len, .ptr = cfu_info.ptr };
+            uint32_t v1 = get(cfu_info, n_index);
+            uint32_t v2 = get(cfu_info, graph_adj_next(v_adj, n_index));
 
-                uint32_t i_prev = graph_adj_prev(
-                    (GraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
-                    i
+            if (v1 > v2) {
+                GraphPlaneP3ColorVertex v2_info = get(ctx->vertex_info, v2);
+                uint32_t v2v1_index = graph_adj_neighbor_index(
+                    (GraphAdjList){ .len = v2_info.len, .ptr = v2_info.ptr },
+                    v1
                 );
-                uint32_t i_next = graph_adj_next(
-                    (GraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
-                    i
-                );
-
-                uint32_t u_prev = get(v_info, i_prev);
-                uint32_t u_next = get(v_info, i_next);
-
-                bool u_prev_visited = get(visited, u_prev) == mark;
-                bool u_next_visited = get(visited, u_next) == mark;
-                bool u_visited = get(visited, u) == mark;
-
-                if (
-                    u == cur_frame->u or
-                    u_prev == cur_frame->u or
-                    u_next == cur_frame->u
-                ) {
-                    bool v_valid = false;
-                    bool u_valid = (u == cur_frame->u);
-                    bool up_valid = (u_prev == cur_frame->u);
-                    bool un_valid = (u_next == cur_frame->u);
-                    for (
-                        uint32_t j = cur_frame->edge_index;
-                        j < cfu_info.len;
-                        j += 1
-                    ) {
-                        uint32_t n_index = cur_frame->u_nb_first + j;
-                        if (n_index >= cfu_info.len) {
-                            n_index -= cfu_info.len;
-                        }
-                        uint32_t n = get(cfu_info, n_index);
-                        if (n == v) {
-                            v_valid = true;
-                        }
-                        if (n == u) {
-                            u_valid = true;
-                        }
-                        if (n == u_next) {
-                            un_valid = true;
-                        }
-                        if (n == u_prev) {
-                            up_valid = true;
-                        }
-                    }
-
-                    if (u == cur_frame->u) {
-                        u_visited = u_visited && v_valid && u_valid;
-                    }
-                    if (u_prev == cur_frame->u) {
-                        u_prev_visited = u_prev_visited
-                            && u_valid && v_valid && up_valid;
-                    }
-                    if (u_next == cur_frame->u) {
-                        u_next_visited = u_next_visited
-                            && u_valid && v_valid && un_valid;
-                    }
-                }
-
-                if (u_visited or u_prev_visited or u_next_visited) {
+                GraphPlaneP3ColorTikzDrawSlice v2_drawn = get(draw_graph, v2);
+                if (get(v2_drawn, v2v1_index) == 0) {
                     if (active) {
-                        get(v_drawn, i) = -1;
+                        get(v2_drawn, v2v1_index) = -1;
                     } else {
-                        get(v_drawn, i) = -2;
+                        get(v2_drawn, v2v1_index) = -2;
                     }
+                }
+            } else {
+                GraphPlaneP3ColorVertex v1_info = get(ctx->vertex_info, v1);
+                uint32_t v1v2_index = graph_adj_neighbor_index(
+                    (GraphAdjList){ .len = v1_info.len, .ptr = v1_info.ptr },
+                    v2
+                );
+                GraphPlaneP3ColorTikzDrawSlice v1_drawn = get(draw_graph, v1);
+                if (get(v1_drawn, v1v2_index) == 0) {
+                    if (active) {
+                        get(v1_drawn, v1v2_index) = -1;
+                    } else {
+                        get(v1_drawn, v1v2_index) = -2;
+                    }
+                }
+            }
+        }
+
+        get(visited, cur_frame->u) = 0;
+    }
+
+    for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
+        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
+
+        for (uint32_t i = 0; i < v_info.len; i += 1) {
+            uint32_t u = get(v_info, i);
+            if (u < v or get(v_drawn, i) != 0) {
+                continue;
+            }
+
+            uint32_t i_prev = graph_adj_prev(
+                (GraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
+                i
+            );
+            uint32_t i_next = graph_adj_next(
+                (GraphAdjList){ .len = v_info.len, .ptr = v_info.ptr },
+                i
+            );
+
+            uint32_t u_prev = get(v_info, i_prev);
+            uint32_t u_next = get(v_info, i_next);
+
+            uint32_t min_mark = get(visited, u_prev);
+            uint32_t u_mark = get(visited, u);
+            if (min_mark == 0) {
+                min_mark = u_mark;
+            } else if (u_mark > 0) {
+                min_mark = min(u_mark, min_mark);
+            }
+            uint32_t u_next_mark = get(visited, u_next);
+            if (min_mark == 0) {
+                min_mark = u_next_mark;
+            } else if (u_next_mark > 0) {
+                min_mark = min(u_next_mark, min_mark);
+            }
+
+            if (min_mark > 0) {
+                if (min_mark <= active_frames.len) {
+                    get(v_drawn, i) = -1;
+                } else {
+                    get(v_drawn, i) = -2;
                 }
             }
         }
