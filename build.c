@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
         p3color_tikz_objs,
         &out_dir_step,
         aven_str("p3color_tikz"),
-        true,
+        false,
         &arena
     );
 
@@ -293,7 +293,7 @@ int main(int argc, char **argv) {
         p3choose_tikz_objs,
         &out_dir_step,
         aven_str("p3choose_tikz"),
-        true,
+        false,
         &arena
     );
 
