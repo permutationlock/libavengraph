@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 4000000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)4000000UL)
 
 #define FULL_RUNS 10
 #define NGRAPHS 10
@@ -39,6 +39,12 @@
 #define NTHREADS 4
 
 #define NBENCHES 11
+
+#ifdef __GNUC__
+    #define BENCHMARK_COMPILER_BARRIER __asm volatile( "" ::: "memory" );
+#else
+    #define BENCHMARK_COMPILER_BARRIER
+#endif
 
 int main(void) {
     void *mem = malloc(ARENA_SIZE);
@@ -197,12 +203,12 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).path = graph_bfs(
@@ -212,12 +218,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
@@ -253,12 +259,12 @@ int main(void) {
             }
             {
                 AvenArena temp_arena = loop_arena;
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).aug_graph = graph_aug(
@@ -266,12 +272,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
@@ -346,12 +352,12 @@ int main(void) {
 
                 size_t bfs_nruns = max(nruns / 10, 1);
         
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < bfs_nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color_bfs(
@@ -361,12 +367,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns /
@@ -406,12 +412,12 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color(
@@ -421,12 +427,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
@@ -465,12 +471,12 @@ int main(void) {
             for (size_t nthreads = 2; nthreads <= NTHREADS; nthreads += 1){
                 AvenArena temp_arena = loop_arena;
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color_thread(
@@ -482,12 +488,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
@@ -527,12 +533,12 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3choose(
@@ -542,12 +548,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
@@ -616,12 +622,12 @@ int main(void) {
             for (size_t nthreads = 2; nthreads <= NTHREADS; nthreads += 1){
                 AvenArena temp_arena = loop_arena;
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3choose_thread(
@@ -633,12 +639,12 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    __asm volatile("" ::: "memory");
+                    BENCHMARK_COMPILER_BARRIER
                 }
 
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst end_inst = aven_time_now();
-                __asm volatile("" ::: "memory");
+                BENCHMARK_COMPILER_BARRIER
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
