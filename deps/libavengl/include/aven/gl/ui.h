@@ -1191,10 +1191,21 @@ static inline bool aven_gl_ui_button_maybe_internal(
         enabled \
     )
 
+typedef struct {
+    bool right;
+    bool top;
+    bool left;
+    bool bot;
+} AvenGlUiBorder;
+
+static const AvenGlUiBorder aven_gl_ui_border_all = { true, true, true, true };
+static const AvenGlUiBorder aven_gl_ui_border_none = { 0 };
+
 static inline bool aven_gl_ui_window_internal(
     AvenGlUi *ctx,
     AvenGlUiId id,
-    Aff2 trans
+    Aff2 trans,
+    AvenGlUiBorder border_set
 ) {
     Vec2 p1 = { -1.0f, -1.0f };
     Vec2 p2 = { 1.0f, 1.0f };
@@ -1243,12 +1254,31 @@ static inline bool aven_gl_ui_window_internal(
     float y_padding = 0.01f / vec2_mag(up);
     float x_padding = 0.01f / vec2_mag(right);
 
+    Vec2 pos = { 0.0f, 0.0f };
+    Vec2 denom = { 1.0f, 1.0f };
+    if (border_set.left) {
+        pos[0] += x_padding / 2.0f;
+        denom[0] += x_padding / 2.0f;
+    }
+    if (border_set.right) {
+        pos[0] -= x_padding / 2.0f;
+        denom[0] += x_padding / 2.0f;
+    }
+    if (border_set.top) {
+        pos[1] += y_padding / 2.0f;
+        denom[1] += y_padding / 2.0f;
+    }
+    if (border_set.bot) {
+        pos[1] -= y_padding / 2.0f;
+        denom[1] += y_padding / 2.0f;
+    }
+
     Aff2 inner_trans;
-    aff2_identity(inner_trans);
-    aff2_stretch(
+    aff2_position(
         inner_trans,
-        (Vec2){ 1.0f / (1.0f + x_padding), 1.0f / (1.0f + y_padding) },
-        inner_trans
+        pos,
+        (Vec2){ 1.0f / denom[0], 1.0f / denom[1] },
+        0.0f
     );
     aff2_compose(inner_trans, trans, inner_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1261,10 +1291,11 @@ static inline bool aven_gl_ui_window_internal(
     return value;    
 }
 
-#define aven_gl_ui_window(ctx, trans) aven_gl_ui_window_internal( \
+#define aven_gl_ui_window(ctx, trans, border) aven_gl_ui_window_internal( \
         ctx, \
         aven_gl_ui_id_internal(__FILE__, AVEN_GL_UI_WINDOW_ID, __LINE__), \
-        trans \
+        trans, \
+        border \
     )
 
 #endif

@@ -25,6 +25,11 @@
 #include "src/input.c"
 #include "src/vulkan.c"
 
+#include "src/null_init.c"
+#include "src/null_window.c"
+#include "src/null_joystick.c"
+#include "src/null_monitor.c"
+
 #if defined(_WIN32)
     #include "src/win32_init.c"
     #include "src/win32_module.c"

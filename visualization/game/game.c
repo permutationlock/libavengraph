@@ -644,11 +644,14 @@ int game_update(
     ctx->screen_updates += 1;
     ctx->ns_since_refresh = 0;
 
-    float ui_width = (2.0f - 0.02f) / 8.0f;
-    float ui_window_width = ui_width + 0.02f;
+    float padding = 0.02f;
+    float ui_width = (2.0f - 2.0f * padding) / 8.0f;
+    float ui_window_width = ui_width + padding;
     float graph_offset = 0.0f;
-    float ui_offset = -1.0f;
+    float ui_offset = -1.0f - padding;
     float graph_scale = 1.0f;
+
+    AvenGlUiBorder popup_border = { true, true, false, true };
 
     {
         float dw = min(2.0f, 2.0f + free_space - ui_window_width);
@@ -690,36 +693,46 @@ int game_update(
         aff2_position(
             backdrop_trans,
             (Vec2){ 0.0f, 0.0f },
-            (Vec2){ ui_window_width / 2.0f, 1.0f },
+            (Vec2){ (ui_window_width + padding) / 2.0f, 1.0f },
             0.0f
         );
         aff2_compose(backdrop_trans, ui_trans, backdrop_trans);
-        if (aven_gl_ui_window(&ctx->ui, backdrop_trans)) {
+        if (
+            aven_gl_ui_window(
+                &ctx->ui,
+                backdrop_trans,
+                aven_gl_ui_border_all
+            )
+        ) {
             ctx->active_window = GAME_UI_WINDOW_NONE;
         }
     }
 
-    float left_x = 1.0f - 0.01f;
+    float left_x = 1.0f - padding;
     float button_count = 0;
     if (ctx->active_window == GAME_UI_WINDOW_ALG) {
         Aff2 window_trans;
         aff2_position(
             window_trans,
             (Vec2){
-                0.01f + ui_width + ui_width / 2.0f,
+                1.5f * padding + ui_width + ui_width / 2.0f,
                 left_x - (button_count * ui_width) - ui_width / 2.0f
             },
-            (Vec2){ ui_width + 0.01f, 0.01f + ui_width / 2.0f },
+            (Vec2){ ui_width + padding, padding + ui_width / 2.0f },
             0.0f
         );
         aff2_compose(window_trans, ui_trans, window_trans);
-        aven_gl_ui_window(&ctx->ui, window_trans);
+        aven_gl_ui_window(
+            &ctx->ui,
+            window_trans,
+            popup_border
+        );
         {
             Aff2 button_trans;
             aff2_position(
                 button_trans,
                 (Vec2){
-                    0.01f + ui_width,
+                    padding + ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -754,7 +767,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    0.01f + 2.0f * ui_width,
+                    padding + 2.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -835,20 +848,24 @@ int game_update(
         aff2_position(
             window_trans,
             (Vec2){
-                0.01f + 2.0f * ui_width + ui_width / 2.0f,
+                1.5f * padding + 2.0f * ui_width + ui_width / 2.0f,
                 left_x - (button_count * ui_width) - ui_width / 2.0f
             },
-            (Vec2){ 0.01f + 2.0f * ui_width, 0.01f + ui_width / 2.0f },
+            (Vec2){ padding + 2.0f * ui_width, padding + ui_width / 2.0f },
             0.0f
         );
         aff2_compose(window_trans, ui_trans, window_trans);
-        aven_gl_ui_window(&ctx->ui, window_trans);
+        aven_gl_ui_window(
+            &ctx->ui,
+            window_trans,
+            popup_border
+        );
         {
             Aff2 button_trans;
             aff2_position(
                 button_trans,
                 (Vec2){
-                    0.01f + ui_width,
+                    padding + ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -883,7 +900,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    0.01f + 2.0f * ui_width,
+                    padding + 2.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -918,7 +935,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    0.01f + 3.0f * ui_width,
+                    padding + 3.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -953,7 +970,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    0.01f + 4.0f * ui_width,
+                    padding + 4.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1065,14 +1082,18 @@ int game_update(
         aff2_position(
             window_trans,
             (Vec2){
-                0.01f + (float)nbuttons * 0.5f * ui_width + ui_width / 2.0f,
+                1.5f * padding + (float)nbuttons * 0.5f * ui_width + ui_width / 2.0f,
                 left_x - (button_count * ui_width) - ui_width / 2.0f
             },
-            (Vec2){ 0.01f + (float)nbuttons * 0.5f * ui_width, 0.01f + ui_width / 2.0f },
+            (Vec2){ padding + (float)nbuttons * 0.5f * ui_width, padding + ui_width / 2.0f },
             0.0f
         );
         aff2_compose(window_trans, ui_trans, window_trans);
-        aven_gl_ui_window(&ctx->ui, window_trans);
+        aven_gl_ui_window(
+            &ctx->ui,
+            window_trans,
+            popup_border
+        );
         {
             size_t nradii = countof(vertex_radii);
             for (
@@ -1084,7 +1105,7 @@ int game_update(
                 aff2_position(
                     button_trans,
                     (Vec2){
-                        0.01f + (float)(1 + radius_count) * ui_width,
+                        padding + (float)(1 + radius_count) * ui_width,
                         left_x - (button_count * ui_width) - ui_width / 2.0f
                     },
                     (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1425,16 +1446,20 @@ int game_update(
             aff2_position(
                 pv_trans,
                 (Vec2){
-                    0.01f + ui_width,
+                    1.5f * padding + ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
-                (Vec2){ 0.01f + ui_width / 2.0f, 0.01f + ui_width / 2.0f },
+                (Vec2){ padding + ui_width / 2.0f, padding + ui_width / 2.0f },
                 0.0f
             );
             aff2_compose(pv_trans, ui_trans, pv_trans);
-            aven_gl_ui_window(&ctx->ui, pv_trans);
+            aven_gl_ui_window(
+                &ctx->ui,
+                pv_trans,
+                popup_border
+            );
 
-            float radius = 0.75f;
+            float radius = 0.7f;
             float angle = 2.0f * AVEN_MATH_PI_F / (float)GAME_PREVIEW_EDGES;
             for (size_t i = 0; i < GAME_PREVIEW_EDGES; i += 1) {
                 Vec2 p1 = {

@@ -11,7 +11,7 @@
         "-Wcast-align -Wstrict-prototypes -Wold-style-definition " \
         "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"
     #define LIBAVENGL_DEFAULT_GLFW_CCFLAGS \
-        "-std=c11 -pedantic -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
+        "-std=c11 -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
         "-Wstrict-prototypes -Wold-style-definition -Winit-self " \
         "-Wno-unused-parameter -Wno-sign-compare -Wno-overflow " \
         "-Wno-missing-field-initializers " \

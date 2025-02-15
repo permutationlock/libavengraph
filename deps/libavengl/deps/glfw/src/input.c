@@ -818,10 +818,8 @@ GLFWAPI void glfwSetCursorPos(GLFWwindow* handle, double xpos, double ypos)
     _GLFWwindow* window = (_GLFWwindow*) handle;
     assert(window != NULL);
 
-    if (xpos != xpos || xpos < -1.79769313486231570815e+308 ||
-        xpos > 1.79769313486231570815e+308 || ypos != ypos ||
-        ypos < -1.79769313486231570815e+308 ||
-        ypos > 1.79769313486231570815e+308)
+    if (xpos != xpos || xpos < -DBL_MAX || xpos > DBL_MAX ||
+        ypos != ypos || ypos < -DBL_MAX || ypos > DBL_MAX)
     {
         _glfwInputError(GLFW_INVALID_VALUE,
                         "Invalid cursor position %f %f",

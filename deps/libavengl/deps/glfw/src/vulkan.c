@@ -41,7 +41,7 @@
 
 GLFWbool _glfwInitVulkan(int mode)
 {
-  VkResult err;
+    VkResult err;
     VkExtensionProperties* ep;
     PFN_vkEnumerateInstanceExtensionProperties vkEnumerateInstanceExtensionProperties;
     uint32_t i, count;
