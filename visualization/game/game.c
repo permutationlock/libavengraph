@@ -586,7 +586,6 @@ int game_update(
     AvenTimeInst now = aven_time_now();
     int64_t ns_since_update = aven_time_since(now, ctx->last_update);
     ctx->elapsed += ns_since_update;
-    ctx->ns_since_refresh += ns_since_update;
     ctx->last_update = now;
 
     float screen_ratio = (float)width / (float)height;
@@ -619,9 +618,6 @@ int game_update(
                 ctx->screen_updates = 0;
             }
         }
-        if (ctx->ns_since_refresh > GAME_MAX_TIME_NO_REFRESH) {
-            ctx->screen_updates = 0;
-        }
     } else {
         ctx->active_window = GAME_UI_WINDOW_NONE;
         ctx->preview.edge_index = 0;
@@ -629,6 +625,7 @@ int game_update(
         while (ctx->elapsed >= ctx->alg_opts.time_step) {
             ctx->elapsed -= ctx->alg_opts.time_step;
             ctx->screen_updates = 0;
+            ctx->graph_updates = 0;
 
             game_info_alg_step(&ctx->info.alg);
             if (ctx->info.alg.done) {
@@ -642,7 +639,6 @@ int game_update(
     }
 
     ctx->screen_updates += 1;
-    ctx->ns_since_refresh = 0;
 
     float padding = 0.02f;
     float ui_width = (2.0f - 2.0f * padding) / 8.0f;
@@ -667,10 +663,6 @@ int game_update(
         (Vec2){ norm_width, norm_height },
         0.0f
     );
-
-    //aven_gl_text_geometry_clear(&ctx->text.geometry);
-    aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
-    aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
 
     // Generate UI geometry and evaluate UI logic
 
@@ -760,6 +752,7 @@ int game_update(
                         break;
                     }
                 }
+                ctx->graph_updates = 0;
             }
         }
         {
@@ -795,6 +788,7 @@ int game_update(
                         break;
                     }
                 }
+                ctx->graph_updates = 0;
             }
         }
     }
@@ -893,6 +887,7 @@ int game_update(
                         break;
                     }
                 }
+                ctx->graph_updates = 0;
             }
         }
         {
@@ -928,6 +923,7 @@ int game_update(
                         break;
                     }
                 }
+                ctx->graph_updates = 0;
             }
         }
         {
@@ -963,6 +959,7 @@ int game_update(
                         break;
                     }
                 }
+                ctx->graph_updates = 0;
             }
         }
         {
@@ -998,6 +995,7 @@ int game_update(
                         break;
                     }
                 }
+                ctx->graph_updates = 0;
             }
         }
     }
@@ -1133,6 +1131,7 @@ int game_update(
                         &ctx->info.alg,
                         &ctx->session_opts
                     );
+                    ctx->graph_updates = 0;
                 }
                 Vec2 dim;
                 vec2_lerp(
@@ -1246,6 +1245,7 @@ int game_update(
                 &ctx->info.alg,
                 &ctx->session_opts
             );
+            ctx->graph_updates = 0;
         }
 
         button_count += 1;
@@ -1284,6 +1284,7 @@ int game_update(
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
+                ctx->graph_updates = 0;
             }
         }
         {
@@ -1308,6 +1309,7 @@ int game_update(
                 while (!ctx->info.alg.done) {
                     game_info_alg_step(&ctx->info.alg);
                 }
+                ctx->graph_updates = 0;
             }
         }
 
@@ -1351,6 +1353,7 @@ int game_update(
                 for (size_t i = 0; i < steps; i += 1) {
                     game_info_alg_step(&ctx->info.alg);
                 }
+                ctx->graph_updates = 0;
             }
         }
         {
@@ -1373,6 +1376,7 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 game_info_alg_step(&ctx->info.alg);
+                ctx->graph_updates = 0;
             }
         }
 
@@ -1617,107 +1621,115 @@ int game_update(
     }
 
     // Generate graph geometry
-    float radius = vertex_radii[
-        min(ctx->session_opts.radius, countof(vertex_radii))
-    ];
 
-    float border_padding = 1.5f * radius + 5.0f * pixel_size;
-    graph_scale *= 1.0f / (1.0f + border_padding);
+    if (ctx->graph_updates < GAME_SCREEN_UPDATES) {
+        ctx->graph_updates += 1;
+        aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
+        aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
 
-    Aff2 graph_trans;
-    aff2_position(
-        graph_trans,
-        (Vec2){ graph_offset, 0.0f },
-        (Vec2){ graph_scale, graph_scale },
-        -draw_angle
-    );
-    aff2_rotate(graph_trans, graph_trans, draw_angle);
 
-    switch (ctx->info.alg.type) {
-        case GAME_DATA_ALG_TYPE_P3COLOR: {
-            GraphPlaneP3ColorGeometryInfo geometry_info = {
-                .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
-                .done_color = { 0.6f, 0.6f, 0.6f, 1.0f },
-                .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
-                .face_color = { 0.15f, 0.6f, 0.6f, 1.0f },
-                .below_color = { 0.55f, 0.65f, 0.15f, 1.0f },
-                .inactive_color = { 0.1f, 0.1f, 0.1f, 1.0f },
-                .edge_thickness = radius / 4.0f,
-                .border_thickness = radius * 0.25f,
-                .radius = radius,
-            };
-            vec4_copy(
-                geometry_info.colors[0],
-                (Vec4){ 0.9f, 0.9f, 0.9f, 1.0f }
-            );
-            for (size_t i = 0; i < 3; i += 1) {
-                vec4_copy(geometry_info.colors[i + 1], vertex_colors[i]);
-            }
-            GameInfoAlgP3Color *alg = &ctx->info.alg.data.p3color;
-            graph_plane_p3color_geometry_push_ctx(
-                &ctx->shapes.geometry,
-                &ctx->rounded_shapes.geometry,
-                ctx->info.session.embedding,
-                &alg->ctx,
-                alg->frames,
-                graph_trans,
-                &geometry_info,
-                ctx->info.arena
-            );
-            break;
-        }
-        case GAME_DATA_ALG_TYPE_P3CHOOSE: {
-            GraphPlaneP3ChooseGeometryInfo geometry_info = {
-                .colors = {
-                    .ptr = ctx->info.session.colors.ptr,
-                    .len = ctx->info.session.colors.len,
-                },
-                .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
-                .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
-                .uncolored_edge_color = { 0.6f, 0.6f, 0.6f, 1.0f },
-                .active_frame = {
+        float radius = vertex_radii[
+            min(ctx->session_opts.radius, countof(vertex_radii))
+        ];
+
+        float border_padding = 1.5f * radius + 5.0f * pixel_size;
+        graph_scale *= 1.0f / (1.0f + border_padding);
+
+        Aff2 graph_trans;
+        aff2_position(
+            graph_trans,
+            (Vec2){ graph_offset, 0.0f },
+            (Vec2){ graph_scale, graph_scale },
+            -draw_angle
+        );
+        aff2_rotate(graph_trans, graph_trans, draw_angle);
+
+        switch (ctx->info.alg.type) {
+            case GAME_DATA_ALG_TYPE_P3COLOR: {
+                GraphPlaneP3ColorGeometryInfo geometry_info = {
+                    .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+                    .done_color = { 0.6f, 0.6f, 0.6f, 1.0f },
                     .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
-                    .xp_color = { 0.55f, 0.65f, 0.15f, 1.0f },
-                    .py_color = { 0.15f, 0.6f, 0.6f, 1.0f },
-                    .cycle_color = { 0.65f, 0.25f, 0.15f, 1.0f },
-                },
-                .inactive_frame = {
-                    .active_color = { 0.4f, 0.4f, 0.4f, 1.0f },
-                    .xp_color = { 0.4f, 0.4f, 0.4f, 1.0f },
-                    .py_color = { 0.4f, 0.4f, 0.4f, 1.0f },
-                    .cycle_color = { 0.4f, 0.4f, 0.4f, 1.0f },
-                },
-                .edge_thickness = radius / 4.0f,
-                .border_thickness = radius * 0.25f,
-                .radius = radius,
-            };
-            GameInfoAlgP3Choose *alg = &ctx->info.alg.data.p3choose;
-            graph_plane_p3choose_geometry_push_ctx(
-                &ctx->shapes.geometry,
-                &ctx->rounded_shapes.geometry,
-                ctx->info.session.embedding,
-                &alg->ctx,
-                alg->frames,
-                graph_trans,
-                &geometry_info
-            );
+                    .face_color = { 0.15f, 0.6f, 0.6f, 1.0f },
+                    .below_color = { 0.55f, 0.65f, 0.15f, 1.0f },
+                    .inactive_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+                    .edge_thickness = radius / 4.0f,
+                    .border_thickness = radius * 0.25f,
+                    .radius = radius,
+                };
+                vec4_copy(
+                    geometry_info.colors[0],
+                    (Vec4){ 0.9f, 0.9f, 0.9f, 1.0f }
+                );
+                for (size_t i = 0; i < 3; i += 1) {
+                    vec4_copy(geometry_info.colors[i + 1], vertex_colors[i]);
+                }
+                GameInfoAlgP3Color *alg = &ctx->info.alg.data.p3color;
+                graph_plane_p3color_geometry_push_ctx(
+                    &ctx->shapes.geometry,
+                    &ctx->rounded_shapes.geometry,
+                    ctx->info.session.embedding,
+                    &alg->ctx,
+                    alg->frames,
+                    graph_trans,
+                    &geometry_info,
+                    ctx->info.arena
+                );
+                break;
+            }
+            case GAME_DATA_ALG_TYPE_P3CHOOSE: {
+                GraphPlaneP3ChooseGeometryInfo geometry_info = {
+                    .colors = {
+                        .ptr = ctx->info.session.colors.ptr,
+                        .len = ctx->info.session.colors.len,
+                    },
+                    .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+                    .edge_color = { 0.1f, 0.1f, 0.1f, 1.0f },
+                    .uncolored_edge_color = { 0.6f, 0.6f, 0.6f, 1.0f },
+                    .active_frame = {
+                        .active_color = { 0.5f, 0.1f, 0.5f, 1.0f },
+                        .xp_color = { 0.55f, 0.65f, 0.15f, 1.0f },
+                        .py_color = { 0.15f, 0.6f, 0.6f, 1.0f },
+                        .cycle_color = { 0.65f, 0.25f, 0.15f, 1.0f },
+                    },
+                    .inactive_frame = {
+                        .active_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                        .xp_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                        .py_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                        .cycle_color = { 0.4f, 0.4f, 0.4f, 1.0f },
+                    },
+                    .edge_thickness = radius / 4.0f,
+                    .border_thickness = radius * 0.25f,
+                    .radius = radius,
+                };
+                GameInfoAlgP3Choose *alg = &ctx->info.alg.data.p3choose;
+                graph_plane_p3choose_geometry_push_ctx(
+                    &ctx->shapes.geometry,
+                    &ctx->rounded_shapes.geometry,
+                    ctx->info.session.embedding,
+                    &alg->ctx,
+                    alg->frames,
+                    graph_trans,
+                    &geometry_info
+                );
+            }
+            default:
+                break;
         }
-        default:
-            break;
+
+        // Push geometry to GPU and draw to screen
+
+        aven_gl_shape_buffer_update(
+            gl,
+            &ctx->shapes.buffer,
+            &ctx->shapes.geometry
+        );
+        aven_gl_shape_rounded_buffer_update(
+            gl,
+            &ctx->rounded_shapes.buffer,
+            &ctx->rounded_shapes.geometry
+        );
     }
-
-    // Push geometry to GPU and draw to screen
-
-    aven_gl_shape_buffer_update(
-        gl,
-        &ctx->shapes.buffer,
-        &ctx->shapes.geometry
-    );
-    aven_gl_shape_rounded_buffer_update(
-        gl,
-        &ctx->rounded_shapes.buffer,
-        &ctx->rounded_shapes.geometry
-    );
     //aven_gl_text_buffer_update(gl, &ctx->text.buffer, &ctx->text.geometry);
 
     gl->Viewport(0, 0, width, height);
@@ -1768,5 +1780,6 @@ int game_update(
 
 void game_damage(GameCtx *ctx) {
     ctx->screen_updates = 0;
+    ctx->graph_updates = 0;
 }
 

@@ -37,7 +37,6 @@
 #define GAME_TIME_STEP (64 * GAME_MIN_TIME_STEP)
 
 #define GAME_SCREEN_UPDATES (4)
-#define GAME_MAX_TIME_NO_REFRESH (AVEN_TIME_NSEC_PER_SEC)
 
 #define GAME_PREVIEW_EDGES (8)
 
@@ -154,8 +153,8 @@ typedef struct {
     GameInfo info;
     AvenRngPcg pcg;
     int64_t elapsed;
-    int64_t ns_since_refresh;
     int screen_updates;
+    int graph_updates;
     int width;
     int height;
     GameInfoSessionOpts session_opts;
