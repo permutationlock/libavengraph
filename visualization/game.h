@@ -154,7 +154,7 @@ typedef struct {
     AvenRngPcg pcg;
     int64_t elapsed;
     int screen_updates;
-    int graph_updates;
+    bool graph_up_to_date;
     int width;
     int height;
     GameInfoSessionOpts session_opts;

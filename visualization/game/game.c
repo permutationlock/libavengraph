@@ -9,13 +9,11 @@
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/gl/shape.h>
-#include <aven/gl/text.h>
 #include <aven/math.h>
 #include <aven/str.h>
 #include <aven/time.h>
 
 #include "../game.h"
-// #include "font.h"
 
 #include <graph/plane/gen.h>
 #include <graph/plane/p3color/geometry.h>
@@ -381,25 +379,6 @@ const GameTable game_table = {
 static void game_load(GameCtx *ctx, AvenGl *gl) {
     ctx->arena = ctx->init_arena;
 
-    //ByteSlice font_bytes = array_as_bytes(game_font_opensans_ttf);
-    //ctx->text.font = aven_gl_text_font_init(
-    //    gl,
-    //    font_bytes,
-    //    32.0f,
-    //    ctx->arena
-    //);
-
-    //ctx->text.ctx = aven_gl_text_ctx_init(gl);
-    //ctx->text.geometry = aven_gl_text_geometry_init(
-    //    128,
-    //    &ctx->arena
-    //);
-    //ctx->text.buffer = aven_gl_text_buffer_init(
-    //    gl,
-    //    &ctx->text.geometry,
-    //    AVEN_GL_BUFFER_USAGE_DYNAMIC
-    //);
-
     ctx->shapes.ctx = aven_gl_shape_ctx_init(gl);
     ctx->shapes.geometry = aven_gl_shape_geometry_init(
         GAME_GEOMETRY_VERTICES,
@@ -467,10 +446,6 @@ static void game_unload(GameCtx *ctx, AvenGl *gl) {
     aven_gl_shape_buffer_deinit(gl, &ctx->shapes.buffer);
     aven_gl_shape_ctx_deinit(gl, &ctx->shapes.ctx);
     ctx->shapes = (GameShapes){ 0 };
-
-    //aven_gl_text_buffer_deinit(gl, &ctx->text.buffer);
-    //aven_gl_text_ctx_deinit(gl, &ctx->text.ctx);
-    //ctx->text = (GameText){ 0 };
 }
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena) {
@@ -526,7 +501,6 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
 }
 
 void game_deinit(GameCtx *ctx, AvenGl *gl) {
-    //aven_gl_text_font_deinit(gl, &ctx->text.font);
     game_unload(ctx, gl);
     *ctx = (GameCtx){ 0 };
 }
@@ -625,7 +599,7 @@ int game_update(
         while (ctx->elapsed >= ctx->alg_opts.time_step) {
             ctx->elapsed -= ctx->alg_opts.time_step;
             ctx->screen_updates = 0;
-            ctx->graph_updates = 0;
+            ctx->graph_up_to_date = false;
 
             game_info_alg_step(&ctx->info.alg);
             if (ctx->info.alg.done) {
@@ -724,7 +698,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    padding + ui_width,
+                    1.5f * padding + ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -752,7 +726,7 @@ int game_update(
                         break;
                     }
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
         {
@@ -760,7 +734,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    padding + 2.0f * ui_width,
+                    1.5f * padding + 2.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -788,7 +762,7 @@ int game_update(
                         break;
                     }
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
     }
@@ -859,7 +833,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    padding + ui_width,
+                    1.5f * padding + ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -887,7 +861,7 @@ int game_update(
                         break;
                     }
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
         {
@@ -895,7 +869,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    padding + 2.0f * ui_width,
+                    1.5f * padding + 2.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -923,7 +897,7 @@ int game_update(
                         break;
                     }
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
         {
@@ -931,7 +905,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    padding + 3.0f * ui_width,
+                    1.5f * padding + 3.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -959,7 +933,7 @@ int game_update(
                         break;
                     }
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
         {
@@ -967,7 +941,7 @@ int game_update(
             aff2_position(
                 button_trans,
                 (Vec2){
-                    padding + 4.0f * ui_width,
+                    1.5f * padding + 4.0f * ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
                 (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -995,7 +969,7 @@ int game_update(
                         break;
                     }
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
     }
@@ -1103,7 +1077,7 @@ int game_update(
                 aff2_position(
                     button_trans,
                     (Vec2){
-                        padding + (float)(1 + radius_count) * ui_width,
+                        1.5f * padding + (float)(1 + radius_count) * ui_width,
                         left_x - (button_count * ui_width) - ui_width / 2.0f
                     },
                     (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1131,7 +1105,7 @@ int game_update(
                         &ctx->info.alg,
                         &ctx->session_opts
                     );
-                    ctx->graph_updates = 0;
+                    ctx->graph_up_to_date = false;
                 }
                 Vec2 dim;
                 vec2_lerp(
@@ -1245,7 +1219,7 @@ int game_update(
                 &ctx->info.alg,
                 &ctx->session_opts
             );
-            ctx->graph_updates = 0;
+            ctx->graph_up_to_date = false;
         }
 
         button_count += 1;
@@ -1284,7 +1258,7 @@ int game_update(
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
         {
@@ -1309,7 +1283,7 @@ int game_update(
                 while (!ctx->info.alg.done) {
                     game_info_alg_step(&ctx->info.alg);
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
 
@@ -1353,7 +1327,7 @@ int game_update(
                 for (size_t i = 0; i < steps; i += 1) {
                     game_info_alg_step(&ctx->info.alg);
                 }
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
         {
@@ -1376,7 +1350,7 @@ int game_update(
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
                 game_info_alg_step(&ctx->info.alg);
-                ctx->graph_updates = 0;
+                ctx->graph_up_to_date = false;
             }
         }
 
@@ -1622,11 +1596,11 @@ int game_update(
 
     // Generate graph geometry
 
-    if (ctx->graph_updates < GAME_SCREEN_UPDATES) {
-        ctx->graph_updates += 1;
+    if (!ctx->graph_up_to_date) {
+        ctx->graph_up_to_date = true;
+
         aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
         aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
-
 
         float radius = vertex_radii[
             min(ctx->session_opts.radius, countof(vertex_radii))
@@ -1730,7 +1704,6 @@ int game_update(
             &ctx->rounded_shapes.geometry
         );
     }
-    //aven_gl_text_buffer_update(gl, &ctx->text.buffer, &ctx->text.geometry);
 
     gl->Viewport(0, 0, width, height);
     assert(gl->GetError() == 0);
@@ -1752,13 +1725,6 @@ int game_update(
         pixel_size,
         cam_trans
     );
-    //aven_gl_text_geometry_draw(
-    //    gl,
-    //    &ctx->text.ctx,
-    //    &ctx->text.buffer,
-    //    &ctx->text.font,
-    //    cam_trans
-    //);
     aven_gl_ui_draw(
         gl,
         &ctx->ui,
@@ -1780,6 +1746,6 @@ int game_update(
 
 void game_damage(GameCtx *ctx) {
     ctx->screen_updates = 0;
-    ctx->graph_updates = 0;
+    ctx->graph_up_to_date = false;
 }
 
