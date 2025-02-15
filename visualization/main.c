@@ -140,6 +140,7 @@ static void cursor_callback(
 
     void on_resize(int width, int height) {
         glfwSetWindowSize(window, width, height);
+        on_damage(window);
     }
 
     void main_loop(void) {
