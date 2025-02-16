@@ -152,16 +152,15 @@ typedef struct {
     AvenTimeInst last_update;
     GameInfo info;
     AvenRngPcg pcg;
-    int64_t elapsed;
-    int screen_updates;
-    int redraws;
-    bool graph_up_to_date;
-    int width;
-    int height;
     GameInfoSessionOpts session_opts;
     GameInfoAlgOpts alg_opts;
     GameUiWindow active_window;
     GamePreview preview;
+    int64_t elapsed;
+    int screen_updates;
+    int width;
+    int height;
+    bool graph_up_to_date;
 } GameCtx;
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena);
