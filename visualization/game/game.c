@@ -1198,10 +1198,7 @@ int game_update(
                 !ctx->alg_opts.playing
             )
         ) {
-            ctx->pcg = aven_rng_pcg_seed(
-                (uint64_t)now.tv_nsec,
-                (uint64_t)now.tv_sec
-            );
+            ctx->pcg = ctx->info.pcg;
             ctx->active_window = GAME_UI_WINDOW_NONE;
             game_info_setup(
                 &ctx->info,
