@@ -148,12 +148,7 @@ static void cursor_callback(
         int height;
         glfwGetFramebufferSize(window, &width, &height);
 
-        int last_screen_updates = ctx.screen_updates;
         if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
-            aven_panic("update error");
-        }
-
-        if (last_screen_updates < GAME_SCREEN_UPDATES) {
             glfwSwapBuffers(window);
         } else {
             aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
@@ -297,12 +292,7 @@ int main(void) {
 #endif // defined(HOT_RELOAD)
         glfwGetFramebufferSize(window, &width, &height);
 
-        int last_screen_updates = ctx.screen_updates;
         if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
-            break;
-        }
-
-        if (last_screen_updates < GAME_SCREEN_UPDATES) {
             glfwSwapBuffers(window);
         } else {
             aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);

@@ -549,7 +549,7 @@ void game_mouse_click(
     aven_gl_ui_mouse_click(&ctx->ui, event);
 }
 
-int game_update(
+bool game_update(
     GameCtx *ctx,
     AvenGl *gl,
     int width,
@@ -609,7 +609,8 @@ int game_update(
     }
 
     if (ctx->screen_updates >= GAME_SCREEN_UPDATES) {
-        return 0;
+        ctx->ui_up_to_date = true;
+        return false;
     }
 
     ctx->screen_updates += 1;
@@ -620,8 +621,6 @@ int game_update(
     float graph_offset = ui_window_width / 2.0f;
     float ui_offset = -(2.0f + 2.0f * free_space - ui_window_width) / 2.0f;
     float graph_scale = min(2.0f, 2.0f + free_space - ui_window_width) / 2.0f;
-
-    GameUiWindow last_window = ctx->active_window;
 
     AvenGlUiBorder popup_border = { true, true, false, true };
 
@@ -1583,12 +1582,27 @@ int game_update(
     }
 
     if (ctx->ui.empty_click) {
+        if (ctx->active_window != GAME_UI_WINDOW_NONE) {
+            ctx->ui_up_to_date = false;
+        }
         ctx->active_window = GAME_UI_WINDOW_NONE;
+    }
+
+    if (
+        !aven_gl_ui_id_eq(ctx->ui.hot_id, (AvenGlUiId){ 0 }) or
+        !aven_gl_ui_id_eq(ctx->ui.next_hot_id, (AvenGlUiId){ 0 })
+    ) {
+        ctx->ui_up_to_date = false;
     }
 
     // Generate graph geometry
 
-    if (!ctx->graph_up_to_date) {
+    if (ctx->graph_up_to_date) {
+        if (ctx->ui_up_to_date) {
+            aven_gl_ui_clear(&ctx->ui);
+            return false;
+        }
+    } else {
         ctx->graph_up_to_date = true;
 
         aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
@@ -1735,10 +1749,13 @@ int game_update(
     gl->ColorMask(true, true, true, true);
     assert(gl->GetError() == 0);
 
-    return 0;
+    aven_gl_ui_clear(&ctx->ui);
+
+    return true;
 }
 
 void game_damage(GameCtx *ctx) {
+    ctx->ui_up_to_date = false;
     ctx->screen_updates = 0;
     ctx->graph_up_to_date = false;
 }

@@ -129,6 +129,24 @@ static inline void aven_gl_ui_mouse_click(
     }
 }
 
+static inline void aven_gl_ui_clear(AvenGlUi *ctx) {
+    // clear ui geometry and set up the next ui state
+    aven_gl_shape_rounded_geometry_clear(&ctx->shape.geometry);
+    if (!aven_gl_ui_id_eq(ctx->hot_id, ctx->next_hot_id)) {
+        // clicks happened exactly as cursor moved between elements
+        if (ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_UP) {
+            ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
+        }
+    } else if (ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_BOTH) {
+        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_UP;
+        ctx->empty_click = true;
+    } else {
+        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
+    }
+    ctx->hot_id = ctx->next_hot_id;
+    ctx->next_hot_id = (AvenGlUiId){ 0 };
+}
+
 static inline void aven_gl_ui_draw(
     AvenGl *gl,
     AvenGlUi *ctx,
@@ -148,22 +166,6 @@ static inline void aven_gl_ui_draw(
         pixel_size,
         cam_trans
     );
-
-    // clear ui geometry and set up the next ui state
-    aven_gl_shape_rounded_geometry_clear(&ctx->shape.geometry);
-    if (!aven_gl_ui_id_eq(ctx->hot_id, ctx->next_hot_id)) {
-        // clicks happened exactly as cursor moved between elements
-        if (ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_UP) {
-            ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
-        }
-    } else if (ctx->mouse.event == AVEN_GL_UI_MOUSE_EVENT_BOTH) {
-        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_UP;
-        ctx->empty_click = true;
-    } else {
-        ctx->mouse.event = AVEN_GL_UI_MOUSE_EVENT_NONE;
-    }
-    ctx->hot_id = ctx->next_hot_id;
-    ctx->next_hot_id = (AvenGlUiId){ 0 };
 }
 
 static inline void aven_gl_ui_push_thread(

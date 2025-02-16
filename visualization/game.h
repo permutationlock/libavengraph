@@ -160,20 +160,27 @@ typedef struct {
     int screen_updates;
     int width;
     int height;
+    bool ui_up_to_date;
     bool graph_up_to_date;
 } GameCtx;
 
 GameCtx game_init(AvenGl *gl, AvenArena *arena);
 void game_deinit(GameCtx *ctx, AvenGl *gl);
 int game_reload(GameCtx *ctx, AvenGl *gl);
-int game_update(GameCtx *ctx, AvenGl *gl, int width, int height, AvenArena arena);
+bool game_update(
+    GameCtx *ctx,
+    AvenGl *gl,
+    int width,
+    int height,
+    AvenArena arena
+);
 void game_damage(GameCtx *ctx);
 void game_mouse_move(GameCtx *ctx, Vec2 pos);
 void game_mouse_click(GameCtx *ctx, AvenGlUiMouseEvent event);
  
 typedef GameCtx (*GameInitFn)(AvenGl *gl, AvenArena *arena);
 typedef int (*GameReloadFn)(GameCtx *ctx, AvenGl *gl);
-typedef int (*GameUpdateFn)(
+typedef bool (*GameUpdateFn)(
     GameCtx *ctx,
     AvenGl *gl,
     int width,
