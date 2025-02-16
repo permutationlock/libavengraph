@@ -186,7 +186,7 @@ int main(void) {
     window = glfwCreateWindow(
         (int)width,
         (int)height,
-        "AvenGl Test",
+        "Path Coloring Plane Triangulations",
         NULL,
         NULL
     );
@@ -195,7 +195,7 @@ int main(void) {
         window = glfwCreateWindow(
             (int)width,
             (int)height,
-            "AvenGl Test",
+            "Path Coloring Plane Triangulations",
             NULL,
             NULL
         );
