@@ -426,7 +426,7 @@ static int getKeyMods(void)
     return mods;
 }
 
-static void fitToMonitor(_GLFWwindow* window)
+static void fitToWin32Monitor(_GLFWwindow* window)
 {
     MONITORINFO mi = { sizeof(mi) };
     GetMonitorInfoW(window->monitor->win32.handle, &mi);
@@ -440,7 +440,7 @@ static void fitToMonitor(_GLFWwindow* window)
 
 // Make the specified window and its video mode active on its monitor
 //
-static void acquireMonitor(_GLFWwindow* window)
+static void acquireWin32Monitor(_GLFWwindow* window)
 {
     if (!_glfw.win32.acquiredMonitorCount)
     {
@@ -461,7 +461,7 @@ static void acquireMonitor(_GLFWwindow* window)
 
 // Remove the window and restore the original video mode
 //
-static void releaseMonitor(_GLFWwindow* window)
+static void releaseWin32Monitor(_GLFWwindow* window)
 {
     if (window->monitor->window != window)
         return;
@@ -471,7 +471,7 @@ static void releaseMonitor(_GLFWwindow* window)
     {
         SetThreadExecutionState(ES_CONTINUOUS);
 
-        // HACK: Restore mouse trail length saved in acquireMonitor
+        // HACK: Restore mouse trail length saved in acquireWin32Monitor
         SystemParametersInfoW(SPI_SETMOUSETRAILS, _glfw.win32.mouseTrailSize, 0, 0);
     }
 
@@ -1051,11 +1051,11 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
             if (window->monitor && window->win32.iconified != iconified)
             {
                 if (iconified)
-                    releaseMonitor(window);
+                    releaseWin32Monitor(window);
                 else
                 {
-                    acquireMonitor(window);
-                    fitToMonitor(window);
+                    acquireWin32Monitor(window);
+                    fitToWin32Monitor(window);
                 }
             }
 
@@ -1273,7 +1273,7 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 
 // Creates the GLFW window
 //
-static int createNativeWindow(_GLFWwindow* window,
+static int createNativeWin32Window(_GLFWwindow* window,
                               const _GLFWwndconfig* wndconfig,
                               const _GLFWfbconfig* fbconfig)
 {
@@ -1497,7 +1497,7 @@ GLFWbool _glfwCreateWindowWin32(_GLFWwindow* window,
                                 const _GLFWctxconfig* ctxconfig,
                                 const _GLFWfbconfig* fbconfig)
 {
-    if (!createNativeWindow(window, wndconfig, fbconfig))
+    if (!createNativeWin32Window(window, wndconfig, fbconfig))
         return GLFW_FALSE;
 
     if (ctxconfig->client != GLFW_NO_API)
@@ -1535,8 +1535,8 @@ GLFWbool _glfwCreateWindowWin32(_GLFWwindow* window,
     {
         _glfwShowWindowWin32(window);
         _glfwFocusWindowWin32(window);
-        acquireMonitor(window);
-        fitToMonitor(window);
+        acquireWin32Monitor(window);
+        fitToWin32Monitor(window);
 
         if (wndconfig->centerCursor)
             _glfwCenterCursorInContentArea(window);
@@ -1557,7 +1557,7 @@ GLFWbool _glfwCreateWindowWin32(_GLFWwindow* window,
 void _glfwDestroyWindowWin32(_GLFWwindow* window)
 {
     if (window->monitor)
-        releaseMonitor(window);
+        releaseWin32Monitor(window);
 
     if (window->context.destroy)
         window->context.destroy(window);
@@ -1678,8 +1678,8 @@ void _glfwSetWindowSizeWin32(_GLFWwindow* window, int width, int height)
     {
         if (window->monitor->window == window)
         {
-            acquireMonitor(window);
-            fitToMonitor(window);
+            acquireWin32Monitor(window);
+            fitToWin32Monitor(window);
         }
     }
     else
@@ -1850,8 +1850,8 @@ void _glfwSetWindowMonitorWin32(_GLFWwindow* window,
         {
             if (monitor->window == window)
             {
-                acquireMonitor(window);
-                fitToMonitor(window);
+                acquireWin32Monitor(window);
+                fitToWin32Monitor(window);
             }
         }
         else
@@ -1880,7 +1880,7 @@ void _glfwSetWindowMonitorWin32(_GLFWwindow* window,
     }
 
     if (window->monitor)
-        releaseMonitor(window);
+        releaseWin32Monitor(window);
 
     _glfwInputWindowMonitor(window, monitor);
 
@@ -1898,7 +1898,7 @@ void _glfwSetWindowMonitorWin32(_GLFWwindow* window,
             flags |= SWP_FRAMECHANGED;
         }
 
-        acquireMonitor(window);
+        acquireWin32Monitor(window);
 
         GetMonitorInfoW(window->monitor->win32.handle, &mi);
         SetWindowPos(window->win32.handle, HWND_TOPMOST,
