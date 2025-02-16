@@ -532,7 +532,7 @@ void game_mouse_move(
         (Vec2){ side / 2.0f, -side / 2.0f },
         0.0f
     );
-    
+
     aff2_transform(pos, screen_trans, pos);
 
     aven_gl_ui_mouse_move(
@@ -617,18 +617,13 @@ int game_update(
     float padding = 0.02f;
     float ui_width = (2.0f - 2.0f * padding) / 8.0f;
     float ui_window_width = ui_width + padding;
-    float graph_offset = 0.0f;
-    float ui_offset = -1.0f - padding;
-    float graph_scale = 1.0f;
+    float graph_offset = ui_window_width / 2.0f;
+    float ui_offset = -(2.0f + 2.0f * free_space - ui_window_width) / 2.0f;
+    float graph_scale = min(2.0f, 2.0f + free_space - ui_window_width) / 2.0f;
+
+    GameUiWindow last_window = ctx->active_window;
 
     AvenGlUiBorder popup_border = { true, true, false, true };
-
-    {
-        float dw = min(2.0f, 2.0f + free_space - ui_window_width);
-        graph_scale = dw / 2.0f;
-        graph_offset = ui_window_width / 2.0f;
-        ui_offset = -(2.0f + 2.0f * free_space - ui_window_width) / 2.0f;
-    }
 
     Aff2 cam_trans;
     aff2_camera_position(
@@ -1594,9 +1589,14 @@ int game_update(
         ctx->active_window = GAME_UI_WINDOW_NONE;
     }
 
+    if (ctx->active_window != last_window) {
+        ctx->redraws = 0;
+    }
+
     // Generate graph geometry
 
     if (!ctx->graph_up_to_date) {
+        ctx->redraws = 0;
         ctx->graph_up_to_date = true;
 
         aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
@@ -1707,24 +1707,29 @@ int game_update(
 
     gl->Viewport(0, 0, width, height);
     assert(gl->GetError() == 0);
-    gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
-    assert(gl->GetError() == 0);
-    gl->Clear(GL_COLOR_BUFFER_BIT);
-    assert(gl->GetError() == 0);
 
-    aven_gl_shape_draw(
-        gl,
-        &ctx->shapes.ctx,
-        &ctx->shapes.buffer,
-        cam_trans
-    );
-    aven_gl_shape_rounded_draw(
-        gl,
-        &ctx->rounded_shapes.ctx,
-        &ctx->rounded_shapes.buffer,
-        pixel_size,
-        cam_trans
-    );
+    if (ctx->redraws < GAME_SCREEN_UPDATES) {
+        gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
+        assert(gl->GetError() == 0);
+        gl->Clear(GL_COLOR_BUFFER_BIT);
+        assert(gl->GetError() == 0);
+
+        aven_gl_shape_draw(
+            gl,
+            &ctx->shapes.ctx,
+            &ctx->shapes.buffer,
+            cam_trans
+        );
+        aven_gl_shape_rounded_draw(
+            gl,
+            &ctx->rounded_shapes.ctx,
+            &ctx->rounded_shapes.buffer,
+            pixel_size,
+            cam_trans
+        );
+        ctx->redraws += 1;
+    }
+
     aven_gl_ui_draw(
         gl,
         &ctx->ui,
@@ -1746,6 +1751,7 @@ int game_update(
 
 void game_damage(GameCtx *ctx) {
     ctx->screen_updates = 0;
+    ctx->redraws = 0;
     ctx->graph_up_to_date = false;
 }
 

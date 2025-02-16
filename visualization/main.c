@@ -148,9 +148,16 @@ static void cursor_callback(
         int height;
         glfwGetFramebufferSize(window, &width, &height);
 
-        vinfo.vtable.update(&ctx, &gl, width, height, arena);
+        int last_screen_updates = ctx.screen_updates;
+        if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
+            aven_panic("update error");
+        }
 
-        glfwSwapBuffers(window);
+        if (last_screen_updates < GAME_SCREEN_UPDATES) {
+            glfwSwapBuffers(window);
+        } else {
+            aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
+        }
         glfwPollEvents();
     }
 #endif // defined(__EMSCRIPTEN__)
@@ -290,9 +297,16 @@ int main(void) {
 #endif // defined(HOT_RELOAD)
         glfwGetFramebufferSize(window, &width, &height);
 
-        vinfo.vtable.update(&ctx, &gl, width, height, arena);
+        int last_screen_updates = ctx.screen_updates;
+        if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
+            break;
+        }
 
-        glfwSwapBuffers(window);
+        if (last_screen_updates < GAME_SCREEN_UPDATES) {
+            glfwSwapBuffers(window);
+        } else {
+            aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
+        }
         glfwPollEvents();
     }
 
