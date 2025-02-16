@@ -25,6 +25,8 @@
 
 #include <windows.h>
 #include <setjmp.h>
+// Modified Oct 2024 by Aven Bross to remove the following line:
+// -- #include "rwlock.h"
 
 #define LIFE_THREAD 0xBAB1F00D
 #define DEAD_THREAD 0xDEADBEEF

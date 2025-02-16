@@ -25,6 +25,9 @@
 //
 //========================================================================
 
+// Modified by Aven Bross in February 2024 to remove duplicate symbols for a
+// single translation unit build
+
 #include "internal.h"
 
 #if defined(_GLFW_X11)

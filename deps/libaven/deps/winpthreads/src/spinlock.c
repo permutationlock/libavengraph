@@ -21,6 +21,9 @@
    DEALINGS IN THE SOFTWARE.
 */
 
+// Modified Oct 2024 by Aven Bross to use __asm__ in lieu of asm for inline
+// assembly
+
 #include "pthread.h"
 
 #define likely(cond) __builtin_expect((cond) != 0, 1)

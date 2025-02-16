@@ -20,6 +20,9 @@
    DEALINGS IN THE SOFTWARE.
 */
 
+// Modified Oct 2024 by Aven Bross to use __asm__ in lieu of asm for inline
+// assembly
+
 #ifndef WIN_PTHREADS_MISC_H
 #define WIN_PTHREADS_MISC_H
 

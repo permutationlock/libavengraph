@@ -24,6 +24,9 @@
 //
 //========================================================================
 
+// Modified by Aven Bross in February 2024 to remove duplicate symbols for a
+// single translation unit build
+
 #define _GNU_SOURCE
 
 #include "internal.h"
