@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE (4096UL * 4000000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)2800000UL)
 
 #define NGRAPHS 1
 #define FULL_RUNS 1

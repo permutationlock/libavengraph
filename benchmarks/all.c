@@ -27,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE ((size_t)4096UL * (size_t)4000000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)2800000UL)
 
 #define FULL_RUNS 10
 #define NGRAPHS 10
@@ -133,7 +133,7 @@ int main(void) {
                 uint32_t target;
             } CaseData;
 
-            size_t nruns = MAX_VERTICES / n;
+            size_t nruns = max(1, MAX_VERTICES / (n * 10));
 
             Slice(CaseData) cases = { .len = NGRAPHS };
             cases.ptr = aven_arena_create_array(

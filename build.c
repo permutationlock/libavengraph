@@ -169,14 +169,14 @@ int main(int argc, char **argv) {
 
     AvenStrSlice graphics_includes = slice_list(graphics_include_list);
 
-    AvenBuildStep stb_obj_step = libavengl_build_step_stb(
-        &opts,
-        &libavengl_opts,
-        libaven_include_path,
-        libavengl_path,
-        &work_dir_step,
-        &arena
-    );
+    // AvenBuildStep stb_obj_step = libavengl_build_step_stb(
+    //     &opts,
+    //     &libavengl_opts,
+    //     libaven_include_path,
+    //     libavengl_path,
+    //     &work_dir_step,
+    //     &arena
+    // );
 
     Optional(AvenBuildStep) glfw_obj_step = { 0 };
     if (!libavengl_opts.no_glfw) {
@@ -199,11 +199,11 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    AvenBuildStep *visualization_obj_data[5];
+    AvenBuildStep *visualization_obj_data[4];
     List(AvenBuildStep *) visualization_obj_list = list_array(visualization_obj_data);
 
     list_push(visualization_obj_list) = &visualization_obj_step;
-    list_push(visualization_obj_list) = &stb_obj_step;
+    // list_push(visualization_obj_list) = &stb_obj_step;
     
     if (winutf8_obj_step.valid) {
         list_push(visualization_obj_list) = &winutf8_obj_step.value;
