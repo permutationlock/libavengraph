@@ -1,4 +1,3 @@
-#include "aven/gl/ui.h"
 #if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
     #define _POSIX_C_SOURCE 200112L
 #endif
@@ -434,6 +433,10 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
         disabled_colors,
         &ctx->arena
     );
+
+    ctx->graph_up_to_date = false;
+    ctx->ui_up_to_date = false;
+    ctx->screen_updates = 0;
 }
 
 static void game_unload(GameCtx *ctx, AvenGl *gl) {

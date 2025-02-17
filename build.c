@@ -14,11 +14,18 @@
 #include "deps/libaven/include/aven/build.h"
 #include "deps/libaven/include/aven/build/common.h"
 #include "deps/libaven/include/aven/path.h"
+#include "deps/libaven/include/aven/watch.h"
 
 #include "deps/libaven/build.h"
 #include "deps/libavengl/build.h"
 
 #include "build.h"
+
+typedef enum {
+    REBUILD_STATE_NONE = 0,
+    REBUILD_STATE_EXE,
+    REBUILD_STATE_GAME,
+} RebuildState;
  
 #define ARENA_SIZE (4096 * 2000)
 
@@ -35,7 +42,7 @@ int main(int argc, char **argv) {
     AvenArgSlice libavengl_args = libavengl_build_args();
 
     AvenArgSlice args = {
-        .len = 1 + common_args.len + libavengl_args.len + libaven_args.len
+        .len = 2 + common_args.len + libavengl_args.len + libaven_args.len
     };
     args.ptr = aven_arena_create_array(AvenArg, &arena, args.len);
 
@@ -43,6 +50,12 @@ int main(int argc, char **argv) {
     get(args, arg_index) = (AvenArg){
         .name = "bench",
         .description = "Build and run benchmarks",
+        .type = AVEN_ARG_TYPE_BOOL,
+    };
+    arg_index += 1;
+    get(args, arg_index) = (AvenArg){
+        .name = "visualization-watch",
+        .description = "Build and run visualization and hot-reload src changes",
         .type = AVEN_ARG_TYPE_BOOL,
     };
     arg_index += 1;
@@ -75,6 +88,7 @@ int main(int argc, char **argv) {
     }
 
     bool opt_bench = aven_arg_get_bool(args, "bench");
+    bool opt_watch = aven_arg_get_bool(args, "visualization-watch");
     AvenBuildCommonOpts opts = aven_build_common_opts(args, &arena);
     LibAvenBuildOpts libaven_opts = libaven_build_opts(args, &arena);
     LibAvenGlBuildOpts libavengl_opts = libavengl_build_opts(args, &arena);
@@ -169,15 +183,6 @@ int main(int argc, char **argv) {
 
     AvenStrSlice graphics_includes = slice_list(graphics_include_list);
 
-    // AvenBuildStep stb_obj_step = libavengl_build_step_stb(
-    //     &opts,
-    //     &libavengl_opts,
-    //     libaven_include_path,
-    //     libavengl_path,
-    //     &work_dir_step,
-    //     &arena
-    // );
-
     Optional(AvenBuildStep) glfw_obj_step = { 0 };
     if (!libavengl_opts.no_glfw) {
         glfw_obj_step.value = libavengl_build_step_glfw(
@@ -189,6 +194,93 @@ int main(int argc, char **argv) {
         );
         glfw_obj_step.valid = true;
     }
+
+    // Build steps for hot reloading visualizaiton
+
+    AvenStr visualization_hot_macro_data[] = { aven_str("HOT_RELOAD") };
+    AvenStrSlice visualization_hot_macros = slice_array(
+        visualization_hot_macro_data
+    );
+
+    AvenBuildStep visualization_hot_game_dir_step =
+        aven_build_common_step_subdir(&out_dir_step, aven_str("game"), &arena);
+    AvenBuildStep visualization_hot_watch_dir_step =
+        aven_build_common_step_subdir(&out_dir_step, aven_str("watch"), &arena);
+
+    AvenBuildStep visualization_hot_dll_step =
+        aven_build_common_step_cc_ld_so_ex(
+            &opts,
+            graphics_includes,
+            visualization_hot_macros,
+            (AvenStrSlice){ 0 },
+            (AvenBuildStepPtrSlice){ 0 },
+            aven_path(
+                &arena,
+                root_path.ptr,
+                "visualization",
+                "game",
+                "game.c",
+                NULL
+            ),
+            &visualization_hot_game_dir_step,
+            &arena
+        );
+
+    AvenBuildStep hot_dll_signal_step = aven_build_step_trunc(
+        aven_path(&arena, visualization_hot_watch_dir_step.out_path.value.ptr, "lock", NULL)
+    );
+    aven_build_step_add_dep(&hot_dll_signal_step, &visualization_hot_watch_dir_step, &arena);
+    aven_build_step_add_dep(&hot_dll_signal_step, &visualization_hot_dll_step, &arena);
+
+    AvenBuildStep hot_dll_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&hot_dll_root_step, &hot_dll_signal_step, &arena);
+
+    AvenBuildStep visualization_hot_obj_step = aven_build_common_step_cc_ex(
+        &opts,
+        graphics_includes,
+        visualization_hot_macros,
+        aven_path(&arena, root_path.ptr, "visualization", "main.c", NULL),
+        &work_dir_step,
+        &arena
+    );
+
+
+    AvenBuildStep *visualization_hot_obj_data[4];
+    List(AvenBuildStep *) visualization_hot_obj_list = list_array(
+        visualization_hot_obj_data
+    );
+
+    list_push(visualization_hot_obj_list) = &visualization_hot_obj_step;
+    
+    if (winutf8_obj_step.valid) {
+        list_push(visualization_hot_obj_list) = &winutf8_obj_step.value;
+    }
+
+    if (winpthreads_obj_step.valid) {
+        list_push(visualization_hot_obj_list) = &winpthreads_obj_step.value;
+    }
+
+    if (glfw_obj_step.valid) {
+        list_push(visualization_hot_obj_list) = &glfw_obj_step.value;
+    }
+
+    AvenBuildStepPtrSlice visualization_hot_objs = slice_list(
+        visualization_hot_obj_list
+    );
+
+    AvenBuildStep visualization_hot_exe_step = aven_build_common_step_ld_exe_ex(
+        &opts,
+        libavengl_opts.syslibs,
+        visualization_hot_objs,
+        &out_dir_step,
+        aven_str("visualization_hot"),
+        true,
+        &arena
+    );
+    AvenBuildStep hot_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&hot_root_step, &hot_dll_root_step, &arena);
+    aven_build_step_add_dep(&hot_root_step, &visualization_hot_watch_dir_step, &arena);
+    aven_build_step_add_dep(&hot_root_step, &visualization_hot_exe_step, &arena);
 
     AvenBuildStep visualization_obj_step = aven_build_common_step_cc_ex(
         &opts,
@@ -203,7 +295,6 @@ int main(int argc, char **argv) {
     List(AvenBuildStep *) visualization_obj_list = list_array(visualization_obj_data);
 
     list_push(visualization_obj_list) = &visualization_obj_step;
-    // list_push(visualization_obj_list) = &stb_obj_step;
     
     if (winutf8_obj_step.valid) {
         list_push(visualization_obj_list) = &winutf8_obj_step.value;
@@ -228,6 +319,8 @@ int main(int argc, char **argv) {
         true,
         &arena
     );
+
+    // Build steps for visualizaiton and tikz drawing generators
 
     AvenBuildStep p3color_tikz_obj_step = aven_build_common_step_cc_ex(
         &opts,
@@ -394,20 +487,127 @@ int main(int argc, char **argv) {
         aven_build_step_clean(&root_step);
         aven_build_step_clean(&test_root_step);
         aven_build_step_clean(&bench_root_step);
-    } else if (opts.test) {
-        error = aven_build_step_run(&test_root_step, arena);
-        if (error != 0) {
-            fprintf(stderr, "TEST FAILED\n");
-        }
-    } else if (opt_bench) {
-        error = aven_build_step_run(&bench_root_step, arena);
-        if (error != 0) {
-            fprintf(stderr, "BENCHMARK FAILED\n");
-        }
+        aven_build_step_clean(&hot_root_step);
     } else {
-        error = aven_build_step_run(&root_step, arena);
-        if (error != 0) {
-            fprintf(stderr, "BUILD FAILED\n");
+         if (opts.test) {
+            error = aven_build_step_run(&test_root_step, arena);
+            if (error != 0) {
+                fprintf(stderr, "TEST FAILED\n");
+            }
+        } else if (opt_bench) {
+            error = aven_build_step_run(&bench_root_step, arena);
+            if (error != 0) {
+                fprintf(stderr, "BENCHMARK FAILED\n");
+            }
+        } else if (opt_watch) {
+            AvenWatchHandle src_handle = aven_watch_init(
+                aven_path(&arena, root_path.ptr, "visualization", NULL)
+            );
+            AvenWatchHandle game_handle = aven_watch_init(
+                aven_path(&arena, root_path.ptr, "visualization", "game", NULL)
+            );
+            AvenWatchHandle handle_data[] = { src_handle, game_handle };
+            AvenWatchHandleSlice handles = slice_array(handle_data);
+
+            Optional(AvenProcId) exe_pid = { .valid = false };
+
+            RebuildState rebuild_state = REBUILD_STATE_EXE;
+            for (;;) {
+                switch (rebuild_state) {
+                    case REBUILD_STATE_EXE:
+                        if (exe_pid.valid) {
+                            aven_proc_kill(exe_pid.value);
+                            exe_pid.valid = false;
+                        }
+                        aven_build_step_reset(&hot_root_step);
+                        error = aven_build_step_run(&hot_root_step, arena);
+                        if (error != 0) {
+                            fprintf(stderr, "BUILD FAILED: %d\n", error);
+                        }
+                        break;
+                    case REBUILD_STATE_GAME:
+                        aven_build_step_reset(&hot_dll_root_step);
+                        error = aven_build_step_run(&hot_dll_root_step, arena);
+                        if (error != 0) {
+                            fprintf(stderr, "BUILD FAILED: %d\n", error);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                rebuild_state = REBUILD_STATE_NONE;
+
+                if (exe_pid.valid) {
+                    AvenProcWaitResult result = aven_proc_check(
+                        exe_pid.value
+                    );
+                    if (result.error == 0) {
+                        if (result.payload == 0) {
+                            printf("APPLICATION EXITED CLEANLY\n");
+                        } else {
+                            printf("APPLICATION FAILED: %d\n", result.payload);
+                        }
+                        exe_pid.valid = false;
+                    } else if (result.error != AVEN_PROC_WAIT_ERROR_TIMEOUT) {
+                        aven_proc_kill(exe_pid.value);
+                        exe_pid.valid = false;
+                    }
+                }
+
+                if (!exe_pid.valid) {
+                    printf("RUNNING:\n");
+
+                    AvenStr cmd_parts[] = {
+                        visualization_hot_exe_step.out_path.value
+                    };
+                    AvenStrSlice cmd = slice_array(cmd_parts);
+
+                    AvenProcIdResult result = aven_proc_cmd(cmd, arena);
+                    if (result.error != 0) {
+                        fprintf(stderr, "RUN FAILED: %d\n", result.error);
+                    } else {
+                        exe_pid.valid = true;
+                        exe_pid.value = result.payload;
+                    }
+                }
+
+                AvenWatchResult result = aven_watch_check_multiple(handles, -1);
+                if (result.error != 0) {
+                    fprintf(stderr, "WATCH CHECK FAILED: %d\n", result.error);
+                    return 1;
+                }
+
+                for (size_t i = 0; i < handles.len; i += 1) {
+                    if ((result.payload & (((uint32_t)1) << i)) == 0) {
+                        continue;
+                    }
+                    if (get(handles, i) == src_handle) {
+                        rebuild_state = REBUILD_STATE_EXE;
+                        break;
+                    }
+                    if (get(handles, i) == game_handle) {
+                        rebuild_state = REBUILD_STATE_GAME;
+                    }
+                }
+
+                // Ignore extraneous source modifications some editors produce
+                while (result.payload != 0) {
+                    result = aven_watch_check_multiple(handles, 100);
+                    if (result.error != 0) {
+                        fprintf(stderr, "WATCH CHECK FAILED: %d\n", result.error);
+                        return 1;
+                    }
+                }
+            }
+            error = aven_build_step_run(&hot_root_step, arena);
+            if (error != 0) {
+                fprintf(stderr, "VISUALIZATION HOT-WATCH FAILED\n");
+            }
+        } else {
+            error = aven_build_step_run(&root_step, arena);
+            if (error != 0) {
+                fprintf(stderr, "BUILD FAILED\n");
+            }
         }
     }
 

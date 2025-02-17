@@ -47,7 +47,7 @@ static inline uint32_t aven_rng_pcg_rand(AvenRngPcg *pcg) {
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
 }
 
-uint32_t aven_rng_pcg_rand_stub(void *pcg) {
+static uint32_t aven_rng_pcg_rand_stub(void *pcg) {
     return aven_rng_pcg_rand(pcg);
 }
 
