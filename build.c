@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     };
     arg_index += 1;
     get(args, arg_index) = (AvenArg){
-        .name = "visualization-watch",
+        .name = "vis-watch",
         .description = "Build and run visualization and hot-reload src changes",
         .type = AVEN_ARG_TYPE_BOOL,
     };
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
     }
 
     bool opt_bench = aven_arg_get_bool(args, "bench");
-    bool opt_watch = aven_arg_get_bool(args, "visualization-watch");
+    bool opt_watch = aven_arg_get_bool(args, "vis-watch");
     AvenBuildCommonOpts opts = aven_build_common_opts(args, &arena);
     LibAvenBuildOpts libaven_opts = libaven_build_opts(args, &arena);
     LibAvenGlBuildOpts libavengl_opts = libavengl_build_opts(args, &arena);
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
         winpthreads_obj_step.valid = true;
     }
 
-    // Build steps for examples
+    // Build steps nd includes for libavengl
 
     AvenStr graphics_include_data[countof(include_data) + 3];
     List(AvenStr) graphics_include_list = list_array(graphics_include_data);
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
         glfw_obj_step.valid = true;
     }
 
-    // Build steps for hot reloading visualizaiton
+    // Build steps for visualizaiton
 
     AvenStr visualization_hot_macro_data[] = { aven_str("HOT_RELOAD") };
     AvenStrSlice visualization_hot_macros = slice_array(
@@ -389,6 +389,8 @@ int main(int argc, char **argv) {
         false,
         &arena
     );
+
+    // Default build_out artifact build steps
 
     AvenBuildStep root_step = aven_build_step_root();
     aven_build_step_add_dep(&root_step, &visualization_exe_step, &arena);
