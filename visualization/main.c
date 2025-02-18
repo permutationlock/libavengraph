@@ -173,8 +173,8 @@ int main(void) {
 
     arena = aven_arena_init(mem, ARENA_SIZE);
 
-    int width = 480;
-    int height = 480;
+    int width = GAME_INIT_WIDTH;
+    int height = GAME_INIT_HEIGHT;
 
     glfwInit();
     glfwSetErrorCallback(error_callback);
