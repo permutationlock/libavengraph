@@ -7,20 +7,23 @@
 #include "../../graph.h"
 
 typedef struct {
-    uint32_t p1;
-    uint32_t p2;
-    uint32_t p2p1_index;
-    uint32_t v;
+    uint32_t v1;
+    uint32_t vk;
+    uint32_t vi;
+    uint32_t vi1;
+    uint32_t v1vk_index;
+    uint32_t uj;
     uint32_t edge_index;
     int32_t mark;
 } GraphPlaneP3ColorBfsFrame;
 typedef Optional(GraphPlaneP3ColorBfsFrame) GraphPlaneP3ColorBfsFrameOptional;
+typedef Slice(GraphPlaneP3ColorBfsFrameOptional)
+    GraphPlaneP3ColorBfsFrameOptionalSlice;
 
 typedef struct {
     uint32_t len;
     int32_t mark;
     uint32_t parent;
-    bool path_end;
     uint32_t *ptr;
 } GraphPlaneP3ColorBfsVertex;
 
@@ -69,29 +72,25 @@ static inline GraphPlaneP3ColorBfsCtx graph_plane_p3color_bfs_init(
     for (uint32_t i = 0; i < path1.len; i += 1) {
         uint32_t v = get(path1, i);
         get(ctx.vertex_info, v).mark = 1;
-
-        if (i + 1 == path1.len) {
-            get(ctx.vertex_info, v).path_end = true;
-        }
     }
 
     for (uint32_t i = 0; i < path2.len; i += 1) {
         uint32_t v = get(path2, i);
         get(ctx.vertex_info, v).mark = 2;
-
-        if (i + 1 == path2.len) {
-            get(ctx.vertex_info, v).path_end = true;
-        }
     }
 
-    uint32_t p1 = get(path1, 0);
-    uint32_t p2 = get(path2, 0);
-    uint32_t p2p1_index = graph_adj_neighbor_index(get(graph, p2), p1);
+    uint32_t v1 = get(path1, 0);
+    uint32_t vi = get(path1, path1.len - 1);
+    uint32_t vk = get(path2, 0);
+    uint32_t vi1 = get(path2, path2.len - 1);
+    uint32_t v1vk_index = graph_adj_neighbor_index(get(graph, v1), vk);
     list_push(ctx.frames) = (GraphPlaneP3ColorBfsFrame){
-        .p1 = p1,
-        .p2 = p2,
-        .p2p1_index = p2p1_index,
-        .v = p2,
+        .v1 = v1,
+        .vk = vk,
+        .vi = vi,
+        .vi1 = vi1,
+        .v1vk_index = v1vk_index,
+        .uj = vk,
         .mark = -1,
     };
 
@@ -122,38 +121,38 @@ static inline bool graph_plane_p3color_bfs_frame_step(
     GraphPlaneP3ColorBfsCtx *ctx,
     GraphPlaneP3ColorBfsFrame *frame
 ) {
-    GraphPlaneP3ColorBfsVertex *p1_info = &get(ctx->vertex_info, frame->p1);
-    GraphPlaneP3ColorBfsVertex *p2_info = &get(ctx->vertex_info, frame->p2);
+    GraphPlaneP3ColorBfsVertex *v1_info = &get(ctx->vertex_info, frame->v1);
+    GraphPlaneP3ColorBfsVertex *vk_info = &get(ctx->vertex_info, frame->vk);
 
-    if (frame->v == frame->p2) {
-        if (p1_info->path_end and p2_info->path_end) {
+    if (frame->uj == frame->vk) {
+        if (frame->v1 == frame->vi and frame->vk == frame->vi1) {
             return true;
         }
 
-        GraphAdjList p2_adj = { .len = p2_info->len, .ptr = p2_info->ptr };
-        uint32_t p2u_index = graph_adj_prev(p2_adj, frame->p2p1_index);
-        uint32_t u = get(p2_adj, p2u_index);
+        GraphAdjList v1_adj = { .len = v1_info->len, .ptr = v1_info->ptr };
+        uint32_t v1u_index = graph_adj_next(v1_adj, frame->v1vk_index);
+        uint32_t u = get(v1_adj, v1u_index);
 
         GraphPlaneP3ColorBfsVertex *u_info = &get(ctx->vertex_info, u);
         if (u_info->mark <= 0) {
-            frame->v = u;
+            frame->uj = u;
             u_info->mark = frame->mark;
             u_info->parent = u;
-        } else if (u_info->mark == p1_info->mark) {
-            assert(!p1_info->path_end);
-            frame->p1 = u;
-            frame->p2p1_index = p2u_index;
-        } else if (u_info->mark == p2_info->mark) {
-            assert(!p2_info->path_end);
-            frame->p2 = u;
-            frame->p2p1_index = graph_adj_neighbor_index(
+        } else if (u_info->mark == vk_info->mark) {
+            assert(frame->vk != frame->vi1);
+            frame->vk = u;
+            frame->v1vk_index = v1u_index;
+            frame->uj = u;
+        } else if (u_info->mark == v1_info->mark) {
+            assert(frame->v1 != frame->vi);
+            frame->v1 = u;
+            frame->v1vk_index = graph_adj_neighbor_index(
                 (GraphAdjList){
                     .len = u_info->len,
                     .ptr = u_info->ptr,
                 },
-                frame->p1
+                frame->vk
             );
-            frame->v = u;
         } else {
             return true;
         }
@@ -161,52 +160,68 @@ static inline bool graph_plane_p3color_bfs_frame_step(
         return false;
     }
 
-    GraphPlaneP3ColorBfsVertex *v_info = &get(ctx->vertex_info, frame->v); 
-    GraphAdjList v_adj = { .len = v_info->len, .ptr = v_info->ptr };
-    if (frame->edge_index == v_adj.len) {
-        frame->v = queue_pop(ctx->vertices);
+    GraphPlaneP3ColorBfsVertex *uj_info = &get(ctx->vertex_info, frame->uj); 
+    GraphAdjList uj_adj = { .len = uj_info->len, .ptr = uj_info->ptr };
+    if (frame->edge_index == uj_adj.len) {
+        frame->uj = queue_pop(ctx->vertices);
         frame->edge_index = 0;
         return false;
     }
 
-    uint32_t vy_index = frame->edge_index;
-    uint32_t y = get(v_adj, vy_index);
+    uint32_t ujy_index = frame->edge_index;
+    uint32_t y = get(uj_adj, ujy_index);
     GraphPlaneP3ColorBfsVertex *y_info = &get(ctx->vertex_info, y);
     frame->edge_index += 1;
 
-    if (y_info->mark == p2_info->mark) {
+    if (y_info->mark == vk_info->mark) {
         uint32_t next_index = frame->edge_index;
-        if (next_index >= v_adj.len) {
-            next_index -= (uint32_t)v_adj.len;
+        if (next_index >= uj_adj.len) {
+            next_index -= (uint32_t)uj_adj.len;
         }
-        uint32_t x = get(v_adj, next_index);
+        uint32_t x = get(uj_adj, next_index);
         GraphPlaneP3ColorBfsVertex *x_info = &get(ctx->vertex_info, x);
 
-        if (x_info->mark == p1_info->mark) {
-            if (!x_info->path_end or !y_info->path_end) {
-                uint32_t yx_index = graph_adj_neighbor_index(
-                    (GraphAdjList){
-                        .len = y_info->len,
-                        .ptr = y_info->ptr,
-                    },
-                    x
-                );
+        if (x_info->mark == v1_info->mark) {
+            if (x != frame->vi or y != frame->vi1) {
+                uint32_t xy_index;
+                if (x == frame->v1) {
+                    xy_index = frame->v1vk_index;
+                    for (uint32_t i = 0; i < x_info->len; i += 1) {
+                        xy_index = xy_index + 1;
+                        if (xy_index >= x_info->len) {
+                            xy_index -= x_info->len;
+                        }
+                        if (get(*x_info, xy_index) == y) {
+                            break;
+                        }
+                    }
+                    assert(xy_index != frame->v1vk_index);
+                } else {
+                    xy_index = graph_adj_neighbor_index(
+                        (GraphAdjList){
+                            .len = x_info->len,
+                            .ptr = x_info->ptr,
+                        },
+                        y
+                    );
+                }
                 list_push(ctx->frames) = (GraphPlaneP3ColorBfsFrame){
-                    .p1 = x,
-                    .p2 = y,
-                    .p2p1_index = yx_index,
-                    .v = y,
+                    .v1 = x,
+                    .vk = y,
+                    .vi = frame->vi,
+                    .vi1 = frame->vi1,
+                    .v1vk_index = xy_index,
+                    .uj = y,
                     .mark = frame->mark - 1,
                 };
             }
 
-            int32_t p3_color = p1_info->mark ^ p2_info->mark;
+            int32_t p3_color = v1_info->mark ^ vk_info->mark;
 
-            uint32_t w = frame->v;
+            uint32_t w = frame->uj;
             GraphPlaneP3ColorBfsVertex *w_info = &get(ctx->vertex_info, w);
 
             w_info->mark = p3_color;
-            w_info->path_end = true;
 
             while (w_info->parent != w) {
                 w = w_info->parent;
@@ -214,39 +229,43 @@ static inline bool graph_plane_p3color_bfs_frame_step(
                 w_info->mark = p3_color;
             }
 
-            uint32_t wp1_index = graph_adj_neighbor_index(
+            uint32_t wvk_index = graph_adj_neighbor_index(
                 (GraphAdjList){
                     .len = w_info->len,
                     .ptr = w_info->ptr,
                 },
-                frame->p1
+                frame->vk
             );
             list_push(ctx->frames) = (GraphPlaneP3ColorBfsFrame){
-                .p1 = frame->p1,
-                .p2 = w,
-                .p2p1_index = wp1_index,
-                .v = w,
+                .v1 = w,
+                .vk = frame->vk,
+                .vi = x,
+                .vi1 = y,
+                .v1vk_index = wvk_index,
+                .uj = frame->vk,
                 .mark = frame->mark - 1,
             };
 
-            uint32_t p2w_index = graph_adj_prev(
+            uint32_t v1w_index = graph_adj_next(
                 (GraphAdjList){
-                    .len = p2_info->len,
-                    .ptr = p2_info->ptr,
+                    .len = v1_info->len,
+                    .ptr = v1_info->ptr,
                 },
-                frame->p2p1_index
+                frame->v1vk_index
             );
             *frame = (GraphPlaneP3ColorBfsFrame){
-                .p1 = w,
-                .p2 = frame->p2,
-                .p2p1_index = p2w_index,
-                .v = frame->p2,
+                .v1 = frame->v1,
+                .vk = w,
+                .vi = x,
+                .vi1 = y,
+                .v1vk_index = v1w_index,
+                .uj = w,
                 .mark = frame->mark - 1,
             };
             queue_clear(ctx->vertices);
         }
     } else if (y_info->mark <= 0 and y_info->mark != frame->mark) {
-        y_info->parent = frame->v;
+        y_info->parent = frame->uj;
         y_info->mark = frame->mark;
         queue_push(ctx->vertices) = y;
     }
