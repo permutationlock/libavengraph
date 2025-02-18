@@ -17,7 +17,7 @@ graphics using the OpenGL ES 2.0 API.
 The provided visualization also uses GLFW for window creation.
 Both GLFW and `libavengl` are vendored in `dep`.
 
-## Building examples
+## Building the project
 
 All examples should build with no system dependencies other
 than a C compiler on any Windows or Linux system.
@@ -33,7 +33,7 @@ cc -o build build.c
 ```
 where `cc` is your favorite C compiler that supports C99 or later.
 
-To build algorithm visualization and tikz figure generators:
+To build the algorithm visualization and tikz figure examples:
 ```
 ./build
 ```
@@ -44,16 +44,31 @@ For a release build using `clang` or `gcc` run:
   ./build -ccflags "-O3" -glfw-ccflags "-O3 -DNDEBUG"
 ```
 
-To build and run the benchmarks you will need ~11.5GB of
+### Watch mode and hot reloading
+
+To build and run the visualization in "watch mode" you can run:
+```
+  ./build vis-watch
+```
+The build system will watch for changes to files in `visualization/`. If a
+file in `visualization/game/` is modified, then the changes will be compiled
+into a dynamic library and hot loaded into the running application. If
+a file in the root of `visualization/` is changed, then the application
+will close, compile, and run.
+
+### Benchmarks
+
+To build and run the algorithm benchmarks you will need ~13GB of
 unused available system RAM and a C compiler that supports C11
 atomics:
 ```
 ./build bench -ccflags "-std=c11 -O3 -march=native"
 ```
-The benchmark will take several minutes to an hour to complete
-and will report incremental results.
+The benchmarks may take up to a few hours to complete.
 
-To clean build artifacts:
+### Cleaning up
+
+To clean all build artifacts:
 ```
 ./build clean
 ```
