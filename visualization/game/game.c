@@ -403,6 +403,7 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
         AVEN_GL_BUFFER_USAGE_DYNAMIC
     );
 
+#ifdef TEXTURE_OPTIMIZATION
     {
         AvenArena temp_arena = ctx->arena;
         ctx->graph_texture.ctx = aven_gl_texture_ctx_init(
@@ -428,6 +429,7 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
             AVEN_GL_BUFFER_USAGE_STATIC
         );
     }
+#endif // TEXTURE_OPTIMIZATION 
 
     {
         AvenGlUiColors window_colors = {
@@ -471,9 +473,11 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
 static void game_unload(GameCtx *ctx, AvenGl *gl) {
     aven_gl_ui_deinit(gl, &ctx->ui);
 
+#ifdef TEXTURE_OPTIMIZATION
     aven_gl_texture_buffer_deinit(gl, &ctx->graph_texture.buffer);
     aven_gl_texture_ctx_deinit(gl, &ctx->graph_texture.ctx);
     ctx->graph_texture = (GameGraphTexture){ 0 };
+#endif // TEXTURE_OPTIMIZATION
 
     aven_gl_shape_rounded_buffer_deinit(gl, &ctx->rounded_shapes.buffer);
     aven_gl_shape_rounded_ctx_deinit(gl, &ctx->rounded_shapes.ctx);
@@ -1647,12 +1651,28 @@ bool game_update(
     if (ctx->graph_up_to_date) {
         Aff2 ident;
         aff2_identity(ident);
+#ifdef TEXTURE_OPTIMIZATION
         aven_gl_texture_geometry_draw(
             gl,
             &ctx->graph_texture.ctx,
             &ctx->graph_texture.buffer,
             ident
         );
+#else // !defined(TEXTURE_OPTIMIZATION)
+        aven_gl_shape_draw(
+            gl,
+            &ctx->shapes.ctx,
+            &ctx->shapes.buffer,
+            cam_trans
+        );
+        aven_gl_shape_rounded_draw(
+            gl,
+            &ctx->rounded_shapes.ctx,
+            &ctx->rounded_shapes.buffer,
+            pixel_size,
+            cam_trans
+        );
+#endif // !defined(TEXTURE_OPTIMIZATION)
     } else {
         aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
         aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
@@ -1777,15 +1797,7 @@ bool game_update(
             cam_trans
         );
 
-        gl->ColorMask(false, false, false, true);
-        assert(gl->GetError() == 0);
-        gl->ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        assert(gl->GetError() == 0);
-        gl->Clear(GL_COLOR_BUFFER_BIT);
-        assert(gl->GetError() == 0);
-        gl->ColorMask(true, true, true, true);
-        assert(gl->GetError() == 0);
-
+#ifdef TEXTURE_OPTIMIZATION
         if (
             !ctx->alg_opts.playing or
             ctx->alg_opts.time_step > (AVEN_TIME_NSEC_PER_SEC / 30)
@@ -1801,6 +1813,7 @@ bool game_update(
                 (size_t)ctx->height
             );
         }
+#endif // TEXTURE_OPTIMIZATION
     }
 
     aven_gl_ui_draw(
