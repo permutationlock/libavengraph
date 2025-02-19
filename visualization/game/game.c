@@ -427,8 +427,6 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
             &texture_geometry,
             AVEN_GL_BUFFER_USAGE_STATIC
         );
-        gl->GenFramebuffers(1, &ctx->graph_texture.framebuffer_id);
-        assert(gl->GetError() == 0);
     }
 
     {
@@ -473,8 +471,6 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
 static void game_unload(GameCtx *ctx, AvenGl *gl) {
     aven_gl_ui_deinit(gl, &ctx->ui);
 
-    gl->DeleteFramebuffers(1, &ctx->graph_texture.framebuffer_id);
-    assert(gl->GetError() == 0);
     aven_gl_texture_buffer_deinit(gl, &ctx->graph_texture.buffer);
     aven_gl_texture_ctx_deinit(gl, &ctx->graph_texture.ctx);
     ctx->graph_texture = (GameGraphTexture){ 0 };
