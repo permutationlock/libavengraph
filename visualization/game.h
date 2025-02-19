@@ -6,6 +6,7 @@
 #include <aven/gl.h>
 #include <aven/gl/shape.h>
 #include <aven/gl/text.h>
+#include <aven/gl/texture.h>
 #include <aven/gl/ui.h>
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
@@ -16,6 +17,9 @@
 #include <graph/plane/p3color.h>
 #include <graph/plane/p3color_bfs.h>
 #include <graph/plane/p3choose.h>
+
+#define GAME_INIT_WIDTH (480)
+#define GAME_INIT_HEIGHT (480)
 
 #define GAME_GL_ARENA_SIZE (4096 * 1000)
 #define GAME_ALG_ARENA_SIZE (4096 * 500)
@@ -124,11 +128,11 @@ typedef struct {
 } GameRoundedShapes;
 
 typedef struct {
-    AvenGlTextFont font;
-    AvenGlTextCtx ctx;
-    AvenGlTextGeometry geometry;
-    AvenGlTextBuffer buffer;
-} GameText;
+    AvenGlTextureCtx ctx;
+    AvenGlTextureBuffer buffer;
+    GLuint framebuffer_id;
+    GLuint depthbuffer_id;
+} GameGraphTexture;
 
 typedef enum {
     GAME_UI_WINDOW_NONE = 0,
@@ -143,9 +147,9 @@ typedef struct {
 } GamePreview;
 
 typedef struct {
-    GameText text;
     GameShapes shapes;
     GameRoundedShapes rounded_shapes;
+    GameGraphTexture graph_texture;
     AvenGlUi ui;
     AvenArena init_arena;
     AvenArena arena;
