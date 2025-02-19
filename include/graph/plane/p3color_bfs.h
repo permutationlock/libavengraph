@@ -27,8 +27,9 @@ typedef struct {
     uint32_t *ptr;
 } GraphPlaneP3ColorBfsVertex;
 
+typedef Queue(uint32_t) GraphPlaneP3ColorBfsQueue;
+
 typedef struct {
-    Queue(uint32_t) vertices;
     Slice(GraphPlaneP3ColorBfsVertex) vertex_info;
     List(GraphPlaneP3ColorBfsFrame) frames;
 } GraphPlaneP3ColorBfsCtx;
@@ -40,16 +41,10 @@ static inline GraphPlaneP3ColorBfsCtx graph_plane_p3color_bfs_init(
     AvenArena *arena
 ) {
     GraphPlaneP3ColorBfsCtx ctx = {
-        .vertices = { .cap = graph.len },
         .vertex_info = { .len = graph.len },
         .frames = { .cap = 3 * graph.len - 6 },
     };
 
-    ctx.vertices.ptr = aven_arena_create_array(
-        uint32_t,
-        arena,
-        ctx.vertices.cap
-    );
     ctx.vertex_info.ptr = aven_arena_create_array(
         GraphPlaneP3ColorBfsVertex,
         arena,
@@ -119,7 +114,8 @@ graph_plane_p3color_bfs_next_frame(
 
 static inline bool graph_plane_p3color_bfs_frame_step(
     GraphPlaneP3ColorBfsCtx *ctx,
-    GraphPlaneP3ColorBfsFrame *frame
+    GraphPlaneP3ColorBfsFrame *frame,
+    GraphPlaneP3ColorBfsQueue *bfs_queue
 ) {
     GraphPlaneP3ColorBfsVertex *v1_info = &get(ctx->vertex_info, frame->v1);
     GraphPlaneP3ColorBfsVertex *vk_info = &get(ctx->vertex_info, frame->vk);
@@ -163,7 +159,7 @@ static inline bool graph_plane_p3color_bfs_frame_step(
     GraphPlaneP3ColorBfsVertex *uj_info = &get(ctx->vertex_info, frame->uj); 
     GraphAdjList uj_adj = { .len = uj_info->len, .ptr = uj_info->ptr };
     if (frame->edge_index == uj_adj.len) {
-        frame->uj = queue_pop(ctx->vertices);
+        frame->uj = queue_pop(*bfs_queue);
         frame->edge_index = 0;
         return false;
     }
@@ -219,34 +215,35 @@ static inline bool graph_plane_p3color_bfs_frame_step(
             int32_t p3_color = v1_info->mark ^ vk_info->mark;
 
             uint32_t w = frame->uj;
-            GraphPlaneP3ColorBfsVertex *w_info = &get(ctx->vertex_info, w);
+            uint32_t u = frame->uj;
+            GraphPlaneP3ColorBfsVertex *u_info = &get(ctx->vertex_info, w);
 
-            w_info->mark = p3_color;
+            u_info->mark = p3_color;
 
-            while (w_info->parent != w) {
-                w = w_info->parent;
-                w_info = &get(ctx->vertex_info, w);
-                w_info->mark = p3_color;
+            while (u_info->parent != u) {
+                u = u_info->parent;
+                u_info = &get(ctx->vertex_info, u);
+                u_info->mark = p3_color;
             }
 
-            uint32_t wvk_index = graph_adj_neighbor_index(
+            uint32_t uvk_index = graph_adj_neighbor_index(
                 (GraphAdjList){
-                    .len = w_info->len,
-                    .ptr = w_info->ptr,
+                    .len = u_info->len,
+                    .ptr = u_info->ptr,
                 },
                 frame->vk
             );
             list_push(ctx->frames) = (GraphPlaneP3ColorBfsFrame){
-                .v1 = w,
+                .v1 = u,
                 .vk = frame->vk,
-                .vi = x,
+                .vi = w,
                 .vi1 = y,
-                .v1vk_index = wvk_index,
+                .v1vk_index = uvk_index,
                 .uj = frame->vk,
                 .mark = frame->mark - 1,
             };
 
-            uint32_t v1w_index = graph_adj_next(
+            uint32_t v1u_index = graph_adj_next(
                 (GraphAdjList){
                     .len = v1_info->len,
                     .ptr = v1_info->ptr,
@@ -255,19 +252,19 @@ static inline bool graph_plane_p3color_bfs_frame_step(
             );
             *frame = (GraphPlaneP3ColorBfsFrame){
                 .v1 = frame->v1,
-                .vk = w,
+                .vk = u,
                 .vi = x,
-                .vi1 = y,
-                .v1vk_index = v1w_index,
-                .uj = w,
+                .vi1 = w,
+                .v1vk_index = v1u_index,
+                .uj = u,
                 .mark = frame->mark - 1,
             };
-            queue_clear(ctx->vertices);
+            queue_clear(*bfs_queue);
         }
     } else if (y_info->mark <= 0 and y_info->mark != frame->mark) {
         y_info->parent = frame->uj;
         y_info->mark = frame->mark;
-        queue_push(ctx->vertices) = y;
+        queue_push(*bfs_queue) = y;
     }
 
     return false;
@@ -290,11 +287,23 @@ static inline GraphPropUint8 graph_plane_p3color_bfs(
         &temp_arena
     );
 
+    GraphPlaneP3ColorBfsQueue bfs_queue = aven_arena_create_queue(
+        uint32_t,
+        &temp_arena,
+        graph.len
+    );
+
     GraphPlaneP3ColorBfsFrameOptional cur_frame =
         graph_plane_p3color_bfs_next_frame(&ctx);
 
     do {
-        while (!graph_plane_p3color_bfs_frame_step(&ctx, &cur_frame.value)) {}
+        while (
+            !graph_plane_p3color_bfs_frame_step(
+                &ctx,
+                &cur_frame.value,
+                &bfs_queue
+            )
+        ) {}
         cur_frame = graph_plane_p3color_bfs_next_frame(&ctx);
     } while (cur_frame.valid);
 

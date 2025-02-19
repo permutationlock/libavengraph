@@ -46,7 +46,7 @@
 
 typedef enum {
     GAME_DATA_ALG_TYPE_P3COLOR,
-//    GAME_DATA_ALG_TYPE_P3COLOR_BFS,
+    GAME_DATA_ALG_TYPE_P3COLOR_BFS,
     GAME_DATA_ALG_TYPE_P3CHOOSE,
 } GameInfoAlgType;
 
@@ -62,7 +62,8 @@ typedef struct {
 
 typedef struct {
     GraphPlaneP3ColorBfsCtx ctx;
-    Slice(GraphPlaneP3ColorBfsFrameOptional) frames;
+    Slice(GraphPlaneP3ColorBfsQueue) queues;
+    GraphPlaneP3ColorBfsFrameOptionalSlice frames;
 } GameInfoAlgP3ColorBfs;
 
 typedef struct {
