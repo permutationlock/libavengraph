@@ -1648,6 +1648,11 @@ bool game_update(
     gl->Viewport(0, 0, width, height);
     assert(gl->GetError() == 0);
 
+    gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
+    assert(gl->GetError() == 0);
+    gl->Clear(GL_COLOR_BUFFER_BIT);
+    assert(gl->GetError() == 0);
+
     if (ctx->graph_up_to_date) {
         Aff2 ident;
         aff2_identity(ident);
@@ -1767,10 +1772,6 @@ bool game_update(
         }
 
         // Push geometry to GPU and draw to screen
-        gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
-        assert(gl->GetError() == 0);
-        gl->Clear(GL_COLOR_BUFFER_BIT);
-        assert(gl->GetError() == 0);
 
         aven_gl_shape_buffer_update(
             gl,
@@ -1804,6 +1805,15 @@ bool game_update(
         ) {
             ctx->graph_up_to_date = true;
 
+            gl->ColorMask(false, false, false, true);
+            assert(gl->GetError() == 0);
+            gl->ClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            assert(gl->GetError() == 0);
+            gl->Clear(GL_COLOR_BUFFER_BIT);
+            assert(gl->GetError() == 0);
+            gl->ColorMask(true, true, true, true);
+            assert(gl->GetError() == 0);
+
             aven_gl_texture_ctx_update_framebuffer(
                 gl,
                 &ctx->graph_texture.ctx,
@@ -1813,7 +1823,9 @@ bool game_update(
                 (size_t)ctx->height
             );
         }
-#endif // TEXTURE_OPTIMIZATION
+#else // !defined(TEXTURE_OPTIMIZATION)
+        ctx->graph_up_to_date = true;
+#endif // !defined(TEXTURE_OPTIMIZATION)
     }
 
     aven_gl_ui_draw(
