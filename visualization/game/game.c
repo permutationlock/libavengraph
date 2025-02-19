@@ -429,34 +429,6 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
         );
         gl->GenFramebuffers(1, &ctx->graph_texture.framebuffer_id);
         assert(gl->GetError() == 0);
-        GLuint last_framebuffer_id;
-        gl->GetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&last_framebuffer_id);
-        assert(gl->GetError() == 0);
-        gl->BindFramebuffer(GL_FRAMEBUFFER, ctx->graph_texture.framebuffer_id);
-        assert(gl->GetError() == 0);
-        gl->BindTexture(GL_TEXTURE_2D, ctx->graph_texture.ctx.texture_id);
-        assert(gl->GetError() == 0);
-        gl->FramebufferTexture2D(
-            GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D,
-            ctx->graph_texture.ctx.texture_id,
-            0
-        );
-        assert(gl->GetError() == 0);
-        gl->DepthMask(false);
-        assert(gl->GetError() == 0);
-        gl->StencilMask(false);
-        assert(gl->GetError() == 0);
-        gl->Disable(GL_DEPTH_TEST);
-        assert(gl->GetError() == 0);
-        gl->Disable(GL_STENCIL_TEST);
-        assert(gl->GetError() == 0);
-        assert(gl->CheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-        gl->BindTexture(GL_TEXTURE_2D, 0);
-        assert(gl->GetError() == 0);
-        gl->BindFramebuffer(GL_FRAMEBUFFER, last_framebuffer_id);
-        assert(gl->GetError() == 0);
     }
 
     {
@@ -628,55 +600,6 @@ bool game_update(
 ) {
     (void)arena;
 
-    if (width != ctx->width or height != ctx->height) {
-        GLuint last_framebuffer_id;
-        gl->GetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&last_framebuffer_id);
-        assert(gl->GetError() == 0);
-        gl->BindFramebuffer(GL_FRAMEBUFFER, ctx->graph_texture.framebuffer_id);
-        assert(gl->GetError() == 0);
-        gl->BindTexture(GL_TEXTURE_2D, ctx->graph_texture.ctx.texture_id);
-        assert(gl->GetError() == 0);
-        gl->FramebufferTexture2D(
-            GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D,
-            0,
-            0
-        );
-        assert(gl->GetError() == 0);
-
-        aven_gl_texture_ctx_update(
-            gl,
-            &ctx->graph_texture.ctx,
-            (size_t)width,
-            (size_t)height,
-            (AvenGlTextureBytesOptional){ 0 }
-        );
-
-
-        gl->FramebufferTexture2D(
-            GL_FRAMEBUFFER,
-            GL_COLOR_ATTACHMENT0,
-            GL_TEXTURE_2D,
-            ctx->graph_texture.ctx.texture_id,
-            0
-        );
-        assert(gl->GetError() == 0);
-        gl->DepthMask(false);
-        assert(gl->GetError() == 0);
-        gl->StencilMask(false);
-        assert(gl->GetError() == 0);
-        gl->Disable(GL_DEPTH_TEST);
-        assert(gl->GetError() == 0);
-        gl->Disable(GL_STENCIL_TEST);
-        assert(gl->GetError() == 0);
-        assert(gl->CheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-        gl->BindTexture(GL_TEXTURE_2D, 0);
-        assert(gl->GetError() == 0);
-        gl->BindFramebuffer(GL_FRAMEBUFFER, last_framebuffer_id);
-        assert(gl->GetError() == 0);
-    }
-
     ctx->width = width;
     ctx->height = height;
     
@@ -729,11 +652,11 @@ bool game_update(
     }
 
     if (ctx->screen_updates >= GAME_SCREEN_UPDATES) {
-        // ctx->ui_up_to_date = true;
+        ctx->ui_up_to_date = true;
         return false;
     }
 
-    //ctx->screen_updates += 1;
+    ctx->screen_updates += 1;
 
     float padding = 0.02f;
     float ui_width = (2.0f - 2.0f * padding) / 8.0f;
@@ -1715,16 +1638,26 @@ bool game_update(
         ctx->ui_up_to_date = false;
     }
 
+    if (ctx->graph_up_to_date and ctx->ui_up_to_date) {
+        aven_gl_ui_clear(&ctx->ui);
+        return false;
+    }
+
     // Generate graph geometry
 
-    if (ctx->graph_up_to_date) {
-        if (ctx->ui_up_to_date) {
-            aven_gl_ui_clear(&ctx->ui);
-            return false;
-        }
-    } else {
-        // ctx->graph_up_to_date = true;
+    gl->Viewport(0, 0, width, height);
+    assert(gl->GetError() == 0);
 
+    if (ctx->graph_up_to_date) {
+        Aff2 ident;
+        aff2_identity(ident);
+        aven_gl_texture_geometry_draw(
+            gl,
+            &ctx->graph_texture.ctx,
+            &ctx->graph_texture.buffer,
+            ident
+        );
+    } else {
         aven_gl_shape_geometry_clear(&ctx->shapes.geometry);
         aven_gl_shape_rounded_geometry_clear(&ctx->rounded_shapes.geometry);
 
@@ -1818,6 +1751,10 @@ bool game_update(
         }
 
         // Push geometry to GPU and draw to screen
+        gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
+        assert(gl->GetError() == 0);
+        gl->Clear(GL_COLOR_BUFFER_BIT);
+        assert(gl->GetError() == 0);
 
         aven_gl_shape_buffer_update(
             gl,
@@ -1829,27 +1766,6 @@ bool game_update(
             &ctx->rounded_shapes.buffer,
             &ctx->rounded_shapes.geometry
         );
-
-        GLuint last_framebuffer_id;
-        gl->GetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&last_framebuffer_id);
-        assert(gl->GetError() == 0);
-        gl->BindFramebuffer(GL_FRAMEBUFFER, ctx->graph_texture.framebuffer_id);
-        assert(gl->GetError() == 0);
-        gl->DepthMask(false);
-        assert(gl->GetError() == 0);
-        gl->StencilMask(false);
-        assert(gl->GetError() == 0);
-        gl->Disable(GL_DEPTH_TEST);
-        assert(gl->GetError() == 0);
-        gl->Disable(GL_STENCIL_TEST);
-        assert(gl->GetError() == 0);
-        gl->Viewport(0, 0, width, height);
-        assert(gl->GetError() == 0);
-
-        gl->ClearColor(0.75f, 0.0f, 0.0f, 1.0f);
-        assert(gl->GetError() == 0);
-        gl->Clear(GL_COLOR_BUFFER_BIT);
-        assert(gl->GetError() == 0);
 
         aven_gl_shape_draw(
             gl,
@@ -1874,31 +1790,22 @@ bool game_update(
         gl->ColorMask(true, true, true, true);
         assert(gl->GetError() == 0);
 
-        gl->BindFramebuffer(GL_FRAMEBUFFER, last_framebuffer_id);
-        assert(gl->GetError() == 0);
+        if (
+            !ctx->alg_opts.playing or
+            ctx->alg_opts.time_step > (AVEN_TIME_NSEC_PER_SEC / 30)
+        ) {
+            ctx->graph_up_to_date = true;
+
+            aven_gl_texture_ctx_update_framebuffer(
+                gl,
+                &ctx->graph_texture.ctx,
+                0,
+                0,
+                (size_t)ctx->width,
+                (size_t)ctx->height
+            );
+        }
     }
-
-    gl->Viewport(0, 0, width, height);
-    assert(gl->GetError() == 0);
-
-    gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
-    assert(gl->GetError() == 0);
-    gl->Clear(GL_COLOR_BUFFER_BIT);
-    assert(gl->GetError() == 0);
-
-    Aff2 ident;
-    aff2_identity(ident);
-    aven_gl_texture_geometry_draw(
-        gl,
-        &ctx->graph_texture.ctx,
-        &ctx->graph_texture.buffer,
-        ident
-    );
-
-    gl->ClearColor(0.75f, 0.75f, 0.75f, 1.0f);
-    assert(gl->GetError() == 0);
-    gl->Clear(GL_COLOR_BUFFER_BIT);
-    assert(gl->GetError() == 0);
 
     aven_gl_ui_draw(
         gl,

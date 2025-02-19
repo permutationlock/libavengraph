@@ -126,6 +126,7 @@ static inline AvenGlTextureCtx aven_gl_texture_ctx_init(
         GL_UNSIGNED_BYTE,
         maybe_bytes.valid ? maybe_bytes.value.ptr : NULL
     );
+    assert(gl->GetError() == 0);
     gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     assert(gl->GetError() == 0);
     gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -161,6 +162,41 @@ static inline void aven_gl_texture_ctx_update(
         GL_UNSIGNED_BYTE,
         maybe_bytes.valid ? maybe_bytes.value.ptr : NULL
     );
+    assert(gl->GetError() == 0);
+    gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    assert(gl->GetError() == 0);
+    gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    assert(gl->GetError() == 0);
+    gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    assert(gl->GetError() == 0);
+    gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    assert(gl->GetError() == 0);
+
+    gl->BindTexture(GL_TEXTURE_2D, 0);
+    assert(gl->GetError() == 0);
+}
+
+static inline void aven_gl_texture_ctx_update_framebuffer(
+    AvenGl *gl,
+    AvenGlTextureCtx *ctx,
+    size_t x,
+    size_t y,
+    size_t width,
+    size_t height    
+) {
+    gl->BindTexture(GL_TEXTURE_2D, ctx->texture_id);
+    assert(gl->GetError() == 0);
+    gl->CopyTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA,
+        (GLsizei)x,
+        (GLsizei)y,
+        (GLsizei)width,
+        (GLsizei)height,
+        0
+    );
+    assert(gl->GetError() == 0);
     gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     assert(gl->GetError() == 0);
     gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -281,7 +317,7 @@ static inline AvenGlTextureBuffer aven_gl_texture_buffer_init(
                 sizeof(*geometry->vertices.ptr);
             buffer.index_cap = geometry->indices.len *
                 sizeof(*geometry->indices.ptr);
-            buffer.index_len = buffer.index_len;
+            buffer.index_len = geometry->indices.len;
             break;
         default:
             assert(false);
