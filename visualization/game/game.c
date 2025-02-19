@@ -1,4 +1,5 @@
 #include "aven/gl/texture.h"
+#include "aven/gl/ui.h"
 #if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
     #define _POSIX_C_SOURCE 200112L
 #endif
@@ -633,6 +634,7 @@ bool game_update(
 
             if (ctx->active_window == GAME_UI_WINDOW_PREVIEW) {
                 ctx->screen_updates = 0;
+                ctx->ui_up_to_date = false;
             }
         }
     } else {
@@ -676,6 +678,10 @@ bool game_update(
     );
 
     // Generate UI geometry and evaluate UI logic
+
+    AvenGlUiId last_hot = ctx->ui.hot_id;
+    AvenGlUiId last_active = ctx->ui.active_id;
+    GameUiWindow last_window = ctx->active_window;
 
     float draw_angle = 0.0f;
     if (norm_width < norm_height) {
@@ -1625,15 +1631,17 @@ bool game_update(
     }
 
     if (ctx->ui.empty_click) {
-        if (ctx->active_window != GAME_UI_WINDOW_NONE) {
-            ctx->ui_up_to_date = false;
-        }
         ctx->active_window = GAME_UI_WINDOW_NONE;
     }
 
     if (
-        !aven_gl_ui_id_eq(ctx->ui.hot_id, (AvenGlUiId){ 0 }) or
-        !aven_gl_ui_id_eq(ctx->ui.next_hot_id, (AvenGlUiId){ 0 })
+        !aven_gl_ui_id_eq(last_hot, ctx->ui.hot_id) or
+        !aven_gl_ui_id_eq(last_active, ctx->ui.active_id) or
+        (
+            !aven_gl_ui_id_eq(ctx->ui.next_hot_id, (AvenGlUiId){ 0 }) and
+            !aven_gl_ui_id_eq(ctx->ui.hot_id, ctx->ui.next_hot_id)
+        ) or
+        last_window != ctx->active_window
     ) {
         ctx->ui_up_to_date = false;
     }
