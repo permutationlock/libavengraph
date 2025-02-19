@@ -74,7 +74,7 @@ static inline Graph graph_gen_grid(
             get(*adj, i) = x + (y + 1) * width;
             i += 1;
         }
-        
+
         adj->len = i;
     }
 

@@ -114,10 +114,10 @@ static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
     for (uint32_t i = 0; i < cwise_outer_face.len; i += 1) {
         uint32_t v = get(cwise_outer_face, i);
         GraphAugAdjList v_adj = get(ctx.vertex_info, v).adj;
-        
+
         uint32_t vu_index = graph_aug_adj_neighbor_index(v_adj, u);
         uint32_t uv_index = get(v_adj, vu_index).back_index;
-        
+
         get(ctx.vertex_info, v).loc.nb.first = vu_index;
         get(ctx.vertex_info, u).loc.nb.last = uv_index;
 
@@ -150,7 +150,7 @@ static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
 
 static inline void graph_plane_p3choose_thread_lock(
     GraphPlaneP3ChooseThreadCtx *thread_ctx
-) {    
+) {
     for (;;) {
         if (
             !atomic_exchange_explicit(

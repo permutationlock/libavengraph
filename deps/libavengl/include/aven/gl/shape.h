@@ -170,7 +170,7 @@ static inline AvenGlShapeBuffer aven_gl_shape_buffer_init(
                 sizeof(*geometry->vertices.ptr);
             buffer.index_cap = geometry->indices.len *
                 sizeof(*geometry->indices.ptr);
-            buffer.index_len = buffer.index_len;
+            buffer.index_len = geometry->indices.len;
             break;
         default:
             assert(false);

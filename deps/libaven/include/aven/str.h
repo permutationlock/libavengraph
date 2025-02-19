@@ -144,7 +144,7 @@ static inline AvenStr aven_str_join(
             len += 1;
         }
     }
-   
+
     char *str_mem = aven_arena_alloc(arena, len + 1, 1, 1);
 
     AvenStr new_str = { .ptr = str_mem, .len = len };

@@ -97,7 +97,7 @@ static void aven_arg_print(AvenArg arg) {
     printf("    %s", arg.name);
 
     aven_arg_print_type(arg.type);
- 
+
     if (arg.description != NULL) {
         printf("  --  %s", arg.description);
     }
@@ -227,7 +227,7 @@ AVEN_FN AvenArgOptional aven_arg_get(
             };
         }
     }
-    
+
     return (AvenArgOptional){ .valid = false };
 }
 

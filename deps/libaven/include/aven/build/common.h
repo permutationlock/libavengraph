@@ -206,7 +206,7 @@ AvenArg aven_build_common_args_data[] = {
             .data = { .arg_str = "-std=c11" },
     #else
             .data = { .arg_str = "/std:c11" },
-    #endif 
+    #endif
 #elif defined(__TINYC__)
             .data = { .arg_str = "-std=c11" },
 #else
@@ -567,7 +567,7 @@ static inline AvenBuildCommonOpts aven_build_common_opts(
 
     opts.test = aven_arg_get_bool(arg_slice, "test");
     opts.clean = aven_arg_get_bool(arg_slice, "clean");
-     
+
     opts.cc.compiler = aven_str_cstr(aven_arg_get_str(arg_slice, "-cc"));
     opts.cc.incflag = aven_str_cstr(aven_arg_get_str(arg_slice, "-ccincflag"));
     opts.cc.defflag = aven_str_cstr(aven_arg_get_str(arg_slice, "-ccdefflag"));
@@ -915,7 +915,7 @@ static AvenBuildStep aven_build_common_step_ld(
         default:
             break;
     }
- 
+
     if (opts->ld.flagsep) {
         get(cmd_slice, i) = opts->ld.outflag;
         i += 1;

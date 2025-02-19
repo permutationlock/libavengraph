@@ -182,7 +182,7 @@ bool game_update(
 void game_damage(GameCtx *ctx);
 void game_mouse_move(GameCtx *ctx, Vec2 pos);
 void game_mouse_click(GameCtx *ctx, AvenGlUiMouseEvent event);
- 
+
 typedef GameCtx (*GameInitFn)(AvenGl *gl, AvenArena *arena);
 typedef int (*GameReloadFn)(GameCtx *ctx, AvenGl *gl);
 typedef bool (*GameUpdateFn)(

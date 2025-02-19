@@ -26,7 +26,7 @@ typedef enum {
     REBUILD_STATE_EXE,
     REBUILD_STATE_GAME,
 } RebuildState;
- 
+
 #define ARENA_SIZE (4096 * 2000)
 
 int main(int argc, char **argv) {
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
             &arena
         );
     }
-    
+
     AvenStrSlice includes = slice_list(include_list);
     AvenStrSlice macros = { 0 };
     AvenStrSlice syslibs = { 0 };
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < includes.len; i += 1) {
         list_push(graphics_include_list) = get(includes, i);
     }
-    
+
     list_push(graphics_include_list) = libavengl_build_include_path(
         libavengl_path,
         &arena
@@ -251,7 +251,7 @@ int main(int argc, char **argv) {
     );
 
     list_push(visualization_hot_obj_list) = &visualization_hot_obj_step;
-    
+
     if (winutf8_obj_step.valid) {
         list_push(visualization_hot_obj_list) = &winutf8_obj_step.value;
     }
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
     List(AvenBuildStep *) visualization_obj_list = list_array(visualization_obj_data);
 
     list_push(visualization_obj_list) = &visualization_obj_step;
-    
+
     if (winutf8_obj_step.valid) {
         list_push(visualization_obj_list) = &winutf8_obj_step.value;
     }
@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
     );
 
     list_push(p3color_tikz_obj_list) = &p3color_tikz_obj_step;
-    
+
     if (winutf8_obj_step.valid) {
         list_push(p3color_tikz_obj_list) = &winutf8_obj_step.value;
     }
@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
     );
 
     list_push(p3choose_tikz_obj_list) = &p3choose_tikz_obj_step;
-    
+
     if (winutf8_obj_step.valid) {
         list_push(p3choose_tikz_obj_list) = &winutf8_obj_step.value;
     }

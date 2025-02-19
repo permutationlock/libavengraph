@@ -76,7 +76,7 @@ static inline void graph_plane_gen_geometry_push_tri_ctx(
             );
         }
     }
-    
+
     GraphPlaneGeometryEdge edge_info = {
         .thickness = info->edge_thickness,
     };

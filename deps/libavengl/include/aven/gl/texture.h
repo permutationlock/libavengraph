@@ -118,7 +118,7 @@ static inline AvenGlTextureCtx aven_gl_texture_ctx_init(
     gl->TexImage2D(
         GL_TEXTURE_2D,
         0,
-        GL_RGBA, 
+        GL_RGBA,
         (GLsizei)width,
         (GLsizei)height,
         0,
@@ -154,7 +154,7 @@ static inline void aven_gl_texture_ctx_update(
     gl->TexImage2D(
         GL_TEXTURE_2D,
         0,
-        GL_RGBA, 
+        GL_RGBA,
         (GLsizei)width,
         (GLsizei)height,
         0,
@@ -182,7 +182,7 @@ static inline void aven_gl_texture_ctx_update_framebuffer(
     size_t x,
     size_t y,
     size_t width,
-    size_t height    
+    size_t height
 ) {
     gl->BindTexture(GL_TEXTURE_2D, ctx->texture_id);
     assert(gl->GetError() == 0);

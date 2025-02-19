@@ -50,7 +50,7 @@
             thread_pool->jobs_in_progress += 1;
             AvenThreadPoolJob job = queue_pop(thread_pool->job_queue);
             mtx_unlock(&thread_pool->lock);
-        
+
             job.fn(job.args);
 
             mtx_lock(&thread_pool->lock);
@@ -215,7 +215,7 @@
             thread_pool->jobs_in_progress += 1;
             AvenThreadPoolJob job = queue_pop(thread_pool->job_queue);
             pthread_mutex_unlock(&thread_pool->lock);
-        
+
             job.fn(job.args);
 
             pthread_mutex_lock(&thread_pool->lock);

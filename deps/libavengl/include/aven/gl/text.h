@@ -132,7 +132,7 @@ static inline AvenGlTextFont aven_gl_text_font_init(
     gl->TexImage2D(
         GL_TEXTURE_2D,
         0,
-        GL_ALPHA, 
+        GL_ALPHA,
         (GLsizei)font.texture_width,
         (GLsizei)font.texture_height,
         0,
@@ -151,7 +151,7 @@ static inline AvenGlTextFont aven_gl_text_font_init(
 
     gl->BindTexture(GL_TEXTURE_2D, 0);
     assert(gl->GetError() == 0);
-    
+
     return font;
 }
 
@@ -328,7 +328,7 @@ static inline AvenGlTextBuffer aven_gl_text_buffer_init(
                 sizeof(*geometry->vertices.ptr);
             buffer.index_cap = geometry->indices.len *
                 sizeof(*geometry->indices.ptr);
-            buffer.index_len = buffer.index_len;
+            buffer.index_len = geometry->indices.len;
             break;
         default:
             assert(false);
@@ -384,7 +384,7 @@ typedef struct {
 
 typedef struct {
     Slice(AvenGlTextQuad) quads;
-    Vec2 dim; 
+    Vec2 dim;
 } AvenGlTextLine;
 
 static inline float aven_gl_text_quad(
@@ -446,13 +446,13 @@ static inline AvenGlTextLine aven_gl_text_line(
 
     return line;
 }
- 
+
 static void aven_gl_text_geometry_push_quad(
     AvenGlTextGeometry *geometry,
     AvenGlTextQuad *q,
     Aff2 trans,
     Vec4 color
-) {    
+) {
     Vec2 vertices[4] = {
         { q->p0[0], -q->p0[1] },
         { q->p1[0], -q->p0[1] },
@@ -463,7 +463,7 @@ static void aven_gl_text_geometry_push_quad(
     for (size_t j = 0; j < countof(vertices); j += 1) {
         aff2_transform(vertices[j], trans, vertices[j]);
     }
-    
+
     size_t start_index = geometry->vertices.len;
 
     list_push(geometry->vertices) = (AvenGlTextVertex){
@@ -505,7 +505,7 @@ static inline void aven_gl_text_geometry_push_line(
     Vec2 offset = {
         -line->dim[0] / 2.0f,
         -line->dim[1] / 2.0f
-    };    
+    };
 
     Aff2 text_trans;
     aff2_identity(text_trans);

@@ -24,7 +24,7 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
 
     if (path.len != expected_len) {
         char fmt[] = "expected path.len = %lu, found path.len = %lu";
-       
+
         char *buffer = aven_arena_alloc(
             &arena,
             sizeof(fmt) + 4,
@@ -43,7 +43,6 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
 
     if (get(path, 0) != args->start) {
         char fmt[] = "expected first vertex %lu, found %lu";
-       
         char *buffer = aven_arena_alloc(
             &arena,
             sizeof(fmt) + 8,
@@ -62,7 +61,6 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
 
     if (get(path, expected_len - 1) != args->end) {
         char fmt[] = "expected last vertex %lu, found %lu";
-       
         char *buffer = aven_arena_alloc(
             &arena,
             sizeof(fmt) + 8,
@@ -130,13 +128,13 @@ AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
             match = false;
         }
     }
-    
+
     // verify path
     if (match) {
         for (size_t i = 0; i < path.len - 1; i += 1) {
             uint32_t v = get(path, i);
             uint32_t u = get(path, i + 1);
-            
+
             uint32_t xv = v % args->width;
             uint32_t yv = v / args->width;
             uint32_t xu = u % args->width;

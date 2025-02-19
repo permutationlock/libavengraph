@@ -14,7 +14,7 @@ typedef struct {
     Vec4 active_color;
     Vec4 cycle_color;
     Vec4 py_color;
-    Vec4 xp_color;    
+    Vec4 xp_color;
 } GraphPlaneP3ChooseGeometryFrame;
 
 typedef struct {
@@ -403,7 +403,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
                     &edge_info
                 );
             }
-        } 
+        }
 
         for (size_t i = 0; i < ctx->frames.len; i += 1) {
             graph_plane_p3choose_geometry_push_frame_outline(
@@ -609,7 +609,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
 
                 aff2_add_vec2(node1_trans, node1_trans, v_pos);
                 aff2_add_vec2(node2_trans, node2_trans, v_pos);
-                
+
                 aven_gl_shape_rounded_geometry_push_square_half(
                     rounded_geometry,
                     node1_trans,
@@ -657,49 +657,5 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
         }
     }
 }
-
-// typedef struct {
-//     GraphPlaneP3ChooseCtx alg_ctx;
-//     GraphPlaneEmbedding embedding;
-//     GraphPropUint8 visited_marks;
-//     int64_t timestep;
-//     AvenTimeInst last_update;
-// } GraphPlaneP3ChooseGeometryCtx;
-
-// static inline void graph_plane_p3choose_geometry_init(
-//     Graph graph,
-//     GraphPlaneEmbedding embedding,
-//     GraphPlaneP3ChooseList list_colors,
-//     GraphSubset cwise_outer_face,
-//     int64_t timestep,
-//     AvenTimeInst now,
-//     AvenArena *arena
-// ) {
-//     GraphPlaneP3ChooseGeometryCtx ctx = {
-//         .embedding = embedding,
-//         .visited_marks = { .len = embedding.len },
-//         .timestep = timestep,
-//         .last_update = now,
-//     };
-
-//     ctx.alg_ctx = graph_plane_p3choose_init(
-//         list_colors,
-//         graph_aug(graph, arena),
-//         cwise_outer_face,
-//         arena
-//     );
-
-//     return ctx;
-// }
-
-// static inline void graph_plane_p3choose_geometry_push_active_frame(
-//     AvenGlShapeGeometry *geometry,
-//     AvenGlShapeRoundedGeometry *rounded_geometry,
-//     GraphPlaneP3ChooseGeometryCtx *ctx,
-//     Aff2 trans,
-//     AvenTimeInst now
-// ) {
-    
-// }
 
 #endif // GRAPH_PLANE_P3CHOOSE_GEOMETRY_H

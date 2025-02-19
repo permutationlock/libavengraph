@@ -131,7 +131,7 @@ AVEN_FN bool aven_path_is_abs(AvenStr path) {
     if (get(path, 1) == ':') {
         return true;
     }
-    
+
     return get(path, 0) == AVEN_PATH_SEP and
         get(path, 1) == AVEN_PATH_SEP;
 #else
@@ -182,7 +182,7 @@ AVEN_FN AvenStr aven_path_rel_intersect(
 
     path1_parts.len = same_index;
     AvenStr intersect = aven_str_join(path1_parts, AVEN_PATH_SEP, &temp_arena);
-    
+
     *arena = temp_arena;
 
     return intersect;
@@ -266,7 +266,7 @@ AVEN_FN AvenPathResult aven_path_exe(AvenArena *arena) {
     if (len <= 0 or len == countof(buffer)) {
         return (AvenPathResult){ .error = AVEN_PATH_EXE_ERROR_FAIL };
     }
- 
+
     AvenStr path = { .len = len + 1 };
     path.ptr = aven_arena_alloc(arena, path.len, 1, 1);
 

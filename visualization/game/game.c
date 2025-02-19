@@ -494,7 +494,7 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
             AVEN_GL_BUFFER_USAGE_STATIC
         );
     }
-#endif // TEXTURE_OPTIMIZATION 
+#endif // TEXTURE_OPTIMIZATION
 
     {
         AvenGlUiColors window_colors = {
@@ -667,7 +667,7 @@ bool game_update(
 
     ctx->width = width;
     ctx->height = height;
-    
+
     AvenTimeInst now = aven_time_now();
     int64_t ns_since_update = aven_time_since(now, ctx->last_update);
     ctx->elapsed += ns_since_update;

@@ -181,7 +181,7 @@ static inline void graph_plane_p3choose_tikz(
         }
     }
 
-    printf("\t\\begin{pgfonlayer}{bg}\n"); 
+    printf("\t\\begin{pgfonlayer}{bg}\n");
 
     {
         GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
@@ -251,7 +251,7 @@ static inline void graph_plane_p3choose_tikz(
             }
 
             v = u;
-        } while (v != cur_frame->z); 
+        } while (v != cur_frame->z);
 
         if (frame_index < ctx->frames.len) {
             cur_frame = &get(ctx->frames, frame_index);

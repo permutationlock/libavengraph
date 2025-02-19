@@ -55,7 +55,7 @@ AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms);
 
     AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms) {
         AVEN_WIN32_FN(void) Sleep(uint32_t);
-        Sleep(wait_ms); 
+        Sleep(wait_ms);
     }
 #else
     #include <errno.h>
@@ -63,7 +63,7 @@ AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms);
     #if !defined(_POSIX_C_SOURCE) or _POSIX_C_SOURCE < 199309L
         #error "clock_gettime requires _POSIX_C_SOURCE >= 199309L"
     #endif
-    
+
     AVEN_FN AvenTimeInst aven_time_now(void) {
         AvenTimeInst now;
         int error = clock_gettime(CLOCK_MONOTONIC, &now);

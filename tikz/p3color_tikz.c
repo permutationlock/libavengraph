@@ -61,7 +61,7 @@ static TestCase gen_test_case(
     uint32_t q_data[] = { 3, 2, 1 };
     GraphSubset p = slice_array(p_data);
     GraphSubset q = slice_array(q_data);
-    
+
     test_case.ctx = graph_plane_p3color_init(
         test_case.graph,
         p,

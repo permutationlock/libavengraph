@@ -106,7 +106,7 @@ AVEN_FN void aven_watch_deinit(AvenWatchHandle handle);
         AvenWatchHandleSlice handles = { .ptr = &handle, .len = 1 };
         return aven_watch_check_multiple(handles, timeout);
     }
- 
+
     AVEN_FN void aven_watch_deinit(AvenWatchHandle handle) {
         AVEN_WIN32_FN(int) FindCloseChangeNotification(
             AvenWatchHandle handle
@@ -129,7 +129,7 @@ AVEN_FN void aven_watch_deinit(AvenWatchHandle handle);
 
         int result = inotify_add_watch(
             handle,
-            dirname.ptr, 
+            dirname.ptr,
             IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_MODIFY
         );
         if (result <= 0) {
@@ -183,7 +183,7 @@ AVEN_FN void aven_watch_deinit(AvenWatchHandle handle);
                 }
             } while (len < 0);
         }
-        
+
         return (AvenWatchResult){ .payload = signaled };
     }
 

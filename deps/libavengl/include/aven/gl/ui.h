@@ -1191,7 +1191,7 @@ static inline bool aven_gl_ui_button_internal(
     Vec2 p2 = { 1.0f, 1.0f };
 
     aff2_transform(p1, trans, p1);
-    aff2_transform(p2, trans, p2); 
+    aff2_transform(p2, trans, p2);
 
     bool hot = aven_gl_ui_id_eq(id, ctx->hot_id);
 
@@ -1383,7 +1383,7 @@ static inline bool aven_gl_ui_window_internal(
         ctx->window_colors.background
     );
 
-    return value;    
+    return value;
 }
 
 #define aven_gl_ui_window(ctx, trans, border) aven_gl_ui_window_internal( \

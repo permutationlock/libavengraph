@@ -45,7 +45,7 @@
     #if defined(_MSC_VER) && defined(__clang__)
         #pragma clang diagnostic pop
     #endif
-#elif defined(__linux__) 
+#elif defined(__linux__)
     #include "src/posix_poll.c"
     #include "src/posix_module.c"
     #include "src/posix_thread.c"

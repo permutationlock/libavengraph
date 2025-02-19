@@ -86,7 +86,7 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
                 { 0.0f, info->radius - info->border_thickness }
             },
             .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-            .roundness = 1.0f,            
+            .roundness = 1.0f,
         };
         vec4_copy(node_info->color, info->colors[i]);
     }
@@ -326,7 +326,7 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
                         get(v_drawn, j) = active ? -1 : -2;
                     }
                 }
-                
+
                 if (!get(visited, u) and u_info.mark <= 0) {
                     queue_push(bfs_queue) = u;
                     get(visited, u) = true;

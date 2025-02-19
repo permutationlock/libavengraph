@@ -156,7 +156,7 @@ static inline bool graph_plane_p3color_bfs_frame_step(
         return false;
     }
 
-    GraphPlaneP3ColorBfsVertex *uj_info = &get(ctx->vertex_info, frame->uj); 
+    GraphPlaneP3ColorBfsVertex *uj_info = &get(ctx->vertex_info, frame->uj);
     GraphAdjList uj_adj = { .len = uj_info->len, .ptr = uj_info->ptr };
     if (frame->edge_index == uj_adj.len) {
         frame->uj = queue_pop(*bfs_queue);

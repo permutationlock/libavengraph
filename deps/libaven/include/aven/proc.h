@@ -148,7 +148,7 @@ AVEN_FN AvenProcIdResult aven_proc_cmd(
     }
 
     CloseHandle(process_info.thread);
-    
+
     return (AvenProcIdResult){ .payload = process_info.process };
 #else
     AvenProcId cmd_pid = fork();

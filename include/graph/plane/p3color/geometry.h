@@ -86,7 +86,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                 { 0.0f, info->radius - info->border_thickness }
             },
             .shape = GRAPH_PLANE_GEOMETRY_SHAPE_SQUARE,
-            .roundness = 1.0f,            
+            .roundness = 1.0f,
         };
         vec4_copy(node_info->color, info->colors[i]);
     }
@@ -403,7 +403,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
-                GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u); 
+                GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u);
 
                 if (u_info.mark <= 0) {
                     if (get(visited, u) != mark) {

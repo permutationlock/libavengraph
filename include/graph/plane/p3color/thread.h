@@ -96,7 +96,7 @@ static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
 
 static inline void graph_plane_p3color_thread_lock_internal(
     GraphPlaneP3ColorThreadCtx *ctx
-) {    
+) {
     for (;;) {
         if (
             !atomic_exchange_explicit(
@@ -414,7 +414,7 @@ static inline GraphPropUint8 graph_plane_p3color_thread(
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
-    
+
     GraphPlaneP3ColorThreadCtx ctx = graph_plane_p3color_thread_init(
         graph,
         p,

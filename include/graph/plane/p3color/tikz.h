@@ -202,7 +202,7 @@ static inline void graph_plane_p3color_tikz(
         get(visited, v) = 0;
     }
 
-    printf("\t\\begin{pgfonlayer}{bg}\n"); 
+    printf("\t\\begin{pgfonlayer}{bg}\n");
     {
         GraphPlaneP3ColorVertex fu_info = get(ctx->vertex_info, frame->u);
         uint32_t n_index = frame->u_nb_first + frame->edge_index;
@@ -305,7 +305,7 @@ static inline void graph_plane_p3color_tikz(
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
                 uint32_t u = get(v_info, i);
-                GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u); 
+                GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u);
 
                 if (u_info.mark <= 0) {
                     if (get(visited, u) != mark) {
@@ -331,7 +331,7 @@ static inline void graph_plane_p3color_tikz(
                     }
                 }
             }
-        } 
+        }
 
         for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
             GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);

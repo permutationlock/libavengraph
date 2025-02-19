@@ -104,7 +104,7 @@ int main(void) {
         &arena
     );
     aven_thread_pool_run(&thread_pool);
-    
+
     uint32_t p_data[] = { 1, 2 };
     uint32_t q_data[] = { 0 };
     GraphSubset p = slice_array(p_data);
@@ -351,7 +351,7 @@ int main(void) {
                 AvenArena temp_arena = loop_arena;
 
                 size_t bfs_nruns = max(nruns / 10, 1);
-        
+
                 BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
                 BENCHMARK_COMPILER_BARRIER
@@ -561,7 +561,7 @@ int main(void) {
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
                     bool valid = true;
-    
+
                     GraphPlaneP3ChooseListProp color_lists = get(
                         cases,
                         i
@@ -652,7 +652,7 @@ int main(void) {
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
                     bool valid = true;
-    
+
                     GraphPlaneP3ChooseListProp color_lists = get(
                         cases,
                         i

@@ -48,7 +48,7 @@
 
         return (VInfoResult){ .payload = game_dll };
     }
-    
+
     static void vinfo_error_print(int error) {
         switch (error) {
             case GAME_INFO_LOAD_ERROR_OPEN:

@@ -140,7 +140,7 @@ AVEN_FN void *aven_arena_realloc(
         arena->base = ptr;
         return aven_arena_alloc(arena, new_count, align, size);
     }
-   
+
     if (new_count <= old_count) {
         return ptr;
     }

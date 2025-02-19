@@ -107,7 +107,7 @@ int main(void) {
     uint32_t q_data[] = { 2, 1 };
     GraphSubset p = slice_array(p_data);
     GraphSubset q = slice_array(q_data);
-    
+
     uint32_t p_data_flipped[] = { 1, 2 };
     uint32_t q_data_flipped[] = { 0 };
     GraphSubset p_flipped = slice_array(p_data_flipped);
@@ -351,7 +351,7 @@ int main(void) {
             // }
             {
                 AvenArena temp_arena = loop_arena;
-        
+
                 BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
                 BENCHMARK_COMPILER_BARRIER
@@ -471,7 +471,7 @@ int main(void) {
             }
             {
                 AvenArena temp_arena = loop_arena;
-        
+
                 BENCHMARK_COMPILER_BARRIER
                 AvenTimeInst start_inst = aven_time_now();
                 BENCHMARK_COMPILER_BARRIER
@@ -682,7 +682,7 @@ int main(void) {
             //     uint32_t nvalid = 0;
             //     for (uint32_t i = 0; i < cases.len; i += 1) {
             //         bool valid = true;
-    
+
             //         GraphPlaneP3ChooseListProp color_lists = get(
             //             cases,
             //             i
@@ -773,7 +773,7 @@ int main(void) {
             //     uint32_t nvalid = 0;
             //     for (uint32_t i = 0; i < cases.len; i += 1) {
             //         bool valid = true;
-    
+
             //         GraphPlaneP3ChooseListProp color_lists = get(
             //             cases,
             //             i

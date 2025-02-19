@@ -95,7 +95,7 @@ static TestCase gen_test_case(
 
         get(color_lists, i) = list;
     }
-    
+
     test_case.ctx = graph_plane_p3choose_init(
         test_case.graph,
         color_lists,
