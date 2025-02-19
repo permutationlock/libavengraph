@@ -582,6 +582,11 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
             case 2: {
                 Aff2 node1_trans;
                 aff2_identity(node1_trans);
+                aff2_add_vec2(
+                    node1_trans,
+                    node1_trans,
+                    (Vec2){ 0.0f, -0.01f }
+                );
                 aff2_stretch(
                     node1_trans,
                     (Vec2){
@@ -638,7 +643,7 @@ static inline void graph_plane_p3choose_geometry_push_ctx(
                         node_trans,
                         (3.0f * AVEN_MATH_PI_F / 2.0f) +
                             (float)i * (2.0f * AVEN_MATH_PI_F / 3.0f),
-                        (3.0f * AVEN_MATH_PI_F / 2.0f) +
+                        0.01f + (3.0f * AVEN_MATH_PI_F / 2.0f) +
                             ((float)i + 1.0f) * (2.0f * AVEN_MATH_PI_F / 3.0f),
                         get(info->colors, get(v_list, i))
                     );

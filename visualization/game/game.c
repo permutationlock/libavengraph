@@ -1637,12 +1637,10 @@ bool game_update(
     if (
         !aven_gl_ui_id_eq(last_hot, ctx->ui.hot_id) or
         !aven_gl_ui_id_eq(last_active, ctx->ui.active_id) or
-        (
-            !aven_gl_ui_id_eq(ctx->ui.next_hot_id, (AvenGlUiId){ 0 }) and
-            !aven_gl_ui_id_eq(ctx->ui.hot_id, ctx->ui.next_hot_id)
-        ) or
+        !aven_gl_ui_id_eq(ctx->ui.hot_id, ctx->ui.next_hot_id) or
         last_window != ctx->active_window
     ) {
+        ctx->screen_updates = 0;
         ctx->ui_up_to_date = false;
     }
 
