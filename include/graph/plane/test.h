@@ -6,6 +6,128 @@
 
 #include "../graph.h"
 
+typedef struct  {
+    uint32_t vertex;
+    uint32_t back_index;
+    uint32_t next_index;
+    uint32_t prev_index;
+    Optional(uint32_t) rh_face;
+} GraphPlaneTestAdjNode;
+
+typedef struct {
+    uint32_t last_index;
+    uint32_t len;
+} GraphPlaneTestAdjList;
+
+typedef struct {
+    uint32_t nodes[3];
+    uint32_t neighbors[3];
+} GraphPlaneTestFace;
+
+typedef struct {
+    Slice(GraphPlaneTestAdjList) adj;
+    Pool(GraphPlaneTestAdjNode) nodes;
+    Pool(GraphPlaneTestFace) faces;
+} GraphPlaneTestGraph;
+
+static inline uint32_t graph_plane_test_adj_len(
+    GraphPlaneTestGraph *graph,
+    uint32_t v
+) {
+    return get(graph->adj, v).len;
+}
+
+static inline uint32_t graph_plane_test_adj_last(
+    GraphPlaneTestGraph *graph,
+    uint32_t v
+) {
+    assert(graph_plane_test_adj_len(graph, v) > 0);
+    return get(graph->adj, v).last_index;
+}
+
+static inline GraphPlaneTestAdjNode *graph_plane_test_adj_node(
+    GraphPlaneTestGraph *graph,
+    uint32_t i
+) {
+    return &pool_get(graph->nodes, i);
+}
+
+static inline void graph_plane_test_adj_insert_edge(
+    GraphPlaneTestGraph *graph,
+    uint32_t u,
+    uint32_t un_index,
+    uint32_t v,
+    uint32_t vm_index
+) {
+    uint32_t uv_index = (uint32_t)pool_create(graph->nodes);
+    uint32_t vu_index = (uint32_t)pool_create(graph->nodes);
+    GraphPlaneTestAdjNode *uv_node = graph_plane_test_adj_node(graph, uv_index);
+    GraphPlaneTestAdjNode *vu_node = graph_plane_test_adj_node(graph, vu_index);
+    GraphPlaneTestAdjNode *un_node = graph_plane_test_adj_node(graph, un_index);
+    GraphPlaneTestAdjNode *vm_node = graph_plane_test_adj_node(graph, vm_index);
+    *uv_node = (GraphPlaneTestAdjNode){
+        .back_index = vu_index,
+        .next_index = un_node->next_index,
+        .prev_index = un_index,
+        .vertex = v,
+    };
+    *vu_node = (GraphPlaneTestAdjNode){
+        .back_index = uv_index,
+        .next_index = vm_node->next_index,
+        .prev_index = vm_index,
+        .vertex = u,
+    };
+    un_node->next_index = uv_index;
+    vm_node->next_index = vu_index;
+}
+
+static inline void graph_plane_test_adj_delete_edge(
+    GraphPlaneTestGraph *graph,
+    uint32_t u,
+    uint32_t uv_index
+) {
+    GraphPlaneTestAdjNode *uv_node = graph_plane_test_adj_node(graph, uv_index);
+    GraphPlaneTestAdjNode *vu_node = graph_plane_test_adj_node(
+        graph,
+        uv_node->back_index
+    );
+
+    GraphPlaneTestAdjNode *uv_pnode = graph_plane_test_adj_node(
+        graph,
+        uv_node->prev_index
+    );
+    GraphPlaneTestAdjNode *uv_nnode = graph_plane_test_adj_node(
+        graph,
+        uv_node->prev_index
+    );
+    uv_pnode->next_index = uv_node->next_index;
+    uv_nnode->prev_index = uv_node->prev_index;
+
+    GraphPlaneTestAdjNode *vu_pnode = graph_plane_test_adj_node(
+        graph,
+        vu_node->prev_index
+    );
+    GraphPlaneTestAdjNode *vu_nnode = graph_plane_test_adj_node(
+        graph,
+        vu_node->prev_index
+    );
+    vu_pnode->next_index = vu_node->next_index;
+    vu_nnode->prev_index = vu_node->prev_index;
+
+    if (get(graph->adj, u).last_index == uv_index) {
+        get(graph->adj, u).last_index = uv_node->next_index;
+    }
+    get(graph->adj, u).len -= 1;
+
+    if (get(graph->adj, uv_node->vertex).last_index == uv_node->back_index) {
+        get(graph->adj, uv_node->vertex).last_index = vu_node->next_index;
+    }
+    get(graph->adj, uv_node->vertex).len -= 1;
+
+    pool_delete(graph->nodes, uv_node->back_index);
+    pool_delete(graph->nodes, uv_index);
+}
+
 typedef struct {
     uint32_t vertices[3];
     uint32_t neighbors[3];
