@@ -6,16 +6,17 @@ of a few [path coloring algorithms for plane graphs][2].
 ## Code organization
 
 The header-only graph library is contained in the `include` directory.
-The majority of the library depends only on a few files from
+The majority of the library depends only on a couple files from
 the simple `libaven` header-only library, which is vendored in the
-`dep` directory.
+`deps` directory.
 
-The few `*/geometry.h` files may be used construct vector geometry
+The `*/geometry.h` files define functions to construct vector geometry
 for graph visualization and depend on the headers from
 `libavengl`. The `libavengl` library draws 2D vector
 graphics using the OpenGL ES 2.0 API.
-The provided visualization also uses GLFW for window creation.
-Both GLFW and `libavengl` are vendored in `dep`.
+The provided visualization uses GLFW for window creation.
+The GLFW and `libavengl` libraries and the headers
+for X11, xkbcommon, and Wayland are vendored in `deps`.
 
 ## Building the project
 
@@ -32,6 +33,11 @@ or
 cc -o build build.c
 ```
 where `cc` is your favorite C compiler that supports C99 or later.
+Most common C compilers will be configured by default: `gcc`, `clang`,
+and `tcc` on Linux, `gcc.exe`, `clang.exe`, and `cl.exe` on Windows
+are supported out-of-the-box.
+Otherwise you will need to define the various flags yourself,
+run `./build -h` for a full rundown.
 
 To build the algorithm visualization and tikz figure examples:
 ```
@@ -60,13 +66,14 @@ will close, compile, and run.
 
 To build and run the algorithm benchmarks you will need ~13GB of
 unused available system RAM and a C compiler that supports C11
-atomics:
+atomics. An example run command with `gcc` or `clang` on Linux would be:
 ```
 ./build bench -ccflags "-std=c11 -O3 -march=native"
 ```
 The benchmarks may take up to a few hours to complete.
 
-Results from my Linux system with `x86_64` Intel N100 processor:
+Here are the latest results from my Linux system with
+`x86_64` Intel N100 processor, compiled using Clang 19.1.7:
 
 |     Algorithm |  n=1.0e3  |  n=1.0e4  |  n=1.0e5  |  n=1.0e6  |   n=1.0e7  |
 | ------------- | --------- | --------- | --------- | --------- | ---------- |
