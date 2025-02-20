@@ -28,6 +28,8 @@
  * your project.
  */
 
+// Modified to fit in libaven by Aven Bross in 2024
+
 #ifndef AVEN_RNG_PCG_H
 #define AVEN_RNG_PCG_H
 
