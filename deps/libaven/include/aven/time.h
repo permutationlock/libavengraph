@@ -56,8 +56,8 @@ AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms);
     AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms) {
         AVEN_WIN32_FN(void) Sleep(uint32_t);
         Sleep(wait_ms);
-    }
-#else
+    } 
+#else // !defined(_WIN32)
     #include <errno.h>
 
     #if !defined(_POSIX_C_SOURCE) or _POSIX_C_SOURCE < 199309L
@@ -71,25 +71,34 @@ AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms);
         return now;
     }
 
-    AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms) {
-        time_t wait_sec = 0;
-        if (wait_ms > AVEN_TIME_MSEC_PER_SEC) {
-            wait_sec = (time_t)(wait_ms / AVEN_TIME_MSEC_PER_SEC);
-            wait_ms = wait_ms % AVEN_TIME_MSEC_PER_SEC;
-        }
-        AvenTimeInst remaining_time = {
-            .tv_sec = wait_sec,
-            .tv_nsec = (int64_t)wait_ms * (int64_t)AVEN_TIME_NSEC_PER_MSEC,
-        };
+    #if defined(__EMSCRIPTEN__)
+        AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms) {
+            void emscripten_sleep(unsigned int);
 
-        int error = 0;
-        do {
-            AvenTimeInst wait_time = remaining_time;
-            error = nanosleep(&wait_time, &remaining_time);
-        } while (error < 0 and errno == EINTR);
-        assert(error == 0);
-    }
-#endif
+            emscripten_sleep((unsigned int)wait_ms);
+        }
+    #else // !defined(__EMSCRIPTEN__)
+        AVEN_FN void aven_time_sleep_ms(uint32_t wait_ms) {
+            time_t wait_sec = 0;
+            if (wait_ms > AVEN_TIME_MSEC_PER_SEC) {
+                wait_sec = (time_t)(wait_ms / AVEN_TIME_MSEC_PER_SEC);
+                wait_ms = wait_ms % AVEN_TIME_MSEC_PER_SEC;
+            }
+            AvenTimeInst remaining_time = {
+                .tv_sec = wait_sec,
+                .tv_nsec = (int64_t)wait_ms * (int64_t)AVEN_TIME_NSEC_PER_MSEC,
+            };
+
+            int error = 0;
+            do {
+                AvenTimeInst wait_time = remaining_time;
+                error = nanosleep(&wait_time, &remaining_time);
+            } while (error < 0 and errno == EINTR);
+            assert(error == 0);
+        }
+    #endif // !defined(__EMSCRIPTEN__)
+
+#endif // !defined(_WIN32)
 
 AVEN_FN int64_t aven_time_since(AvenTimeInst end, AvenTimeInst start) {
     int64_t seconds = (int64_t)end.tv_sec - (int64_t)start.tv_sec;
