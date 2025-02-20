@@ -539,6 +539,165 @@ static inline void aven_gl_ui_push_circle_equals(
     );
 }
 
+static inline void aven_gl_ui_push_circle_paths(
+    AvenGlUi *ctx,
+    Aff2 trans,
+    AvenGlUiColors* colors
+) {
+    float up_offset = 0.24f;
+    float edge_len = 0.21f;
+    float lower_offset = -0.16f;
+    float angle = AVEN_MATH_PI_F / 7.0f;
+
+    aven_gl_ui_push_circle(ctx, trans, colors);
+    Aff2 tree_trans;
+    aff2_position(
+        tree_trans,
+        (Vec2){ edge_len * cosf(angle), up_offset },
+        (Vec2){ edge_len, 0.05f },
+        -angle
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        0.1f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){ -edge_len * cosf(angle), up_offset },
+        (Vec2){ edge_len, 0.05f },
+        angle
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        0.1f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){ 0.0f, up_offset + edge_len * sinf(angle) },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){
+            2.0f * edge_len * cosf(angle),
+            up_offset - edge_len * sinf(angle)
+        },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){
+            -2.0f * edge_len * cosf(angle),
+            up_offset - edge_len * sinf(angle)
+        },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+
+    up_offset = lower_offset;
+    edge_len = 0.17f;
+    aff2_position(
+        tree_trans,
+        (Vec2){ edge_len * cosf(angle), up_offset },
+        (Vec2){ edge_len, 0.05f },
+        -angle
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        0.1f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){ -edge_len * cosf(angle), up_offset },
+        (Vec2){ edge_len, 0.05f },
+        angle
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        0.1f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){ 0.0f, up_offset + edge_len * sinf(angle) },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){
+            2.0f * edge_len * cosf(angle),
+            up_offset - edge_len * sinf(angle)
+        },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){
+            -2.0f * edge_len * cosf(angle),
+            up_offset - edge_len * sinf(angle)
+        },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+}
+
 static inline void aven_gl_ui_push_circle_tree(
     AvenGlUi *ctx,
     Aff2 trans,
@@ -548,8 +707,8 @@ static inline void aven_gl_ui_push_circle_tree(
     Aff2 tree_trans;
     aff2_position(
         tree_trans,
-        (Vec2){ -0.1f, 0.25f * sinf(AVEN_MATH_PI_F / 4.0f) },
-        (Vec2){ 0.35f, 0.1f },
+        (Vec2){ -0.15f, 0.25f * sinf(AVEN_MATH_PI_F / 4.0f) },
+        (Vec2){ 0.35f, 0.05f },
         AVEN_MATH_PI_F / 4.0f
     );
     aff2_compose(tree_trans, trans, tree_trans);
@@ -561,8 +720,8 @@ static inline void aven_gl_ui_push_circle_tree(
     );
     aff2_position(
         tree_trans,
-        (Vec2){ -0.1f, -0.25f * sinf(AVEN_MATH_PI_F / 4.0f) },
-        (Vec2){ 0.35f, 0.1f },
+        (Vec2){ -0.15f, -0.25f * sinf(AVEN_MATH_PI_F / 4.0f) },
+        (Vec2){ 0.35f, 0.05f },
         -AVEN_MATH_PI_F / 4.0f
     );
     aff2_compose(tree_trans, trans, tree_trans);
@@ -575,7 +734,7 @@ static inline void aven_gl_ui_push_circle_tree(
     aff2_position(
         tree_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.25f, 0.1f },
+        (Vec2){ 0.25f, 0.05f },
         0.0f
     );
     aff2_compose(tree_trans, trans, tree_trans);
@@ -583,6 +742,66 @@ static inline void aven_gl_ui_push_circle_tree(
         &ctx->shape.geometry,
         tree_trans,
         0.1f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){ -0.075f - 0.25f, 0.0f },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){ 0.25f, 0.0f },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){
+            -0.15f + 0.3f * cosf(AVEN_MATH_PI_F / 4.0f),
+            -0.25f * sinf(AVEN_MATH_PI_F / 4.0f) -
+                0.3f * sinf(AVEN_MATH_PI_F / 4.0f)
+        },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
+        colors->primary
+    );
+    aff2_position(
+        tree_trans,
+        (Vec2){
+            -0.15f + 0.3f * cosf(AVEN_MATH_PI_F / 4.0f),
+            0.25f * sinf(AVEN_MATH_PI_F / 4.0f) +
+                0.3f * sinf(AVEN_MATH_PI_F / 4.0f)
+        },
+        (Vec2){ 0.125f, 0.125f },
+        0.0f
+    );
+    aff2_compose(tree_trans, trans, tree_trans);
+    aven_gl_shape_rounded_geometry_push_square(
+        &ctx->shape.geometry,
+        tree_trans,
+        1.0f,
         colors->primary
     );
 }
@@ -599,10 +818,10 @@ static inline void aven_gl_ui_push_pie(
         aff2_position(
             circle_trans,
             (Vec2){
-                0.3f * cosf((float)i * angle),
-                0.3f * sinf((float)i * angle),
+                0.31f * cosf((float)i * angle),
+                0.31f * sinf((float)i * angle),
             },
-            (Vec2){ 0.3f, 0.075f },
+            (Vec2){ 0.31f, 0.075f },
             (float)i * angle
         );
         aff2_compose(circle_trans, trans, circle_trans);
@@ -985,6 +1204,7 @@ typedef enum {
     AVEN_GL_UI_BUTTON_TYPE_NONE = 0,
     AVEN_GL_UI_BUTTON_TYPE_CIRCLE,
     AVEN_GL_UI_BUTTON_TYPE_CIRCLE_TREE,
+    AVEN_GL_UI_BUTTON_TYPE_CIRCLE_PATHS,
     AVEN_GL_UI_BUTTON_TYPE_CIRCLE_EQUALS,
     AVEN_GL_UI_BUTTON_TYPE_PIE,
     AVEN_GL_UI_BUTTON_TYPE_PLAY,
@@ -1071,6 +1291,10 @@ static inline void aven_gl_ui_push_button(
         }
         case AVEN_GL_UI_BUTTON_TYPE_CIRCLE_TREE: {
             aven_gl_ui_push_circle_tree(ctx, inner_trans, colors);
+            break;
+        }
+        case AVEN_GL_UI_BUTTON_TYPE_CIRCLE_PATHS: {
+            aven_gl_ui_push_circle_paths(ctx, inner_trans, colors);
             break;
         }
         case AVEN_GL_UI_BUTTON_TYPE_CIRCLE_EQUALS: {

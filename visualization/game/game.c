@@ -852,7 +852,7 @@ bool game_update(
                 aven_gl_ui_button(
                     &ctx->ui,
                     button_trans,
-                    AVEN_GL_UI_BUTTON_TYPE_CIRCLE_EQUALS
+                    AVEN_GL_UI_BUTTON_TYPE_CIRCLE_PATHS
                 )
             ) {
                 ctx->active_window = GAME_UI_WINDOW_NONE;
@@ -929,7 +929,7 @@ bool game_update(
                     aven_gl_ui_button_maybe(
                         &ctx->ui,
                         button_trans,
-                        AVEN_GL_UI_BUTTON_TYPE_CIRCLE_EQUALS,
+                        AVEN_GL_UI_BUTTON_TYPE_CIRCLE_PATHS,
                         enabled
                     )
                 ) {
