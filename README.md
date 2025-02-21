@@ -20,8 +20,8 @@ for X11, xkbcommon, and Wayland are vendored in `deps`.
 
 ## Building the project
 
-All examples should build with no system dependencies other
-than a C compiler on any Windows or Linux system.
+The visualization should build with no system dependencies other
+than a C compiler on most modern Windows or Linux systems.
 
 To build the build system:
 ```Shell
