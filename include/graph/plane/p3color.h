@@ -141,23 +141,23 @@ static inline bool graph_plane_p3color_frame_step(
         return false;
     }
 
-    uint32_t n_index = frame->u_nb_first + frame->edge_index;
-    if (n_index >= u_info->len) {
-        n_index -= u_info->len;
+    uint32_t v_index = frame->u_nb_first + frame->edge_index;
+    if (v_index >= u_info->len) {
+        v_index -= u_info->len;
     }
 
-    uint32_t n = get(*u_info, n_index);
-    GraphPlaneP3ColorVertex *n_info = &get(ctx->vertex_info, n);
+    uint32_t v = get(*u_info, v_index);
+    GraphPlaneP3ColorVertex *v_info = &get(ctx->vertex_info, v);
 
     frame->edge_index += 1;
 
     if (frame->above_path) {
-        if (n_info->mark <= 0) {
+        if (v_info->mark <= 0) {
             if (frame->last_colored) {
-                frame->z = n;
-                n_info->mark = (int32_t)frame->q_color;
+                frame->z = v;
+                v_info->mark = (int32_t)frame->q_color;
             } else {
-                n_info->mark = frame->face_mark - 1;
+                v_info->mark = frame->face_mark - 1;
             }
             frame->last_colored = false;
         } else {
@@ -186,9 +186,9 @@ static inline bool graph_plane_p3color_frame_step(
                 frame->z = frame->u;
             }
         }
-    } else if (n != frame->x) {
-        if (n_info->mark > 0) {
-            if (n_info->mark == (int32_t)frame->p_color) {
+    } else if (v != frame->x) {
+        if (v_info->mark > 0) {
+            if (v_info->mark == (int32_t)frame->p_color) {
                 frame->above_path = true;
                 frame->last_colored = true;
             }
@@ -206,26 +206,26 @@ static inline bool graph_plane_p3color_frame_step(
 
                 frame->x = frame->u;
             }
-        } else if (n_info->mark == frame->face_mark) {
-            n_info->mark = (int32_t)path_color;
-            frame->y = n;
+        } else if (v_info->mark == frame->face_mark) {
+            v_info->mark = (int32_t)path_color;
+            frame->y = v;
             frame->above_path = true;
         } else {
-            if (n_info->mark <= 0) {
-                n_info->mark = frame->face_mark - 1;
+            if (v_info->mark <= 0) {
+                v_info->mark = frame->face_mark - 1;
             }
 
             if (frame->x == frame->u) {
-                frame->x = n;
+                frame->x = v;
                 frame->x_nb_first = graph_adj_next_neighbor_index(
                     (GraphAdjList){
-                        .len = n_info->len,
-                        .ptr = n_info->ptr
+                        .len = v_info->len,
+                        .ptr = v_info->ptr
                     },
                     frame->u
                 );
 
-                n_info->mark = (int32_t)frame->p_color;
+                v_info->mark = (int32_t)frame->p_color;
             }
         }
     }
@@ -300,16 +300,16 @@ static inline GraphPlaneP3ColorCase graph_plane_p3color_frame_case(
         return GRAPH_PLANE_P3COLOR_CASE_1_B;
     }
 
-    uint32_t n_index = frame->u_nb_first + frame->edge_index;
-    if (n_index >= u_info.len) {
-        n_index -= u_info.len;
+    uint32_t v_index = frame->u_nb_first + frame->edge_index;
+    if (v_index >= u_info.len) {
+        v_index -= u_info.len;
     }
 
-    uint32_t n = get(u_info, n_index);
-    GraphPlaneP3ColorVertex n_info = get(ctx->vertex_info, n);
+    uint32_t v = get(u_info, v_index);
+    GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
     if (frame->above_path) {
-        if (n_info.mark <= 0) {
+        if (v_info.mark <= 0) {
             if (frame->last_colored) {
                 return GRAPH_PLANE_P3COLOR_CASE_3_A;
             } else {
@@ -320,15 +320,15 @@ static inline GraphPlaneP3ColorCase graph_plane_p3color_frame_case(
                 return GRAPH_PLANE_P3COLOR_CASE_3_C;
             }
         }
-    } else if (n != frame->x) {
-        if (n_info.mark > 0) {
-            if (n_info.mark == (int32_t)frame->p_color) {
+    } else if (v != frame->x) {
+        if (v_info.mark > 0) {
+            if (v_info.mark == (int32_t)frame->p_color) {
                 return GRAPH_PLANE_P3COLOR_CASE_2_A;
             }
             if (frame->x != frame->u) {
                 return GRAPH_PLANE_P3COLOR_CASE_2_B;
             }
-        } else if (n_info.mark == frame->face_mark) {
+        } else if (v_info.mark == frame->face_mark) {
             return GRAPH_PLANE_P3COLOR_CASE_2_C;
         } else {
             if (frame->x == frame->u) {
