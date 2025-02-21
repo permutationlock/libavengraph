@@ -259,7 +259,7 @@ AvenArg aven_build_common_args_data[] = {
     },
     {
         .name = "-obext",
-        .description = "File extension for object files",
+        .description = "File extension(s) for object files",
         .type = AVEN_ARG_TYPE_STRING,
         .value = {
             .type = AVEN_ARG_TYPE_STRING,
@@ -278,7 +278,7 @@ AvenArg aven_build_common_args_data[] = {
     },
     {
         .name = "-exext",
-        .description = "File extension for executables",
+        .description = "File extension(s) for executables",
         .type = AVEN_ARG_TYPE_STRING,
         .value = {
             .type = AVEN_ARG_TYPE_STRING,
@@ -308,7 +308,7 @@ AvenArg aven_build_common_args_data[] = {
     },
     {
         .name = "-arext",
-        .description = "File extension for static libraries",
+        .description = "File extension(s) for static libraries",
         .type = AVEN_ARG_TYPE_STRING,
         .value = {
             .type = AVEN_ARG_TYPE_STRING,
@@ -327,7 +327,7 @@ AvenArg aven_build_common_args_data[] = {
     },
     {
         .name = "-wrext",
-        .description = "File extension for windows resource files",
+        .description = "File extension(s) for windows resource files",
         .type = AVEN_ARG_TYPE_STRING,
         .value = {
             .type = AVEN_ARG_TYPE_STRING,
