@@ -134,7 +134,8 @@ not contain its own separate license and copyright.
 and `tcc` on Linux, and `gcc.exe`, `clang.exe`, and `cl.exe` on Windows
 should be supported out-of-the-box.
 Otherwise you will need to define the various flags yourself,
-run `./build -h` for a full rundown of what needs to be configured.
+run `./build -h` for a full rundown of what needs to be configured,
+and see `emcc_make.sh` and `zig_make.bat` for examples.
 
 [1]: https://musing.permutationlock.com/static/triangulate/visualization.html
 [2]: https://github.com/permutationlock/implpathcol_paper
