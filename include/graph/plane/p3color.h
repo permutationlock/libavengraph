@@ -102,10 +102,10 @@ static inline GraphPlaneP3ColorFrameOptional graph_plane_p3color_next_frame(
         return (GraphPlaneP3ColorFrameOptional){ 0 };
     }
 
-    GraphPlaneP3ColorFrame *frame = &list_get(ctx->frames, ctx->frames.len - 1);
-    ctx->frames.len -= 1;
-
-    return (GraphPlaneP3ColorFrameOptional){ .value = *frame, .valid = true };
+    return (GraphPlaneP3ColorFrameOptional){
+        .value = list_pop(ctx->frames),
+        .valid = true,
+    };
 }
 
 static inline bool graph_plane_p3color_frame_step(

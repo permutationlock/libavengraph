@@ -100,14 +100,8 @@ graph_plane_p3color_bfs_next_frame(
         return (GraphPlaneP3ColorBfsFrameOptional){ 0 };
     }
 
-    GraphPlaneP3ColorBfsFrame *frame = &list_get(
-        ctx->frames,
-        ctx->frames.len - 1
-    );
-    ctx->frames.len -= 1;
-
     return (GraphPlaneP3ColorBfsFrameOptional){
-        .value = *frame,
+        .value = list_pop(ctx->frames),
         .valid = true,
     };
 }
