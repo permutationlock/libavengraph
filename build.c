@@ -42,11 +42,17 @@ int main(int argc, char **argv) {
     AvenArgSlice libavengl_args = libavengl_build_args();
 
     AvenArgSlice args = {
-        .len = 2 + common_args.len + libavengl_args.len + libaven_args.len
+        .len = 3 + common_args.len + libavengl_args.len + libaven_args.len
     };
     args.ptr = aven_arena_create_array(AvenArg, &arena, args.len);
 
     size_t arg_index = 0;
+    get(args, arg_index) = (AvenArg){
+        .name = "watch",
+        .description = "Build and run visualization and hot-reload src changes",
+        .type = AVEN_ARG_TYPE_BOOL,
+    };
+    arg_index += 1;
     get(args, arg_index) = (AvenArg){
         .name = "bench",
         .description = "Build and run benchmarks",
@@ -54,8 +60,8 @@ int main(int argc, char **argv) {
     };
     arg_index += 1;
     get(args, arg_index) = (AvenArg){
-        .name = "vis-watch",
-        .description = "Build and run visualization and hot-reload src changes",
+        .name = "tikz",
+        .description = "Build tikz drawing example generators",
         .type = AVEN_ARG_TYPE_BOOL,
     };
     arg_index += 1;
@@ -88,7 +94,8 @@ int main(int argc, char **argv) {
     }
 
     bool opt_bench = aven_arg_get_bool(args, "bench");
-    bool opt_watch = aven_arg_get_bool(args, "vis-watch");
+    bool opt_watch = aven_arg_get_bool(args, "watch");
+    bool opt_tikz = aven_arg_get_bool(args, "tikz");
     AvenBuildCommonOpts opts = aven_build_common_opts(args, &arena);
     LibAvenBuildOpts libaven_opts = libaven_build_opts(args, &arena);
     LibAvenGlBuildOpts libavengl_opts = libavengl_build_opts(args, &arena);
@@ -118,7 +125,10 @@ int main(int argc, char **argv) {
     AvenStr include_data[3];
     List(AvenStr) include_list = list_array(include_data);
     list_push(include_list) = libaven_include_path;
-    list_push(include_list) = libavengraph_build_include_path(root_path, &arena);
+    list_push(include_list) = libavengraph_build_include_path(
+        root_path,
+        &arena
+    );
     if (libaven_opts.winpthreads.local) {
         list_push(include_list) = libaven_build_include_winpthreads(
             libaven_path,
@@ -227,10 +237,23 @@ int main(int argc, char **argv) {
         );
 
     AvenBuildStep hot_dll_signal_step = aven_build_step_trunc(
-        aven_path(&arena, visualization_hot_watch_dir_step.out_path.value.ptr, "lock", NULL)
+        aven_path(
+            &arena,
+            visualization_hot_watch_dir_step.out_path.value.ptr,
+            "lock",
+            NULL
+        )
     );
-    aven_build_step_add_dep(&hot_dll_signal_step, &visualization_hot_watch_dir_step, &arena);
-    aven_build_step_add_dep(&hot_dll_signal_step, &visualization_hot_dll_step, &arena);
+    aven_build_step_add_dep(
+        &hot_dll_signal_step,
+        &visualization_hot_watch_dir_step,
+        &arena
+    );
+    aven_build_step_add_dep(
+        &hot_dll_signal_step,
+        &visualization_hot_dll_step,
+        &arena
+    );
 
     AvenBuildStep hot_dll_root_step = aven_build_step_root();
     aven_build_step_add_dep(&hot_dll_root_step, &hot_dll_signal_step, &arena);
@@ -279,8 +302,16 @@ int main(int argc, char **argv) {
     );
     AvenBuildStep hot_root_step = aven_build_step_root();
     aven_build_step_add_dep(&hot_root_step, &hot_dll_root_step, &arena);
-    aven_build_step_add_dep(&hot_root_step, &visualization_hot_watch_dir_step, &arena);
-    aven_build_step_add_dep(&hot_root_step, &visualization_hot_exe_step, &arena);
+    aven_build_step_add_dep(
+        &hot_root_step,
+        &visualization_hot_watch_dir_step,
+        &arena
+    );
+    aven_build_step_add_dep(
+        &hot_root_step,
+        &visualization_hot_exe_step,
+        &arena
+    );
 
     AvenBuildStep visualization_obj_step = aven_build_common_step_cc_ex(
         &opts,
@@ -292,7 +323,9 @@ int main(int argc, char **argv) {
     );
 
     AvenBuildStep *visualization_obj_data[4];
-    List(AvenBuildStep *) visualization_obj_list = list_array(visualization_obj_data);
+    List(AvenBuildStep *) visualization_obj_list = list_array(
+        visualization_obj_data
+    );
 
     list_push(visualization_obj_list) = &visualization_obj_step;
 
@@ -308,7 +341,9 @@ int main(int argc, char **argv) {
         list_push(visualization_obj_list) = &glfw_obj_step.value;
     }
 
-    AvenBuildStepPtrSlice visualization_objs = slice_list(visualization_obj_list);
+    AvenBuildStepPtrSlice visualization_objs = slice_list(
+        visualization_obj_list
+    );
 
     AvenBuildStep visualization_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
@@ -320,7 +355,10 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    // Build steps for visualizaiton and tikz drawing generators
+    AvenBuildStep root_step = aven_build_step_root();
+    aven_build_step_add_dep(&root_step, &visualization_exe_step, &arena);
+
+    // Build steps for tikz drawing generators
 
     AvenBuildStep p3color_tikz_obj_step = aven_build_common_step_cc_ex(
         &opts,
@@ -392,10 +430,9 @@ int main(int argc, char **argv) {
 
     // Default build_out artifact build steps
 
-    AvenBuildStep root_step = aven_build_step_root();
-    aven_build_step_add_dep(&root_step, &visualization_exe_step, &arena);
-    aven_build_step_add_dep(&root_step, &p3color_tikz_exe_step, &arena);
-    aven_build_step_add_dep(&root_step, &p3choose_tikz_exe_step, &arena);
+    AvenBuildStep tikz_root_step = aven_build_step_root();
+    aven_build_step_add_dep(&tikz_root_step, &p3color_tikz_exe_step, &arena);
+    aven_build_step_add_dep(&tikz_root_step, &p3choose_tikz_exe_step, &arena);
 
     // Build steps for tests
 
@@ -487,9 +524,10 @@ int main(int argc, char **argv) {
 
     if (opts.clean) {
         aven_build_step_clean(&root_step);
+        aven_build_step_clean(&hot_root_step);
+        aven_build_step_clean(&tikz_root_step);
         aven_build_step_clean(&test_root_step);
         aven_build_step_clean(&bench_root_step);
-        aven_build_step_clean(&hot_root_step);
     } else {
          if (opts.test) {
             error = aven_build_step_run(&test_root_step, arena);
@@ -500,6 +538,11 @@ int main(int argc, char **argv) {
             error = aven_build_step_run(&bench_root_step, arena);
             if (error != 0) {
                 fprintf(stderr, "BENCHMARK FAILED\n");
+            }
+        } else if (opt_tikz) {
+            error = aven_build_step_run(&tikz_root_step, arena);
+            if (error != 0) {
+                fprintf(stderr, "BUILD FAILED\n");
             }
         } else if (opt_watch) {
             AvenWatchHandle src_handle = aven_watch_init(
@@ -596,14 +639,14 @@ int main(int argc, char **argv) {
                 while (result.payload != 0) {
                     result = aven_watch_check_multiple(handles, 100);
                     if (result.error != 0) {
-                        fprintf(stderr, "WATCH CHECK FAILED: %d\n", result.error);
+                        fprintf(
+                            stderr,
+                            "WATCH CHECK FAILED: %d\n",
+                            result.error
+                        );
                         return 1;
                     }
                 }
-            }
-            error = aven_build_step_run(&hot_root_step, arena);
-            if (error != 0) {
-                fprintf(stderr, "VISUALIZATION HOT-WATCH FAILED\n");
             }
         } else {
             error = aven_build_step_run(&root_step, arena);
