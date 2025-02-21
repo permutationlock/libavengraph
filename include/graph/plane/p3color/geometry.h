@@ -154,12 +154,12 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         );
     }
 
-    typedef Slice(int32_t) GraphPlaneP3ColorTikzDrawSlice;
-    typedef Slice(GraphPlaneP3ColorTikzDrawSlice)
-        GraphPlaneP3ColorTikzDrawGraph;
+    typedef Slice(int32_t) GraphPlaneP3ColorGeometryDrawSlice;
+    typedef Slice(GraphPlaneP3ColorGeometryDrawSlice)
+        GraphPlaneP3ColorGeometryDrawGraph;
 
-    GraphPlaneP3ColorTikzDrawGraph draw_graph = aven_arena_create_slice(
-        GraphPlaneP3ColorTikzDrawSlice,
+    GraphPlaneP3ColorGeometryDrawGraph draw_graph = aven_arena_create_slice(
+        GraphPlaneP3ColorGeometryDrawSlice,
         &temp_arena,
         ctx->vertex_info.len
     );
@@ -279,7 +279,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         if (v_info.mark <= 0) {
             continue;
         }
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         for (uint32_t i = 0; i < v_info.len; i += 1) {
             uint32_t u = get(v_info, i);
             GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, u);
@@ -337,7 +337,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         get(visited, cur_frame->u) = mark;
 
         GraphPlaneP3ColorVertex cfu_info = get(ctx->vertex_info, cur_frame->u);
-        GraphPlaneP3ColorTikzDrawSlice cfu_drawn = get(
+        GraphPlaneP3ColorGeometryDrawSlice cfu_drawn = get(
             draw_graph,
             cur_frame->u
         );
@@ -367,7 +367,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                     (GraphAdjList){ .len = n_info.len, .ptr = n_info.ptr },
                     cur_frame->u
                 );
-                GraphPlaneP3ColorTikzDrawSlice n_drawn = get(
+                GraphPlaneP3ColorGeometryDrawSlice n_drawn = get(
                     draw_graph,
                     n
                 );
@@ -398,7 +398,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
 
         while (vertices.used > 0) {
             uint32_t v = queue_pop(vertices);
-            GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+            GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
             GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
             for (uint32_t i = 0; i < v_info.len; i += 1) {
@@ -438,7 +438,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                     (GraphAdjList){ .len = v2_info.len, .ptr = v2_info.ptr },
                     v1
                 );
-                GraphPlaneP3ColorTikzDrawSlice v2_drawn = get(draw_graph, v2);
+                GraphPlaneP3ColorGeometryDrawSlice v2_drawn = get(draw_graph, v2);
                 if (get(v2_drawn, v2v1_index) == 0) {
                     if (active) {
                         get(v2_drawn, v2v1_index) = -1;
@@ -452,7 +452,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
                     (GraphAdjList){ .len = v1_info.len, .ptr = v1_info.ptr },
                     v2
                 );
-                GraphPlaneP3ColorTikzDrawSlice v1_drawn = get(draw_graph, v1);
+                GraphPlaneP3ColorGeometryDrawSlice v1_drawn = get(draw_graph, v1);
                 if (get(v1_drawn, v1v2_index) == 0) {
                     if (active) {
                         get(v1_drawn, v1v2_index) = -1;
@@ -467,7 +467,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
     }
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
@@ -513,7 +513,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
     }
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
@@ -532,7 +532,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         }
     }
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
@@ -551,7 +551,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         }
     }
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
@@ -570,7 +570,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         }
     }
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
@@ -589,7 +589,7 @@ static inline void graph_plane_p3color_geometry_push_ctx(
         }
     }
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphPlaneP3ColorTikzDrawSlice v_drawn = get(draw_graph, v);
+        GraphPlaneP3ColorGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
         for (uint32_t i = 0; i < v_info.len; i += 1) {
