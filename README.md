@@ -133,9 +133,9 @@ not contain its own separate license and copyright.
 [^1]: Most common C compilers will be configured by default: `gcc`, `clang`,
 and `tcc` on Linux, and `gcc.exe`, `clang.exe`, and `cl.exe` on Windows
 should be supported out-of-the-box.
-Otherwise you will need to define the various flags yourself,
-run `./build -h` for a full rundown of what needs to be configured,
-and see `emcc_make.sh` and `zig_make.bat` for examples.
+Otherwise you will need to define the various flags yourself.
+Run `./build -h` for a full rundown of what needs to be configured,
+and see `emcc_make.sh`, `zig_make.sh`, and `zig_make.bat` for examples.
 
 [1]: https://musing.permutationlock.com/static/triangulate/visualization.html
 [2]: https://github.com/permutationlock/implpathcol_paper
