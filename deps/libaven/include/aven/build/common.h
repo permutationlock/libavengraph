@@ -205,7 +205,7 @@ AvenArg aven_build_common_args_data[] = {
     #if defined(__clang__)
             .data = { .arg_str = "-std=c11" },
     #else
-            .data = { .arg_str = "/std:c11" },
+            .data = { .arg_str = "/std:c11 /experimental:c11atomics" },
     #endif
 #elif defined(__TINYC__)
             .data = { .arg_str = "-std=c11" },
