@@ -1,4 +1,3 @@
-#! /bin/bash
 make
 ./build -cc "emcc" -ccflags "-O3" -stb-ccflags "-O3" \
     -ldflags "-s ASYNCIFY -s USE_GLFW=3 -s EXPORTED_RUNTIME_METHODS=cwrap \

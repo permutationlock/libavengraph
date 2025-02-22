@@ -1,4 +1,3 @@
-#! /bin/bash
 zig cc -DAVEN_BUILD_COMMON_DEFAULT_CC="\"zig\"" \
     -DAVEN_BUILD_COMMON_DEFAULT_AR="\"zig\"" \
     -DAVEN_BUILD_COMMON_DEFAULT_CCFLAGS="\"cc -std=c11\"" \
