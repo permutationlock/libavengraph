@@ -91,70 +91,6 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         vec4_copy(node_info->color, info->colors[i]);
     }
 
-    for (uint32_t v = 0; v < embedding.len; v += 1) {
-        GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
-        for (size_t i = 0; i < active_frames.len; i += 1) {
-            const GraphPlaneP3ColorBfsFrameOptional *maybe_frame = &get(
-                active_frames,
-                i
-            );
-            if (maybe_frame->valid) {
-                const GraphPlaneP3ColorBfsFrame *frame = &maybe_frame->value;
-                uint32_t active_v = frame->uj;
-                if (frame->uj == frame->vk) {
-                    active_v = frame->v1;
-                }
-                if (v == active_v) {
-                    graph_plane_geometry_push_vertex(
-                        rounded_geometry,
-                        embedding,
-                        v,
-                        trans,
-                        &active_node_info
-                    );
-                    break;
-                } else if (v_info.mark == frame->mark) {
-                    if (v_info.parent == v) {
-                        graph_plane_geometry_push_vertex(
-                            rounded_geometry,
-                            embedding,
-                            v,
-                            trans,
-                            &u_node_info
-                        );
-                    } else {
-                        graph_plane_geometry_push_vertex(
-                            rounded_geometry,
-                            embedding,
-                            v,
-                            trans,
-                            &tree_node_info
-                        );
-                    }
-                    break;
-                }
-            }
-        }
-
-        graph_plane_geometry_push_vertex(
-            rounded_geometry,
-            embedding,
-            v,
-            trans,
-            &outline_node_info
-        );
-
-        int32_t mark = get(ctx->vertex_info, v).mark;
-        uint32_t color =  mark > 0 ? (uint32_t)mark : 0;
-        graph_plane_geometry_push_vertex(
-            rounded_geometry,
-            embedding,
-            v,
-            trans,
-            &get(color_node_infos, color)
-        );
-    }
-
     typedef Slice(int32_t) GraphPlaneP3ColorBfsGeometryDrawSlice;
     typedef Slice(GraphPlaneP3ColorBfsGeometryDrawSlice)
         GraphPlaneP3ColorBfsGeometryDrawGraph;
@@ -332,6 +268,26 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
                     get(visited, u) = true;
                 }
             }
+
+            if (v_info.mark == frame->mark) {
+                if (v_info.parent == v) {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &u_node_info
+                    );
+                } else {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &tree_node_info
+                    );
+                }
+            }
         }
     }
 
@@ -388,6 +344,50 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
                 }
             }
         }
+    }
+
+    for (uint32_t v = 0; v < embedding.len; v += 1) {
+        for (size_t i = 0; i < active_frames.len; i += 1) {
+            const GraphPlaneP3ColorBfsFrameOptional *maybe_frame = &get(
+                active_frames,
+                i
+            );
+            if (maybe_frame->valid) {
+                const GraphPlaneP3ColorBfsFrame *frame = &maybe_frame->value;
+                uint32_t active_v = frame->uj;
+                if (frame->uj == frame->vk) {
+                    active_v = frame->v1;
+                }
+                if (v == active_v) {
+                    graph_plane_geometry_push_vertex(
+                        rounded_geometry,
+                        embedding,
+                        v,
+                        trans,
+                        &active_node_info
+                    );
+                    break;
+                }
+            }
+        }
+
+        graph_plane_geometry_push_vertex(
+            rounded_geometry,
+            embedding,
+            v,
+            trans,
+            &outline_node_info
+        );
+
+        int32_t mark = get(ctx->vertex_info, v).mark;
+        uint32_t color =  mark > 0 ? (uint32_t)mark : 0;
+        graph_plane_geometry_push_vertex(
+            rounded_geometry,
+            embedding,
+            v,
+            trans,
+            &get(color_node_infos, color)
+        );
     }
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
