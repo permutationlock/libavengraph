@@ -636,8 +636,7 @@ void game_mouse_move(
             (float)ctx->width / 2.0f,
             (float)ctx->height / 2.0f,
         },
-        (Vec2){ side / 2.0f, -side / 2.0f },
-        0.0f
+        (Vec2){ side / 2.0f, -side / 2.0f }
     );
 
     aff2_transform(pos, screen_trans, pos);
@@ -737,8 +736,7 @@ bool game_update(
     aff2_camera_position(
         cam_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ norm_width, norm_height },
-        0.0f
+        (Vec2){ norm_width, norm_height }
     );
 
     // Generate UI geometry and evaluate UI logic
@@ -756,8 +754,7 @@ bool game_update(
     aff2_position(
         ui_trans,
         (Vec2){ ui_offset, 0.0f },
-        (Vec2){ 1.0f, 1.0f },
-        0.0f
+        (Vec2){ 1.0f, 1.0f }
     );
     aff2_rotate(ui_trans, ui_trans, draw_angle);
 
@@ -766,8 +763,7 @@ bool game_update(
         aff2_position(
             backdrop_trans,
             (Vec2){ 0.0f, 0.0f },
-            (Vec2){ (ui_window_width + padding) / 2.0f, 1.0f },
-            0.0f
+            (Vec2){ (ui_window_width + padding) / 2.0f, 1.0f }
         );
         aff2_compose(backdrop_trans, ui_trans, backdrop_trans);
         if (
@@ -791,8 +787,7 @@ bool game_update(
                 1.5f * padding + 2.0f * ui_width,
                 left_x - (button_count * ui_width) - ui_width / 2.0f
             },
-            (Vec2){ 1.5f * ui_width + padding, padding + ui_width / 2.0f },
-            0.0f
+            (Vec2){ 1.5f * ui_width + padding, padding + ui_width / 2.0f }
         );
         aff2_compose(window_trans, ui_trans, window_trans);
         aven_gl_ui_window(
@@ -802,7 +797,7 @@ bool game_update(
         );
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + ui_width,
@@ -838,7 +833,7 @@ bool game_update(
         }
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + 2.0f * ui_width,
@@ -874,7 +869,7 @@ bool game_update(
         }
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + 3.0f * ui_width,
@@ -911,7 +906,7 @@ bool game_update(
     }
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){
                 0.0f,
@@ -975,8 +970,7 @@ bool game_update(
                 1.5f * padding + 2.0f * ui_width + ui_width / 2.0f,
                 left_x - (button_count * ui_width) - ui_width / 2.0f
             },
-            (Vec2){ padding + 2.0f * ui_width, padding + ui_width / 2.0f },
-            0.0f
+            (Vec2){ padding + 2.0f * ui_width, padding + ui_width / 2.0f }
         );
         aff2_compose(window_trans, ui_trans, window_trans);
         aven_gl_ui_window(
@@ -986,7 +980,7 @@ bool game_update(
         );
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + ui_width,
@@ -1022,7 +1016,7 @@ bool game_update(
         }
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + 2.0f * ui_width,
@@ -1058,7 +1052,7 @@ bool game_update(
         }
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + 3.0f * ui_width,
@@ -1094,7 +1088,7 @@ bool game_update(
         }
         {
             Aff2 button_trans;
-            aff2_position(
+            aff2_position_rangle(
                 button_trans,
                 (Vec2){
                     1.5f * padding + 4.0f * ui_width,
@@ -1131,7 +1125,7 @@ bool game_update(
     }
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){
                 0.0f,
@@ -1210,11 +1204,14 @@ bool game_update(
         aff2_position(
             window_trans,
             (Vec2){
-                1.5f * padding + (float)nbuttons * 0.5f * ui_width + ui_width / 2.0f,
+                1.5f * padding +
+                    (float)nbuttons * 0.5f * ui_width + ui_width / 2.0f,
                 left_x - (button_count * ui_width) - ui_width / 2.0f
             },
-            (Vec2){ padding + (float)nbuttons * 0.5f * ui_width, padding + ui_width / 2.0f },
-            0.0f
+            (Vec2){
+                padding + (float)nbuttons * 0.5f * ui_width,
+                padding + ui_width / 2.0f
+            }
         );
         aff2_compose(window_trans, ui_trans, window_trans);
         aven_gl_ui_window(
@@ -1230,7 +1227,7 @@ bool game_update(
                 radius_count += 1
             ) {
                 Aff2 button_trans;
-                aff2_position(
+                aff2_position_rangle(
                     button_trans,
                     (Vec2){
                         1.5f * padding + (float)(1 + radius_count) * ui_width,
@@ -1274,8 +1271,7 @@ bool game_update(
                 aff2_position(
                     circle_trans,
                     (Vec2){ 0.0f, 0.0f },
-                    dim,
-                    0.0f
+                    dim
                 );
                 aff2_compose(circle_trans, button_trans, circle_trans);
                 aven_gl_shape_rounded_geometry_push_square(
@@ -1289,7 +1285,7 @@ bool game_update(
     }
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){
                 0.0f,
@@ -1324,8 +1320,7 @@ bool game_update(
         aff2_position(
             circle_trans,
             (Vec2){ 0.0f, 0.0f },
-            dim,
-            0.0f
+            dim
         );
         aff2_compose(circle_trans, button_trans, circle_trans);
         aven_gl_shape_rounded_geometry_push_square(
@@ -1341,7 +1336,7 @@ bool game_update(
 
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){
                 0.0f,
@@ -1380,7 +1375,7 @@ bool game_update(
 
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){ 0.0f, left_x - (button_count * ui_width) - ui_width / 2.0f },
             (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1392,8 +1387,7 @@ bool game_update(
             aff2_position(
                 left_trans,
                 (Vec2){ -0.525f, 0.0f },
-                (Vec2){ 0.475f, 1.0f },
-                0.0f
+                (Vec2){ 0.475f, 1.0f }
             );
             aff2_compose(left_trans, button_trans, left_trans);
             if (
@@ -1419,8 +1413,7 @@ bool game_update(
             aff2_position(
                 right_trans,
                 (Vec2){ 0.525f, 0.0f },
-                (Vec2){ 0.475f, 1.0f },
-                0.0f
+                (Vec2){ 0.475f, 1.0f }
             );
             aff2_compose(right_trans, button_trans, right_trans);
             if (
@@ -1445,7 +1438,7 @@ bool game_update(
 
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){ 0.0f, left_x - (button_count * ui_width) - ui_width / 2.0f },
             (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1457,8 +1450,7 @@ bool game_update(
             aff2_position(
                 left_trans,
                 (Vec2){ -0.525f, 0.0f },
-                (Vec2){ 0.475f, 1.0f },
-                0.0f
+                (Vec2){ 0.475f, 1.0f }
             );
             aff2_compose(left_trans, button_trans, left_trans);
             if (
@@ -1488,8 +1480,7 @@ bool game_update(
             aff2_position(
                 right_trans,
                 (Vec2){ 0.525f, 0.0f },
-                (Vec2){ 0.475f, 1.0f },
-                0.0f
+                (Vec2){ 0.475f, 1.0f }
             );
             aff2_compose(right_trans, button_trans, right_trans);
             if (
@@ -1512,7 +1503,7 @@ bool game_update(
 
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){ 0.0f, left_x - (button_count * ui_width) - ui_width / 2.0f },
             (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1524,8 +1515,7 @@ bool game_update(
             aff2_position(
                 left_trans,
                 (Vec2){ -0.525f, 0.0f },
-                (Vec2){ 0.475f, 1.0f },
-                0.0f
+                (Vec2){ 0.475f, 1.0f }
             );
             aff2_compose(left_trans, button_trans, left_trans);
             if (
@@ -1550,8 +1540,7 @@ bool game_update(
             aff2_position(
                 right_trans,
                 (Vec2){ 0.525f, 0.0f },
-                (Vec2){ 0.475f, 1.0f },
-                0.0f
+                (Vec2){ 0.475f, 1.0f }
             );
             aff2_compose(right_trans, button_trans, right_trans);
             if (
@@ -1580,8 +1569,7 @@ bool game_update(
                     1.5f * padding + ui_width,
                     left_x - (button_count * ui_width) - ui_width / 2.0f
                 },
-                (Vec2){ padding + ui_width / 2.0f, padding + ui_width / 2.0f },
-                0.0f
+                (Vec2){ padding + ui_width / 2.0f, padding + ui_width / 2.0f }
             );
             aff2_compose(pv_trans, ui_trans, pv_trans);
             aven_gl_ui_window(
@@ -1605,17 +1593,19 @@ bool game_update(
                 vec2_midpoint(mp1p2, p1, p2);
                 Vec2 p1p2;
                 vec2_sub(p1p2, p2, p1);
+                float mag = vec2_mag(p1p2);
                 Vec2 dim = {
-                    vec2_mag(p1p2) / 2.0f,
+                    mag / 2.0f,
                     0.05f,
                 };
+                vec2_scale(p1p2, 1.0f / mag, p1p2);
 
                 Aff2 edge_trans;
-                aff2_position(
+                aff2_position_rdir(
                     edge_trans,
                     mp1p2,
                     dim,
-                    vec2_angle_xaxis(p1p2)
+                    p1p2
                 );
                 aff2_compose(edge_trans, pv_trans, edge_trans);
                 aven_gl_shape_rounded_geometry_push_square(
@@ -1627,11 +1617,11 @@ bool game_update(
 
                 vec2_scale(p1, 0.5f, p1);
                 if (i == ctx->preview.edge_index) {
-                    aff2_position(
+                    aff2_position_rangle(
                         edge_trans,
                         p1,
                         (Vec2){ radius / 2.0f, 0.125f },
-                        vec2_angle_xaxis(p1)
+                        (float)i * angle
                     );
                     aff2_compose(edge_trans, pv_trans, edge_trans);
                     aven_gl_shape_rounded_geometry_push_square(
@@ -1641,11 +1631,11 @@ bool game_update(
                         ctx->ui.base_colors.secondary
                     );
                 }
-                aff2_position(
+                aff2_position_rangle(
                     edge_trans,
                     p1,
                     (Vec2){ radius / 2.0f, 0.05f },
-                    vec2_angle_xaxis(p1)
+                    (float)i * angle
                 );
                 aff2_compose(edge_trans, pv_trans, edge_trans);
                 aven_gl_shape_rounded_geometry_push_square(
@@ -1660,8 +1650,7 @@ bool game_update(
             aff2_position(
                 vertex_trans,
                 (Vec2){ 0.0f, 0.0f },
-                (Vec2){ 0.225f, 0.225f },
-                0.0f
+                (Vec2){ 0.225f, 0.225f }
             );
             aff2_compose(vertex_trans, pv_trans, vertex_trans);
             aven_gl_shape_rounded_geometry_push_square(
@@ -1673,8 +1662,7 @@ bool game_update(
             aff2_position(
                 vertex_trans,
                 (Vec2){ 0.0f, 0.0f },
-                (Vec2){ 0.15f, 0.15f },
-                0.0f
+                (Vec2){ 0.15f, 0.15f }
             );
             aff2_compose(vertex_trans, pv_trans, vertex_trans);
             aven_gl_shape_rounded_geometry_push_square(
@@ -1690,8 +1678,7 @@ bool game_update(
                         radius * cosf((float)i * angle),
                         radius * sinf((float)i * angle)
                     },
-                    (Vec2){ 0.15f, 0.15f },
-                    0.0f
+                    (Vec2){ 0.15f, 0.15f }
                 );
                 aff2_compose(vertex_trans, pv_trans, vertex_trans);
                 aven_gl_shape_rounded_geometry_push_square(
@@ -1708,7 +1695,7 @@ bool game_update(
 
     {
         Aff2 button_trans;
-        aff2_position(
+        aff2_position_rangle(
             button_trans,
             (Vec2){ 0.0f, left_x - (button_count * ui_width) - ui_width / 2.0f },
             (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
@@ -1809,7 +1796,7 @@ bool game_update(
         graph_scale *= 1.0f / (1.0f + border_padding);
 
         Aff2 graph_trans;
-        aff2_position(
+        aff2_position_rangle(
             graph_trans,
             (Vec2){ graph_offset, 0.0f },
             (Vec2){ graph_scale, graph_scale },

@@ -103,12 +103,14 @@ static inline void graph_plane_geometry_push_edge(
 
     float dist = vec2_mag(p1p2);
 
+    vec2_scale(p1p2, 1.0f / dist, p1p2);
+
     Aff2 edge_trans;
-    aff2_position(
+    aff2_position_rdir(
         edge_trans,
         center,
         (Vec2){ draw_info->thickness + dist / 2.0f, draw_info->thickness },
-        vec2_angle_xaxis(p1p2)
+        p1p2
     );
 
     aven_gl_shape_geometry_push_square(

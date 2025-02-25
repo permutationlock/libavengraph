@@ -177,8 +177,7 @@ static inline void aven_gl_ui_push_thread(
     aff2_position(
         circle_trans,
         (Vec2){ 0.0f, -0.5f },
-        (Vec2){ 0.66f, 0.22f },
-        0.0f
+        (Vec2){ 0.66f, 0.22f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -190,8 +189,7 @@ static inline void aven_gl_ui_push_thread(
     aff2_position(
         circle_trans,
         (Vec2){ 0.0f, -0.5f },
-        (Vec2){ 0.33f, 0.11f },
-        0.0f
+        (Vec2){ 0.33f, 0.11f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -203,8 +201,7 @@ static inline void aven_gl_ui_push_thread(
     aff2_position(
         circle_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.33f, 0.5f },
-        0.0f
+        (Vec2){ 0.33f, 0.5f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -216,8 +213,7 @@ static inline void aven_gl_ui_push_thread(
     aff2_position(
         circle_trans,
         (Vec2){ 0.0f, 0.5f },
-        (Vec2){ 0.66f, 0.22f },
-        0.0f
+        (Vec2){ 0.66f, 0.22f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -237,8 +233,7 @@ static inline void aven_gl_ui_push_double_thread(
     aff2_position(
         thread_trans,
         (Vec2){ -0.4f, 0.15f },
-        (Vec2){ 0.75f, 0.75f },
-        0.0f
+        (Vec2){ 0.75f, 0.75f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -246,8 +241,7 @@ static inline void aven_gl_ui_push_double_thread(
     aff2_position(
         thread_trans,
         (Vec2){ 0.4f, -0.15f },
-        (Vec2){ 0.75f, 0.75f },
-        0.0f
+        (Vec2){ 0.75f, 0.75f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -262,8 +256,7 @@ static inline void aven_gl_ui_push_triple_thread(
     aff2_position(
         thread_trans,
         (Vec2){ 0.0f, 0.4f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -271,8 +264,7 @@ static inline void aven_gl_ui_push_triple_thread(
     aff2_position(
         thread_trans,
         (Vec2){ -0.4f, -0.4f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -280,8 +272,7 @@ static inline void aven_gl_ui_push_triple_thread(
     aff2_position(
         thread_trans,
         (Vec2){ 0.4f, -0.4f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -296,8 +287,7 @@ static inline void aven_gl_ui_push_quadra_thread(
     aff2_position(
         thread_trans,
         (Vec2){ -0.45f, -0.45f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -305,8 +295,7 @@ static inline void aven_gl_ui_push_quadra_thread(
     aff2_position(
         thread_trans,
         (Vec2){ 0.45f, -0.45f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -314,8 +303,7 @@ static inline void aven_gl_ui_push_quadra_thread(
     aff2_position(
         thread_trans,
         (Vec2){ 0.45f, 0.45f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -323,8 +311,7 @@ static inline void aven_gl_ui_push_quadra_thread(
     aff2_position(
         thread_trans,
         (Vec2){ -0.45f, 0.45f },
-        (Vec2){ 0.55f, 0.55f },
-        0.0f
+        (Vec2){ 0.55f, 0.55f }
     );
     aff2_compose(thread_trans, trans, thread_trans);
     aven_gl_ui_push_thread(ctx, thread_trans, colors);
@@ -336,7 +323,7 @@ static inline void aven_gl_ui_push_magnifier(
     AvenGlUiColors* colors
 ) {
     Aff2 circle_trans;
-    aff2_position(
+    aff2_position_rangle(
         circle_trans,
         (Vec2){ -0.33f, -0.33f },
         (Vec2){ 0.475f, 0.18f },
@@ -353,8 +340,7 @@ static inline void aven_gl_ui_push_magnifier(
     aff2_position(
         circle_trans,
         (Vec2){ 0.15f, 0.15f },
-        (Vec2){ 0.7f, 0.7f },
-        0.0f
+        (Vec2){ 0.7f, 0.7f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -367,8 +353,7 @@ static inline void aven_gl_ui_push_magnifier(
     aff2_position(
         circle_trans,
         (Vec2){ 0.15f, 0.15f },
-        (Vec2){ 0.5f, 0.5f },
-        0.0f
+        (Vec2){ 0.5f, 0.5f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -388,8 +373,7 @@ static inline void aven_gl_ui_push_plus(
     aff2_position(
         plus_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.25f, 0.75f },
-        0.0f
+        (Vec2){ 0.25f, 0.75f }
     );
     aff2_compose(plus_trans, trans, plus_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -401,8 +385,7 @@ static inline void aven_gl_ui_push_plus(
     aff2_position(
         plus_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.75f, 0.25f },
-        0.0f
+        (Vec2){ 0.75f, 0.25f }
     );
     aff2_compose(plus_trans, trans, plus_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -422,8 +405,7 @@ static inline void aven_gl_ui_push_minus(
     aff2_position(
         shaft_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.66f, 0.25f },
-        0.0f
+        (Vec2){ 0.66f, 0.25f }
     );
     aff2_compose(shaft_trans, trans, shaft_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -445,8 +427,7 @@ static inline void aven_gl_ui_push_zoomin(
     aff2_position(
         plus_trans,
         (Vec2){ 0.15f, 0.15f },
-        (Vec2){ 0.5f, 0.5f },
-        0.0f
+        (Vec2){ 0.5f, 0.5f }
     );
     aff2_compose(plus_trans, trans, plus_trans);
     aven_gl_ui_push_plus(ctx, plus_trans, colors);
@@ -463,8 +444,7 @@ static inline void aven_gl_ui_push_zoomout(
     aff2_position(
         plus_trans,
         (Vec2){ 0.15f, 0.15f },
-        (Vec2){ 0.5f, 0.5f },
-        0.0f
+        (Vec2){ 0.5f, 0.5f }
     );
     aff2_compose(plus_trans, trans, plus_trans);
     aven_gl_ui_push_minus(ctx, plus_trans, colors);
@@ -479,8 +459,7 @@ static inline void aven_gl_ui_push_circle(
     aff2_position(
         circle_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.75f, 0.75f },
-        0.0f
+        (Vec2){ 0.75f, 0.75f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -492,8 +471,7 @@ static inline void aven_gl_ui_push_circle(
     aff2_position(
         circle_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.6f, 0.6f },
-        0.0f
+        (Vec2){ 0.6f, 0.6f }
     );
     aff2_compose(circle_trans, trans, circle_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -514,8 +492,7 @@ static inline void aven_gl_ui_push_circle_equals(
     aff2_position(
         tree_trans,
         (Vec2){ 0.0f, 0.15f },
-        (Vec2){ 0.35f, 0.1f },
-        0.0f
+        (Vec2){ 0.35f, 0.1f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -527,8 +504,7 @@ static inline void aven_gl_ui_push_circle_equals(
     aff2_position(
         tree_trans,
         (Vec2){ 0.0f, -0.15f },
-        (Vec2){ 0.35f, 0.1f },
-        0.0f
+        (Vec2){ 0.35f, 0.1f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -551,7 +527,7 @@ static inline void aven_gl_ui_push_circle_paths(
 
     aven_gl_ui_push_circle(ctx, trans, colors);
     Aff2 tree_trans;
-    aff2_position(
+    aff2_position_rangle(
         tree_trans,
         (Vec2){ edge_len * cosf(angle), up_offset },
         (Vec2){ edge_len, 0.05f },
@@ -564,7 +540,7 @@ static inline void aven_gl_ui_push_circle_paths(
         0.1f,
         colors->primary
     );
-    aff2_position(
+    aff2_position_rangle(
         tree_trans,
         (Vec2){ -edge_len * cosf(angle), up_offset },
         (Vec2){ edge_len, 0.05f },
@@ -580,8 +556,7 @@ static inline void aven_gl_ui_push_circle_paths(
     aff2_position(
         tree_trans,
         (Vec2){ 0.0f, up_offset + edge_len * sinf(angle) },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -596,8 +571,7 @@ static inline void aven_gl_ui_push_circle_paths(
             2.0f * edge_len * cosf(angle),
             up_offset - edge_len * sinf(angle)
         },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -612,8 +586,7 @@ static inline void aven_gl_ui_push_circle_paths(
             -2.0f * edge_len * cosf(angle),
             up_offset - edge_len * sinf(angle)
         },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -625,7 +598,7 @@ static inline void aven_gl_ui_push_circle_paths(
 
     up_offset = lower_offset;
     edge_len = 0.17f;
-    aff2_position(
+    aff2_position_rangle(
         tree_trans,
         (Vec2){ edge_len * cosf(angle), up_offset },
         (Vec2){ edge_len, 0.05f },
@@ -638,7 +611,7 @@ static inline void aven_gl_ui_push_circle_paths(
         0.1f,
         colors->primary
     );
-    aff2_position(
+    aff2_position_rangle(
         tree_trans,
         (Vec2){ -edge_len * cosf(angle), up_offset },
         (Vec2){ edge_len, 0.05f },
@@ -654,8 +627,7 @@ static inline void aven_gl_ui_push_circle_paths(
     aff2_position(
         tree_trans,
         (Vec2){ 0.0f, up_offset + edge_len * sinf(angle) },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -670,8 +642,7 @@ static inline void aven_gl_ui_push_circle_paths(
             2.0f * edge_len * cosf(angle),
             up_offset - edge_len * sinf(angle)
         },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -686,8 +657,7 @@ static inline void aven_gl_ui_push_circle_paths(
             -2.0f * edge_len * cosf(angle),
             up_offset - edge_len * sinf(angle)
         },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -705,7 +675,7 @@ static inline void aven_gl_ui_push_circle_tree(
 ) {
     aven_gl_ui_push_circle(ctx, trans, colors);
     Aff2 tree_trans;
-    aff2_position(
+    aff2_position_rangle(
         tree_trans,
         (Vec2){ -0.15f, 0.25f * sinf(AVEN_MATH_PI_F / 4.0f) },
         (Vec2){ 0.35f, 0.05f },
@@ -718,7 +688,7 @@ static inline void aven_gl_ui_push_circle_tree(
         0.1f,
         colors->primary
     );
-    aff2_position(
+    aff2_position_rangle(
         tree_trans,
         (Vec2){ -0.15f, -0.25f * sinf(AVEN_MATH_PI_F / 4.0f) },
         (Vec2){ 0.35f, 0.05f },
@@ -734,8 +704,7 @@ static inline void aven_gl_ui_push_circle_tree(
     aff2_position(
         tree_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.25f, 0.05f },
-        0.0f
+        (Vec2){ 0.25f, 0.05f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -747,8 +716,7 @@ static inline void aven_gl_ui_push_circle_tree(
     aff2_position(
         tree_trans,
         (Vec2){ -0.075f - 0.25f, 0.0f },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -760,8 +728,7 @@ static inline void aven_gl_ui_push_circle_tree(
     aff2_position(
         tree_trans,
         (Vec2){ 0.25f, 0.0f },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -777,8 +744,7 @@ static inline void aven_gl_ui_push_circle_tree(
             -0.25f * sinf(AVEN_MATH_PI_F / 4.0f) -
                 0.3f * sinf(AVEN_MATH_PI_F / 4.0f)
         },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -794,8 +760,7 @@ static inline void aven_gl_ui_push_circle_tree(
             0.25f * sinf(AVEN_MATH_PI_F / 4.0f) +
                 0.3f * sinf(AVEN_MATH_PI_F / 4.0f)
         },
-        (Vec2){ 0.125f, 0.125f },
-        0.0f
+        (Vec2){ 0.125f, 0.125f }
     );
     aff2_compose(tree_trans, trans, tree_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -815,7 +780,7 @@ static inline void aven_gl_ui_push_pie(
     float angle = 2.0f * AVEN_MATH_PI_F / 3.0f;
     for (size_t i = 0; i < 3; i += 1) {
         Aff2 circle_trans;
-        aff2_position(
+        aff2_position_rangle(
             circle_trans,
             (Vec2){
                 0.31f * cosf((float)i * angle),
@@ -859,8 +824,7 @@ static inline void aven_gl_ui_push_pause(
     aff2_position(
         pause_trans,
         (Vec2){ -0.33f, 0.0f },
-        (Vec2){ 0.25f, 0.66f },
-        0.0f
+        (Vec2){ 0.25f, 0.66f }
     );
     aff2_compose(pause_trans, trans, pause_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -872,8 +836,7 @@ static inline void aven_gl_ui_push_pause(
     aff2_position(
         pause_trans,
         (Vec2){ 0.33f, 0.0f },
-        (Vec2){ 0.25f, 0.66f },
-        0.0f
+        (Vec2){ 0.25f, 0.66f }
     );
     aff2_compose(pause_trans, trans, pause_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -930,8 +893,7 @@ static inline void aven_gl_ui_push_end(
     aff2_position(
         line_trans,
         (Vec2){ 0.475f, 0.0f },
-        (Vec2){ -0.2f, 0.75f },
-        0.0f
+        (Vec2){ -0.2f, 0.75f }
     );
     aff2_compose(line_trans, trans, line_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -963,8 +925,7 @@ static inline void aven_gl_ui_push_right_arrow(
     aff2_position(
         shaft_trans,
         (Vec2){ -0.2f, 0.0f },
-        (Vec2){ 0.5f, 0.33f },
-        0.0f
+        (Vec2){ 0.5f, 0.33f }
     );
     aff2_compose(shaft_trans, trans, shaft_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1039,7 +1000,7 @@ static inline void aven_gl_ui_push_cross(
     AvenGlUiColors* colors
 ) {
     Aff2 shaft_trans;
-    aff2_position(
+    aff2_position_rangle(
         shaft_trans,
         (Vec2){ 0.0f, 0.0f },
         (Vec2){ 0.75f, 0.25f },
@@ -1052,7 +1013,7 @@ static inline void aven_gl_ui_push_cross(
         0.1f,
         colors->primary
     );
-    aff2_position(
+    aff2_position_rangle(
         shaft_trans,
         (Vec2){ 0.0f, 0.0f },
         (Vec2){ 0.75f, 0.25f },
@@ -1073,7 +1034,7 @@ static inline void aven_gl_ui_push_check(
     AvenGlUiColors* colors
 ) {
     Aff2 shaft_trans;
-    aff2_position(
+    aff2_position_rangle(
         shaft_trans,
         (Vec2){ 0.1f, 0.0f },
         (Vec2){ 0.66f, 0.25f },
@@ -1086,7 +1047,7 @@ static inline void aven_gl_ui_push_check(
         0.1f,
         colors->primary
     );
-    aff2_position(
+    aff2_position_rangle(
         shaft_trans,
         (Vec2){ -0.32426f, -0.14142f },
         (Vec2){ 0.33f, 0.25f },
@@ -1110,8 +1071,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.75f, 0.75f },
-        0.0f
+        (Vec2){ 0.75f, 0.75f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1123,8 +1083,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.6f, 0.6f },
-        0.0f
+        (Vec2){ 0.6f, 0.6f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1136,8 +1095,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ 0.0f, 0.0f },
-        (Vec2){ 0.15f, 0.15f },
-        0.0f
+        (Vec2){ 0.15f, 0.15f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1149,8 +1107,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ -0.3f, -0.3f },
-        (Vec2){ 0.15f, 0.15f },
-        0.0f
+        (Vec2){ 0.15f, 0.15f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1162,8 +1119,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ 0.3f, -0.3f },
-        (Vec2){ 0.15f, 0.15f },
-        0.0f
+        (Vec2){ 0.15f, 0.15f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1175,8 +1131,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ 0.3f, 0.3f },
-        (Vec2){ 0.15f, 0.15f },
-        0.0f
+        (Vec2){ 0.15f, 0.15f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1188,8 +1143,7 @@ static inline void aven_gl_ui_push_dice(
     aff2_position(
         dice_trans,
         (Vec2){ -0.3f, 0.3f },
-        (Vec2){ 0.15f, 0.15f },
-        0.0f
+        (Vec2){ 0.15f, 0.15f }
     );
     aff2_compose(dice_trans, trans, dice_trans);
     aven_gl_shape_rounded_geometry_push_square(
@@ -1596,8 +1550,7 @@ static inline bool aven_gl_ui_window_internal(
     aff2_position(
         inner_trans,
         pos,
-        (Vec2){ 1.0f / denom[0], 1.0f / denom[1] },
-        0.0f
+        (Vec2){ 1.0f / denom[0], 1.0f / denom[1] }
     );
     aff2_compose(inner_trans, trans, inner_trans);
     aven_gl_shape_rounded_geometry_push_square(
