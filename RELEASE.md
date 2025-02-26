@@ -27,3 +27,7 @@ directory.
 ```Shell
 ./release_clean.sh
 ```
+
+[1]: https://www.musl-libc.org
+[2]: https://ziglang.org
+[3]: https://emscripten.org

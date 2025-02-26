@@ -41,7 +41,7 @@ The resulting executables will be in the `build_out` directory.
 
 For a release build using `clang` or `gcc` run:
 ```
-  ./build -ccflags "-O3" -glfw-ccflags "-O3 -DNDEBUG"
+  ./build -ccflags "-O3 -ffast-math" -glfw-ccflags "-O3 -DNDEBUG"
 ```
 
 ### Watch mode and hot reloading
