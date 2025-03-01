@@ -108,7 +108,7 @@ static void game_info_alg_setup(
                 alg->frames.len
             );
             for (size_t i = 0; i < session_opts->nthreads; i += 1) {
-                get(alg->queues, i).cap = info_session->graph.len;
+                get(alg->queues, i).cap = info_session->graph.adj.len;
                 get(alg->queues, i).ptr = aven_arena_create_array(
                     uint32_t,
                     &info_alg->arena,
@@ -330,7 +330,7 @@ static GameInfoSession game_info_session_init(
     uint32_t max_color = ((color_divisions + 2) * (color_divisions + 1)) / 2U;
     assert(max_color < 256);
 
-    session.color_lists.len = session.graph.len;
+    session.color_lists.len = session.graph.adj.len;
     session.color_lists.ptr = aven_arena_create_array(
         GraphPlaneP3ChooseList,
         arena,

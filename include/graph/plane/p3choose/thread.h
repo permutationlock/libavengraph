@@ -17,7 +17,7 @@
 #define GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE 64
 
 typedef struct {
-    GraphAugAdjList adj;
+    GraphAdj adj;
     GraphPlaneP3ChooseVertexLoc loc;
     GraphPlaneP3ChooseList colors;
     uint32_t entry_index;
@@ -38,6 +38,7 @@ typedef struct {
 } GraphPlaneP3ChooseThreadUint32List;
 
 typedef struct {
+    GraphAugNbSlice nb;
     Slice(GraphPlaneP3ChooseThreadVertex) vertex_info;
     Slice(uint32_t) marks;
     GraphPlaneP3ChooseThreadUint32List valid_entries;
@@ -56,16 +57,17 @@ static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
     size_t nthreads,
     AvenArena *arena
 ) {
-   GraphPlaneP3ChooseThreadCtx ctx = {
-        .vertex_info = { .len = graph.len },
+    GraphPlaneP3ChooseThreadCtx ctx = {
+        .nb = graph.nb,
+        .vertex_info = { .len = graph.adj.len },
         // Each unique mark results from a diferent edge of the graph:
         .marks = {
             .len = nthreads * GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE +
-                   (3 * graph.len - 6) + 1
+                   (3 * graph.adj.len - 6) + 1
         },
         // A new frame only occurs when splitting across an edge
-        .entry_pool = { .cap = 3 * graph.len - 6 },
-        .valid_entries = { .cap = 3 * graph.len - 6 },
+        .entry_pool = { .cap = 3 * graph.adj.len - 6 },
+        .valid_entries = { .cap = 3 * graph.adj.len - 6 },
         .nthreads = nthreads,
         .next_mark = 1,
     };
@@ -99,7 +101,7 @@ static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
         get(ctx.vertex_info, v) = (GraphPlaneP3ChooseThreadVertex){
-            .adj = get(graph, v),
+            .adj = get(graph.adj, v),
             .colors = get(color_lists, v),
         };
     }
@@ -113,10 +115,10 @@ static inline GraphPlaneP3ChooseThreadCtx graph_plane_p3choose_thread_init(
     uint32_t u = get(cwise_outer_face, cwise_outer_face.len - 1);
     for (uint32_t i = 0; i < cwise_outer_face.len; i += 1) {
         uint32_t v = get(cwise_outer_face, i);
-        GraphAugAdjList v_adj = get(ctx.vertex_info, v).adj;
+        GraphAdj v_adj = get(ctx.vertex_info, v).adj;
 
-        uint32_t vu_index = graph_aug_adj_neighbor_index(v_adj, u);
-        uint32_t uv_index = get(v_adj, vu_index).back_index;
+        uint32_t vu_index = graph_aug_nb_index(graph.nb, v_adj, u);
+        uint32_t uv_index = graph_aug_nb(graph.nb, v_adj, vu_index).back_index;
 
         get(ctx.vertex_info, v).loc.nb.first = vu_index;
         get(ctx.vertex_info, u).loc.nb.last = uv_index;
@@ -387,7 +389,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
     GraphPlaneP3ChooseThreadMarkSet *mark_set,
     GraphPlaneP3ChooseFrame *frame
 ) {
-    GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
+    GraphAdj z_adj = get(ctx->vertex_info, frame->z).adj;
     GraphPlaneP3ChooseVertexLoc *z_loc =
         graph_plane_p3choose_thread_vloc(ctx, frame, frame->z);
     GraphPlaneP3ChooseList *z_colors = &get(
@@ -397,7 +399,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
     uint8_t z_color = get(*z_colors, 0);
 
     uint32_t zu_index = z_loc->nb.first;
-    GraphAugAdjListNode zu = get(z_adj, zu_index);
+    GraphAugNb zu = graph_aug_nb(ctx->nb, z_adj, zu_index);
 
     uint32_t u = zu.vertex;
     GraphPlaneP3ChooseVertexLoc *u_loc =
@@ -440,9 +442,9 @@ static inline bool graph_plane_p3choose_thread_frame_step(
         return false;
     }
 
-    GraphAugAdjList u_adj = get(ctx->vertex_info, u).adj;
-    u_loc->nb.last = graph_aug_adj_prev(u_adj, u_loc->nb.last);
-    z_loc->nb.first = graph_aug_adj_next(z_adj, z_loc->nb.first);
+    GraphAdj u_adj = get(ctx->vertex_info, u).adj;
+    u_loc->nb.last = graph_adj_prev(u_adj, u_loc->nb.last);
+    z_loc->nb.first = graph_adj_next(z_adj, z_loc->nb.first);
 
     bool u_colored = false;
 
@@ -470,11 +472,11 @@ static inline bool graph_plane_p3choose_thread_frame_step(
         z_loc = graph_plane_p3choose_thread_vloc(ctx, frame, frame->z);
     }
 
-    uint32_t zv_index = graph_aug_adj_next(z_adj, zu_index);
-    GraphAugAdjListNode zv = get(z_adj, zv_index);
+    uint32_t zv_index = graph_adj_next(z_adj, zu_index);
+    GraphAugNb zv = graph_aug_nb(ctx->nb, z_adj, zv_index);
 
     uint32_t v = zv.vertex;
-    GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
+    GraphAdj v_adj = get(ctx->vertex_info, v).adj;
     GraphPlaneP3ChooseVertexLoc *v_loc =
         graph_plane_p3choose_thread_vloc(ctx, frame, v);
     GraphPlaneP3ChooseList *v_colors = &get(ctx->vertex_info, v).colors;
@@ -485,7 +487,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
         *v_loc = (GraphPlaneP3ChooseVertexLoc){
             .mark = frame->x_loc.mark,
             .nb = {
-                .first = graph_aug_adj_next(v_adj, zv.back_index),
+                .first = graph_adj_next(v_adj, zv.back_index),
                 .last = zv.back_index,
             },
         };
@@ -494,7 +496,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
         if (zv_index == z_loc->nb.last) {
             assert(frame->z == frame->y);
             assert(v == frame->x);
-            v_loc->nb.first = graph_aug_adj_next(v_adj, zv.back_index),
+            v_loc->nb.first = graph_adj_next(v_adj, zv.back_index),
             v_loc->mark = graph_plane_p3choose_thread_next_mark(
                 ctx,
                 mark_set
@@ -514,7 +516,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
                 .x_loc = {
                     .mark = new_mark,
                     .nb = {
-                        .first = graph_aug_adj_next(v_adj, zv.back_index),
+                        .first = graph_adj_next(v_adj, zv.back_index),
                         .last = v_loc->nb.last,
                     },
                 },
@@ -556,7 +558,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
             };
         }
 
-        v_loc->nb.first = graph_aug_adj_next(v_adj, zv.back_index);
+        v_loc->nb.first = graph_adj_next(v_adj, zv.back_index);
 
         if (graph_plane_p3choose_has_color(v_colors, z_color)) {
             if (v_colors->len > 1) {
@@ -582,7 +584,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
                 .y_loc = {
                     .mark = frame->x_loc.mark,
                     .nb = {
-                        .first = graph_aug_adj_next(v_adj, zv.back_index),
+                        .first = graph_adj_next(v_adj, zv.back_index),
                         .last = v_loc->nb.last,
                     },
                 },
@@ -597,7 +599,7 @@ static inline bool graph_plane_p3choose_thread_frame_step(
             );
         } else {
             assert(frame->z == frame->y);
-            v_loc->nb.first = graph_aug_adj_next(v_adj, zv.back_index),
+            v_loc->nb.first = graph_adj_next(v_adj, zv.back_index),
             v_loc->mark = frame->x_loc.mark;
             frame->y = v;
             frame->y_loc = *v_loc;
@@ -707,7 +709,7 @@ static inline GraphPropUint8 graph_plane_p3choose_thread(
     size_t nthreads,
     AvenArena *arena
 ) {
-    GraphPropUint8 coloring = { .len = aug_graph.len };
+    GraphPropUint8 coloring = { .len = aug_graph.adj.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
@@ -725,12 +727,12 @@ static inline GraphPropUint8 graph_plane_p3choose_thread(
         nthreads
     );
 
-    uint32_t chunk_size = (uint32_t)(aug_graph.len / workers.len);
+    uint32_t chunk_size = (uint32_t)(aug_graph.adj.len / workers.len);
     for (uint32_t i = 0; i < workers.len; i += 1) {
         uint32_t start_vertex = i * chunk_size;
         uint32_t end_vertex = (i + 1) * chunk_size;
         if (i + 1 == workers.len) {
-            end_vertex = (uint32_t)aug_graph.len;
+            end_vertex = (uint32_t)aug_graph.adj.len;
         }
 
         get(workers, i) = (GraphPlaneP3ChooseThreadWorker) {

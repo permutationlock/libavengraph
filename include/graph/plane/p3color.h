@@ -25,12 +25,12 @@ typedef Slice(GraphPlaneP3ColorFrameOptional)
     GraphPlaneP3ColorFrameOptionalSlice;
 
 typedef struct {
+    GraphAdj adj;
     int32_t mark;
-    uint32_t len;
-    uint32_t *ptr;
 } GraphPlaneP3ColorVertex;
 
 typedef struct {
+    GraphNbSlice nb;
     Slice(GraphPlaneP3ColorVertex) vertex_info;
     List(GraphPlaneP3ColorFrame) frames;
 } GraphPlaneP3ColorCtx;
@@ -45,8 +45,9 @@ static inline GraphPlaneP3ColorCtx graph_plane_p3color_init(
     uint32_t q1 = get(q, 0);
 
     GraphPlaneP3ColorCtx ctx = {
-        .vertex_info = { .len = graph.len },
-        .frames = { .cap = graph.len - 2 },
+        .nb = graph.nb,
+        .vertex_info = { .len = graph.adj.len },
+        .frames = { .cap = graph.adj.len - 2 },
     };
 
     ctx.vertex_info.ptr = aven_arena_create_array(
@@ -61,10 +62,8 @@ static inline GraphPlaneP3ColorCtx graph_plane_p3color_init(
     );
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
-        GraphAdjList v_adj = get(graph, v);
         get(ctx.vertex_info, v) = (GraphPlaneP3ColorVertex){
-            .len = (uint32_t)v_adj.len,
-            .ptr = v_adj.ptr,
+            .adj = get(graph.adj, v),
         };
     }
 
@@ -82,8 +81,9 @@ static inline GraphPlaneP3ColorCtx graph_plane_p3color_init(
         .p_color = 3,
         .q_color = 2,
         .u = p1,
-        .u_nb_first = graph_adj_neighbor_index(
-            get(graph, p1),
+        .u_nb_first = graph_nb_index(
+            graph.nb,
+            get(graph.adj, p1),
             q1
         ),
         .x = p1,
@@ -116,7 +116,7 @@ static inline bool graph_plane_p3color_frame_step(
 
     GraphPlaneP3ColorVertex *u_info = &get(ctx->vertex_info, frame->u);
 
-    if (frame->edge_index == u_info->len) {
+    if (frame->edge_index == u_info->adj.len) {
         assert(frame->z == frame->u);
 
         if (frame->y == frame->u) {
@@ -129,9 +129,9 @@ static inline bool graph_plane_p3color_frame_step(
         }
 
         GraphPlaneP3ColorVertex *y_info = &get(ctx->vertex_info, frame->y);
-        frame->u_nb_first = graph_adj_next_neighbor_index(
-            (GraphAdjList){ .len = y_info->len, .ptr = y_info->ptr },
-            frame->u
+        frame->u_nb_first = graph_adj_next(
+            y_info->adj,
+            graph_nb_index(ctx->nb, y_info->adj, frame->u)
         );
         frame->u = frame->y;
         frame->z = frame->y;
@@ -142,11 +142,11 @@ static inline bool graph_plane_p3color_frame_step(
     }
 
     uint32_t v_index = frame->u_nb_first + frame->edge_index;
-    if (v_index >= u_info->len) {
-        v_index -= u_info->len;
+    if (v_index >= u_info->adj.len) {
+        v_index -= u_info->adj.len;
     }
 
-    uint32_t v = get(*u_info, v_index);
+    uint32_t v = graph_nb(ctx->nb, u_info->adj, v_index);
     GraphPlaneP3ColorVertex *v_info = &get(ctx->vertex_info, v);
 
     frame->edge_index += 1;
@@ -171,12 +171,9 @@ static inline bool graph_plane_p3color_frame_step(
                     .p_color = path_color,
                     .q_color = frame->p_color,
                     .u = frame->z,
-                    .u_nb_first = graph_adj_next_neighbor_index(
-                        (GraphAdjList){
-                            .len = z_info->len,
-                            .ptr = z_info->ptr
-                        },
-                        frame->u
+                    .u_nb_first = graph_adj_next(
+                        z_info->adj,
+                        graph_nb_index(ctx->nb, z_info->adj, frame->u)
                     ),
                     .x = frame->z,
                     .y = frame->z,
@@ -217,12 +214,9 @@ static inline bool graph_plane_p3color_frame_step(
 
             if (frame->x == frame->u) {
                 frame->x = v;
-                frame->x_nb_first = graph_adj_next_neighbor_index(
-                    (GraphAdjList){
-                        .len = v_info->len,
-                        .ptr = v_info->ptr
-                    },
-                    frame->u
+                frame->x_nb_first = graph_adj_next(
+                    v_info->adj,
+                    graph_nb_index(ctx->nb, v_info->adj, frame->u)
                 );
 
                 v_info->mark = (int32_t)frame->p_color;
@@ -239,7 +233,7 @@ static inline GraphPropUint8 graph_plane_p3color(
     GraphSubset q,
     AvenArena *arena
 ) {
-    GraphPropUint8 coloring = { .len = graph.len };
+    GraphPropUint8 coloring = { .len = graph.adj.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
@@ -289,7 +283,7 @@ static inline GraphPlaneP3ColorCase graph_plane_p3color_frame_case(
 ) {
     GraphPlaneP3ColorVertex u_info = get(ctx->vertex_info, frame->u);
 
-    if (frame->edge_index == u_info.len) {
+    if (frame->edge_index == u_info.adj.len) {
         assert(frame->z == frame->u);
 
         if (frame->y == frame->u) {
@@ -301,11 +295,11 @@ static inline GraphPlaneP3ColorCase graph_plane_p3color_frame_case(
     }
 
     uint32_t v_index = frame->u_nb_first + frame->edge_index;
-    if (v_index >= u_info.len) {
-        v_index -= u_info.len;
+    if (v_index >= u_info.adj.len) {
+        v_index -= u_info.adj.len;
     }
 
-    uint32_t v = get(u_info, v_index);
+    uint32_t v = graph_nb(ctx->nb, u_info.adj, v_index);
     GraphPlaneP3ColorVertex v_info = get(ctx->vertex_info, v);
 
     if (frame->above_path) {

@@ -102,7 +102,7 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
     );
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        get(draw_graph, v).len = get(ctx->vertex_info, v).len;
+        get(draw_graph, v).len = get(ctx->vertex_info, v).adj.len;
         get(draw_graph, v).ptr = aven_arena_create_array(
             int32_t,
             &temp_arena,
@@ -131,18 +131,20 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
             edge_index = frame->v1vk_index;
         }
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
-        GraphAdjList v_adj = { .ptr = v_info.ptr, .len = v_info.len };
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
 
-        if (edge_index < v_adj.len) {
-            uint32_t u = get(v_adj, edge_index);
+        if (edge_index < v_info.adj.len) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, edge_index);
             GraphPlaneP3ColorBfsVertex u_info = get(ctx->vertex_info, u);
-            GraphAdjList u_adj = { .ptr = u_info.ptr, .len = u_info.len };
             GraphPlaneP3ColorBfsGeometryDrawSlice u_drawn = get(draw_graph, u);
             if (u > v) {
                 get(v_drawn, edge_index) = -4;
             } else {
-                uint32_t uv_index = graph_adj_neighbor_index(u_adj, v);
+                uint32_t uv_index = graph_nb_index(
+                    ctx->nb,
+                    u_info.adj,
+                    v
+                );
                 get(u_drawn, uv_index) = -4;
             }
         }
@@ -186,20 +188,12 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
             bool done = false;
             while (!done) {
                 GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
-                GraphAdjList v_adj = {
-                    .ptr = v_info.ptr,
-                    .len = v_info.len
-                };
                 GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
 
                 uint32_t edge_index = vl_index;
-                for (uint32_t j = 0; j < v_adj.len; j += 1) {
-                    uint32_t u = get(v_adj, edge_index);
+                for (uint32_t j = 0; j < v_info.adj.len; j += 1) {
+                    uint32_t u = graph_nb(ctx->nb, v_info.adj, edge_index);
                     GraphPlaneP3ColorBfsVertex u_info = get(ctx->vertex_info, u);
-                    GraphAdjList u_adj = {
-                        .ptr = u_info.ptr,
-                        .len = u_info.len,
-                    };
 
                     if (u > v and get(v_drawn, edge_index) == 0) {
                         if (v_info.mark == u_info.mark) {
@@ -221,7 +215,7 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
                         (j > 0 and u_info.mark == v_info.mark) or
                         (v == frame->vi and u == frame->vi1)
                     ) {
-                        vl_index = graph_adj_neighbor_index(u_adj, v);
+                        vl_index = graph_nb_index(ctx->nb, u_info.adj, v);
                         v = u;
                         break;
                     } else if (v == frame->vk and u == frame->v1) {
@@ -229,7 +223,7 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
                         break;
                     }
 
-                    edge_index = graph_adj_next(v_adj, edge_index);
+                    edge_index = graph_adj_next(v_info.adj, edge_index);
                 }
             }
         }
@@ -237,14 +231,10 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         while (bfs_queue.used > 0) {
             uint32_t v = queue_pop(bfs_queue);
             GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
-            GraphAdjList v_adj = {
-                .ptr = v_info.ptr,
-                .len = v_info.len
-            };
             GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
 
-            for (uint32_t j = 0; j < v_adj.len; j += 1) {
-                uint32_t u = get(v_adj, j);
+            for (uint32_t j = 0; j < v_info.adj.len; j += 1) {
+                uint32_t u = graph_nb(ctx->nb, v_info.adj, j);
                 GraphPlaneP3ColorBfsVertex u_info = get(ctx->vertex_info, u);
 
                 if (u > v and get(v_drawn, j) == 0) {
@@ -335,8 +325,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
             continue;
         }
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             GraphPlaneP3ColorBfsVertex u_info = get(ctx->vertex_info, u);
             if (u > v and u_info.mark == v_info.mark) {
                 if (get(v_drawn, i) == 0) {
@@ -394,8 +384,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
 
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             if (u < v or get(v_drawn, i) != 0) {
                 continue;
             }
@@ -413,8 +403,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
 
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             if (u < v or get(v_drawn, i) != -2) {
                 continue;
             }
@@ -432,8 +422,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
 
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             if (u < v or get(v_drawn, i) != -1) {
                 continue;
             }
@@ -451,8 +441,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
 
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             if (u < v or get(v_drawn, i) <= 0) {
                 continue;
             }
@@ -470,8 +460,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
 
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             if (u < v or get(v_drawn, i) != -3) {
                 continue;
             }
@@ -497,8 +487,8 @@ static inline void graph_plane_p3color_bfs_geometry_push_ctx(
         GraphPlaneP3ColorBfsGeometryDrawSlice v_drawn = get(draw_graph, v);
         GraphPlaneP3ColorBfsVertex v_info = get(ctx->vertex_info, v);
 
-        for (uint32_t i = 0; i < v_info.len; i += 1) {
-            uint32_t u = get(v_info, i);
+        for (uint32_t i = 0; i < v_info.adj.len; i += 1) {
+            uint32_t u = graph_nb(ctx->nb, v_info.adj, i);
             if (u < v or get(v_drawn, i) != -4) {
                 continue;
             }

@@ -22,6 +22,7 @@ typedef struct {
 } GraphPlaneP3ColorThreadAtomicFrameList;
 
 typedef struct {
+    GraphNbSlice nb;
     Slice(GraphPlaneP3ColorVertex) vertex_info;
     GraphPlaneP3ColorThreadAtomicFrameList frames;
     atomic_int threads_active;
@@ -39,8 +40,9 @@ static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
     uint32_t q1 = get(q, 0);
 
     GraphPlaneP3ColorThreadCtx ctx = {
-        .vertex_info = { .len = graph.len },
-        .frames = { .cap = graph.len - 2 },
+        .nb = graph.nb,
+        .vertex_info = { .len = graph.adj.len },
+        .frames = { .cap = graph.adj.len - 2 },
     };
 
     ctx.vertex_info.ptr = aven_arena_create_array(
@@ -60,10 +62,8 @@ static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
     atomic_init(&ctx.threads_active, 0);
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
-        GraphAdjList v_adj = get(graph, v);
         get(ctx.vertex_info, v) = (GraphPlaneP3ColorVertex){
-            .len = (uint32_t)v_adj.len,
-            .ptr = v_adj.ptr,
+            .adj = get(graph.adj, v),
         };
     }
 
@@ -81,8 +81,9 @@ static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
         .p_color = 3,
         .q_color = 2,
         .u = p1,
-        .u_nb_first = graph_adj_neighbor_index(
-            get(graph, p1),
+        .u_nb_first = graph_nb_index(
+            graph.nb,
+            get(graph.adj, p1),
             q1
         ),
         .x = p1,
@@ -155,7 +156,7 @@ static inline bool graph_plane_p3color_thread_frame_step(
 
     GraphPlaneP3ColorVertex *u_info = &get(ctx->vertex_info, frame->u);
 
-    if (frame->edge_index == u_info->len) {
+    if (frame->edge_index == u_info->adj.len) {
         assert(frame->z == frame->u);
 
         if (frame->y == frame->u) {
@@ -168,9 +169,9 @@ static inline bool graph_plane_p3color_thread_frame_step(
         }
 
         GraphPlaneP3ColorVertex *y_info = &get(ctx->vertex_info, frame->y);
-        frame->u_nb_first = graph_adj_next_neighbor_index(
-            (GraphAdjList){ .len = y_info->len, .ptr = y_info->ptr },
-            frame->u
+        frame->u_nb_first = graph_adj_next(
+            y_info->adj,
+            graph_nb_index(ctx->nb, y_info->adj, frame->u)
         );
         frame->u = frame->y;
         frame->z = frame->y;
@@ -181,11 +182,11 @@ static inline bool graph_plane_p3color_thread_frame_step(
     }
 
     uint32_t n_index = frame->u_nb_first + frame->edge_index;
-    if (n_index >= u_info->len) {
-        n_index -= u_info->len;
+    if (n_index >= u_info->adj.len) {
+        n_index -= u_info->adj.len;
     }
 
-    uint32_t n = get(*u_info, n_index);
+    uint32_t n = graph_nb(ctx->nb, u_info->adj, n_index);
     GraphPlaneP3ColorVertex *n_info = &get(ctx->vertex_info, n);
 
     frame->edge_index += 1;
@@ -213,12 +214,9 @@ static inline bool graph_plane_p3color_thread_frame_step(
                         .p_color = path_color,
                         .q_color = frame->p_color,
                         .u = frame->z,
-                        .u_nb_first = graph_adj_next_neighbor_index(
-                            (GraphAdjList){
-                                .len = z_info->len,
-                                .ptr = z_info->ptr
-                            },
-                            frame->u
+                        .u_nb_first = graph_adj_next(
+                            z_info->adj,
+                            graph_nb_index(ctx->nb, z_info->adj, frame->u)
                         ),
                         .x = frame->z,
                         .y = frame->z,
@@ -264,12 +262,9 @@ static inline bool graph_plane_p3color_thread_frame_step(
 
             if (frame->x == frame->u) {
                 frame->x = n;
-                frame->x_nb_first = graph_adj_next_neighbor_index(
-                    (GraphAdjList){
-                        .len = n_info->len,
-                        .ptr = n_info->ptr
-                    },
-                    frame->u
+                frame->x_nb_first = graph_adj_next(
+                    n_info->adj,
+                    graph_nb_index(ctx->nb, n_info->adj, frame->u)
                 );
 
                 n_info->mark = (int32_t)frame->p_color;
@@ -410,7 +405,7 @@ static inline GraphPropUint8 graph_plane_p3color_thread(
     size_t nthreads,
     AvenArena *arena
 ) {
-    GraphPropUint8 coloring = { .len = graph.len };
+    GraphPropUint8 coloring = { .len = graph.adj.len };
     coloring.ptr = aven_arena_create_array(uint8_t, arena, coloring.len);
 
     AvenArena temp_arena = *arena;
@@ -428,12 +423,12 @@ static inline GraphPropUint8 graph_plane_p3color_thread(
         nthreads
     );
 
-    uint32_t chunk_size = (uint32_t)(graph.len / wargs_data.len);
+    uint32_t chunk_size = (uint32_t)(graph.adj.len / wargs_data.len);
     for (uint32_t i = 0; i < wargs_data.len; i += 1) {
         uint32_t start_vertex = i * chunk_size;
         uint32_t end_vertex = (i + 1) * chunk_size;
         if (i + 1 == wargs_data.len) {
-            end_vertex = (uint32_t)graph.len;
+            end_vertex = (uint32_t)graph.adj.len;
         }
 
         get(wargs_data, i) = (GraphP3ColorThreadWorkerArgs){

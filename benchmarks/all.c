@@ -11,7 +11,6 @@
 #include <aven/rng.h>
 #include <aven/rng/pcg.h>
 #include <aven/time.h>
-#include <aven/thread_pool.h>
 
 #include <graph.h>
 #include <graph/path_color.h>
@@ -19,26 +18,34 @@
 #include <graph/bfs.h>
 #include <graph/plane/p3color_bfs.h>
 #include <graph/plane/p3color.h>
-#include <graph/plane/p3color/thread.h>
 #include <graph/plane/p3choose.h>
-#include <graph/plane/p3choose/thread.h>
 #include <graph/plane/gen.h>
+
+#ifdef BENCHMARK_THREADED
+    #include <aven/thread_pool.h>
+    #include <graph/plane/p3color/thread.h>
+    #include <graph/plane/p3choose/thread.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE ((size_t)4096UL * (size_t)3300000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)800000UL)
 
-#define FULL_RUNS 10
-#define NGRAPHS 10
+#define FULL_RUNS 100
+#define NGRAPHS 1
 #define MAX_VERTICES 10000001
-#define START_VERTICES 1000
+#define START_VERTICES 10000
 
 #define MAX_COLOR 8
 
 #define NTHREADS 4
 
-#define NBENCHES 11
+#ifdef BENCHMARK_THREADED
+    #define NBENCHES 11
+#else
+    #define NBENCHES 5
+#endif
 
 #ifdef __GNUC__
     #define BENCHMARK_COMPILER_BARRIER __asm volatile( "" ::: "memory" );
@@ -59,13 +66,17 @@ int main(void) {
         "Augment Adjacency Lists",
         "Path 3-Color w/ BFS",
         "Path 3-Color w/ N(P)",
+#ifdef BENCHMARK_THREADED
         "Path 3-Color w/ N(P) (2 threads)",
         "Path 3-Color w/ N(P) (3 threads)",
         "Path 3-Color w/ N(P) (4 threads)",
+#endif
         "Path 3-Choose",
+#ifdef BENCHMARK_THREADED
         "Path 3-Choose (2 threads)",
         "Path 3-Choose (3 threads)",
         "Path 3-Choose (4 threads)",
+#endif
     };
 
     typedef Slice(double) DoubleSlice;
@@ -98,12 +109,14 @@ int main(void) {
     AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x3241ef25, 0xe837910f);
     AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
+#ifdef BENCHMARK_THREADED
     AvenThreadPool thread_pool = aven_thread_pool_init(
         NTHREADS - 1,
         NTHREADS - 1,
         &arena
     );
     aven_thread_pool_run(&thread_pool);
+#endif
 
     uint32_t p_data[] = { 1, 2 };
     uint32_t q_data[] = { 0 };
@@ -133,7 +146,7 @@ int main(void) {
                 uint32_t target;
             } CaseData;
 
-            size_t nruns = max(1, MAX_VERTICES / (n * 10));
+            size_t nruns = max(1, MAX_VERTICES / n);
 
             Slice(CaseData) cases = { .len = NGRAPHS };
             cases.ptr = aven_arena_create_array(
@@ -150,9 +163,14 @@ int main(void) {
                     &loop_arena
                 );
                 get(cases, i).graph = graph;
-                if (graph.len != n) {
+                if (graph.adj.len != n) {
                     aven_panic("graph generation failed");
                 }
+
+                get(cases, i).root = aven_rng_rand_bounded(rng, n);
+                do {
+                    get(cases, i).target = aven_rng_rand_bounded(rng, n);
+                } while (get(cases, i).target == get(cases, i).root);
 
                 GraphPlaneP3ChooseListProp *color_lists = &get(
                     cases,
@@ -193,11 +211,6 @@ int main(void) {
                     }
 
                     get(*color_lists, j) = list;
-
-                    get(cases, i).root = aven_rng_rand_bounded(rng, n);
-                    do {
-                        get(cases, i).target = aven_rng_rand_bounded(rng, n);
-                    } while (get(cases, i).target == get(cases, i).root);
                 }
             }
             {
@@ -289,30 +302,39 @@ int main(void) {
                     Graph graph = get(cases, i).graph;
                     GraphAug aug_graph = get(cases, i).aug_graph;
 
-                    if (graph.len != aug_graph.len) {
+                    if (graph.adj.len != aug_graph.adj.len) {
                         continue;
                     }
 
                     bool valid = true;
-                    for (uint32_t v = 0; v < graph.len; v += 1) {
-                        GraphAdjList v_adj = get(graph, v);
-                        GraphAugAdjList v_aug_adj = get(aug_graph, v);
+                    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+                        GraphAdj v_adj = get(graph.adj, v);
+                        GraphAdj v_aug_adj = get(aug_graph.adj, v);
 
                         if (v_adj.len != v_aug_adj.len) {
                             valid = false;
                         }
 
                         for (uint32_t j = 0; j < v_adj.len; j += 1) {
-                            uint32_t u = get(v_adj, j);
-                            GraphAugAdjListNode u_node = get(v_aug_adj, j);
+                            uint32_t u = graph_nb(graph.nb, v_adj, j);
+                            GraphAugNb u_node = graph_aug_nb(
+                                aug_graph.nb,
+                                v_aug_adj,
+                                j
+                            );
 
                             if (u != u_node.vertex) {
                                 valid = false;
                                 break;
                             }
 
-                            GraphAugAdjList u_aug_adj = get(aug_graph, u);
-                            if (v != get(u_aug_adj, u_node.back_index).vertex) {
+                            GraphAdj u_aug_adj = get(aug_graph.adj, u);
+                            uint32_t w = graph_aug_nb(
+                                aug_graph.nb,
+                                u_aug_adj,
+                                u_node.back_index
+                            ).vertex;
+                            if (v != w) {
                                 valid = false;
                                 break;
                             }
@@ -468,6 +490,7 @@ int main(void) {
                 get(get(bench_times, bench_index), n_count) += ns_per_graph;
                 bench_index += 1;
             }
+#ifdef BENCHMARK_THREADED
             for (size_t nthreads = 2; nthreads <= NTHREADS; nthreads += 1){
                 AvenArena temp_arena = loop_arena;
 
@@ -530,6 +553,7 @@ int main(void) {
                 get(get(bench_times, bench_index), n_count) += ns_per_graph;
                 bench_index += 1;
             }
+#endif
             {
                 AvenArena temp_arena = loop_arena;
 
@@ -562,6 +586,8 @@ int main(void) {
                 for (uint32_t i = 0; i < cases.len; i += 1) {
                     bool valid = true;
 
+                    Graph graph = get(cases, i).graph;
+
                     GraphPlaneP3ChooseListProp color_lists = get(
                         cases,
                         i
@@ -569,7 +595,7 @@ int main(void) {
                     GraphPropUint8 coloring = get(cases, i).coloring;
 
                     // verify coloring is a list-coloring
-                    for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
+                    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
                         uint8_t v_color = get(coloring, v);
                         GraphPlaneP3ChooseList v_colors = get(color_lists, v);
 
@@ -589,8 +615,8 @@ int main(void) {
                     // verify coloring is a path coloring
                     if (valid) {
                         valid = graph_path_color_verify(
-                            get(cases, i).graph,
-                            get(cases, i).coloring,
+                            graph,
+                            coloring,
                             temp_arena
                         );
                     }
@@ -619,6 +645,7 @@ int main(void) {
                 get(get(bench_times, bench_index), n_count) += ns_per_graph;
                 bench_index += 1;
             }
+#ifdef BENCHMARK_THREADED
             for (size_t nthreads = 2; nthreads <= NTHREADS; nthreads += 1){
                 AvenArena temp_arena = loop_arena;
 
@@ -660,7 +687,7 @@ int main(void) {
                     GraphPropUint8 coloring = get(cases, i).coloring;
 
                     // verify coloring is a list-coloring
-                    for (uint32_t v = 0; v < get(cases, i).graph.len; v += 1) {
+                    for (uint32_t v = 0; v < get(cases, i).graph.adj.len; v += 1) {
                         uint8_t v_color = get(coloring, v);
                         GraphPlaneP3ChooseList v_colors = get(color_lists, v);
 
@@ -711,12 +738,15 @@ int main(void) {
                 get(get(bench_times, bench_index), n_count) += ns_per_graph;
                 bench_index += 1;
             }
+#endif
 
             n_count += 1;
         }
     }
 
+#ifdef BENCHMARK_THREADED
     aven_thread_pool_halt_and_destroy(&thread_pool);
+#endif
 
     for (size_t i = 0; i < bench_times.len; i += 1) {
         DoubleSlice i_times = get(bench_times, i);

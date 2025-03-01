@@ -67,7 +67,7 @@ static TestCase gen_test_case(
     GraphPlaneP3ChooseListProp color_lists = aven_arena_create_slice(
         GraphPlaneP3ChooseList,
         arena,
-        test_case.graph.len
+        test_case.graph.adj.len
     );
 
     for (uint32_t i = 0; i < color_lists.len; i += 1) {

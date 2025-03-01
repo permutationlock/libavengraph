@@ -6,6 +6,7 @@
 #include <aven/math.h>
 
 #include "../../../graph.h"
+#include "../../plane.h"
 #include "../p3choose.h"
 
 #include <stdio.h>
@@ -54,9 +55,9 @@ static inline void graph_plane_p3choose_tikz(
         float dir_score[8] = { 0 };
         float dir_bonus[8] = { 0 };
 
-        GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
+        GraphAdj v_adj = get(ctx->vertex_info, v).adj;
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = get(v_adj, i).vertex;
+            uint32_t u = graph_aug_nb(ctx->nb, v_adj, i).vertex;
 
             Vec2 u_pos;
             vec2_copy(u_pos, get(embedding, u));
@@ -184,15 +185,15 @@ static inline void graph_plane_p3choose_tikz(
     printf("\t\\begin{pgfonlayer}{bg}\n");
 
     {
-        GraphAugAdjList z_adj = get(ctx->vertex_info, frame->z).adj;
+        GraphAdj z_adj = get(ctx->vertex_info, frame->z).adj;
         GraphPlaneP3ChooseTikzDrawSlice z_drawn = get(draw_graph, frame->z);
         GraphPlaneP3ChooseVertexLoc *z_loc =
             graph_plane_p3choose_vloc(ctx, frame, frame->z);
         uint32_t zv_index = z_loc->nb.first;
         if (zv_index != z_loc->nb.last) {
-            zv_index = graph_aug_adj_next(z_adj, zv_index);
+            zv_index = graph_adj_next(z_adj, zv_index);
         }
-        GraphAugAdjListNode zv = get(z_adj, zv_index);
+        GraphAugNb zv = graph_aug_nb(ctx->nb, z_adj, zv_index);
 
         if (zv.vertex > frame->z) {
             get(z_drawn, zv_index) = true;
@@ -219,7 +220,7 @@ static inline void graph_plane_p3choose_tikz(
         uint32_t v = cur_frame->z;
 
         do {
-            GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
+            GraphAdj v_adj = get(ctx->vertex_info, v).adj;
             GraphPlaneP3ChooseTikzDrawSlice v_drawn = get(draw_graph, v);
             GraphPlaneP3ChooseVertexLoc *v_info =
                 graph_plane_p3choose_vloc(ctx, cur_frame, v);
@@ -227,9 +228,9 @@ static inline void graph_plane_p3choose_tikz(
             for (
                 uint32_t i = v_info->nb.first;
                 i != v_info->nb.last;
-                i = graph_aug_adj_next(v_adj, i)
+                i = graph_adj_next(v_adj, i)
             ) {
-                uint32_t u = get(v_adj, i).vertex;
+                uint32_t u = graph_aug_nb(ctx->nb, v_adj, i).vertex;
                 if (u > v and !get(v_drawn, i)) {
                     get(v_drawn, i) = true;
                     printf(
@@ -240,7 +241,7 @@ static inline void graph_plane_p3choose_tikz(
                 }
             }
 
-            uint32_t u = get(v_adj, v_info->nb.last).vertex;
+            uint32_t u = graph_aug_nb(ctx->nb, v_adj, v_info->nb.last).vertex;
             if (u > v and !get(v_drawn, v_info->nb.last)) {
                 get(v_drawn, v_info->nb.last) = true;
                 printf(
@@ -259,11 +260,11 @@ static inline void graph_plane_p3choose_tikz(
     } while (frame_index < ctx->frames.len);
 
     for (uint32_t v = 0; v < ctx->vertex_info.len; v += 1) {
-        GraphAugAdjList v_adj = get(ctx->vertex_info, v).adj;
+        GraphAdj v_adj = get(ctx->vertex_info, v).adj;
         GraphPlaneP3ChooseTikzDrawSlice v_drawn = get(draw_graph, v);
 
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = get(v_adj, i).vertex;
+            uint32_t u = graph_aug_nb(ctx->nb, v_adj, i).vertex;
             if (u > v and !get(v_drawn, i)) {
                 get(v_drawn, i) = true;
                 if (get(ctx->vertex_info, v).loc.mark == 0) {

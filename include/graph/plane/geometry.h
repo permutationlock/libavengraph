@@ -127,10 +127,10 @@ static inline void graph_plane_geometry_push_edges(
     Aff2 trans,
     GraphPlaneGeometryEdge *draw_info
 ) {
-    for (uint32_t u = 0; u < graph.len; u += 1) {
-        GraphAdjList u_neighbors = get(graph, u);
-        for (uint32_t i = 0; i < u_neighbors.len; i += 1) {
-            uint32_t v = get(u_neighbors, i);
+    for (uint32_t u = 0; u < graph.adj.len; u += 1) {
+        GraphAdj u_adj = get(graph.adj, u);
+        for (uint32_t i = 0; i < u_adj.len; i += 1) {
+            uint32_t v = graph_nb(graph.nb, u_adj, i);
             if (v < u) {
                 continue;
             }
@@ -259,14 +259,14 @@ static inline void graph_plane_geometry_push_marked_edges(
     Aff2 trans,
     GraphPlaneGeometryEdge *draw_info
 ) {
-    for (uint32_t u = 0; u < graph.len; u += 1) {
+    for (uint32_t u = 0; u < graph.adj.len; u += 1) {
         if (get(marking, u) != mark) {
             continue;
         }
 
-        GraphAdjList adj = get(graph, u);
-        for (uint32_t i = 0; i < adj.len; i += 1) {
-            uint32_t v = get(adj, i);
+        GraphAdj u_adj = get(graph.adj, u);
+        for (uint32_t i = 0; i < u_adj.len; i += 1) {
+            uint32_t v = graph_nb(graph.nb, u_adj, i);
             if (get(marking, v) != mark) {
                 continue;
             }
@@ -315,14 +315,14 @@ static inline void graph_plane_geometry_push_unmarked_edges(
     Aff2 trans,
     GraphPlaneGeometryEdge *draw_info
 ) {
-    for (uint32_t u = 0; u < graph.len; u += 1) {
+    for (uint32_t u = 0; u < graph.adj.len; u += 1) {
         if (get(marking, u) == mark) {
             continue;
         }
 
-        GraphAdjList adj = get(graph, u);
-        for (uint32_t i = 0; i < adj.len; i += 1) {
-            uint32_t v = get(adj, i);
+        GraphAdj u_adj = get(graph.adj, u);
+        for (uint32_t i = 0; i < u_adj.len; i += 1) {
+            uint32_t v = graph_nb(graph.nb, u_adj, i);
             if (get(marking, v) == mark) {
                 continue;
             }
@@ -412,9 +412,9 @@ static inline void graph_plane_geometry_push_colored_edges(
         if (v_color == 0) {
             continue;
         }
-        GraphAdjList v_adj = get(graph, v);
+        GraphAdj v_adj = get(graph.adj, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = get(v_adj, i);
+            uint32_t u = graph_nb(graph.nb, v_adj, i);
             if (v < u) {
                 continue;
             }
@@ -443,9 +443,9 @@ static inline void graph_plane_geometry_push_uncolored_edges(
 ) {
     for (uint32_t v = 0; v < embedding.len; v += 1) {
         uint8_t v_color = get(coloring, v);
-        GraphAdjList v_adj = get(graph, v);
+        GraphAdj v_adj = get(graph.adj, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = get(v_adj, i);
+            uint32_t u = graph_nb(graph.nb, v_adj, i);
             if (v < u) {
                 continue;
             }

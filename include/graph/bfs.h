@@ -7,12 +7,12 @@
 #include "../graph.h"
 
 typedef struct {
-    uint32_t len;
+    GraphAdj adj;
     uint32_t parent;
-    uint32_t *ptr;
 } GraphBfsVertex;
 
 typedef struct {
+    GraphNbSlice nb;
     Slice(GraphBfsVertex) vertex_info;
     Queue(uint32_t) bfs_queue;
     uint32_t edge_index;
@@ -24,12 +24,13 @@ static inline GraphBfsCtx graph_bfs_init(
     uint32_t root_vertex,
     AvenArena *arena
 ) {
-    assert(root_vertex < graph.len);
+    assert(root_vertex < graph.adj.len);
 
     GraphBfsCtx ctx = {
+        .nb = graph.nb,
         .vertex = root_vertex,
-        .bfs_queue = { .cap = graph.len },
-        .vertex_info = { .len = graph.len },
+        .bfs_queue = { .cap = graph.adj.len },
+        .vertex_info = { .len = graph.adj.len },
     };
 
     ctx.bfs_queue.ptr = aven_arena_create_array(
@@ -44,10 +45,8 @@ static inline GraphBfsCtx graph_bfs_init(
     );
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
-        GraphAdjList v_adj = get(graph, v);
         get(ctx.vertex_info, v) = (GraphBfsVertex){
-            .len = (uint32_t)v_adj.len,
-            .ptr = v_adj.ptr,
+            .adj = get(graph.adj, v),
         };
     }
 
@@ -58,7 +57,7 @@ static inline GraphBfsCtx graph_bfs_init(
 
 static inline bool graph_bfs_step(GraphBfsCtx *ctx) {
     GraphBfsVertex *v_info = &get(ctx->vertex_info, ctx->vertex);
-    if (ctx->edge_index == v_info->len) {
+    if (ctx->edge_index == v_info->adj.len) {
         if (ctx->bfs_queue.used == 0) {
             return true;
         }
@@ -68,7 +67,7 @@ static inline bool graph_bfs_step(GraphBfsCtx *ctx) {
         return false;
     }
 
-    uint32_t u = get(*v_info, ctx->edge_index);
+    uint32_t u = graph_nb(ctx->nb, v_info->adj, ctx->edge_index);
     GraphBfsVertex *u_info = &get(ctx->vertex_info, u);
     if (u_info->parent == 0) {
         queue_push(ctx->bfs_queue) = u;
@@ -123,7 +122,7 @@ static inline GraphSubset graph_bfs(
         return path;
     }
 
-    GraphSubset path_space = { .len = graph.len };
+    GraphSubset path_space = { .len = graph.adj.len };
     path_space.ptr = aven_arena_create_array(
         uint32_t,
         arena,

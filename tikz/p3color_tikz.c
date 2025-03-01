@@ -134,7 +134,7 @@ int main(void) {
                     frame.value.edge_index == get(
                         test_case.ctx.vertex_info,
                         frame.value.u
-                    ).len
+                    ).adj.len
                 ) {
                     steps += 1;
                 }
@@ -190,7 +190,7 @@ int main(void) {
                 frame.value.edge_index == get(
                     test_case.ctx.vertex_info,
                     frame.value.u
-                ).len
+                ).adj.len
             ) {
                 graph_plane_p3color_tikz(
                     test_case.embedding,

@@ -68,15 +68,17 @@ exectuables, run:
 ### Benchmarks
 
 To build and run the algorithm benchmarks you will need ~13GB of
-unused available system RAM and a C compiler that supports C11
-atomics. An example run command with `gcc` or `clang` on Linux would be:
+unused available system RAM. To benchmark the threaded algorithms
+your C compiler must support C11 atomics. An example full benchmark
+run command for `gcc` or `clang` on Linux would be:
 ```
-./build bench -ccflags "-std=c11 -O3 -march=native"
+./build bench -ccflags "-std=c11 -O3 -march=native -DBENCHMARK_THREADED"
 ```
 The benchmarks may take up to a few hours to complete.
 
-Here are the latest results from my Linux system with
-`x86_64` Intel N100 processor, compiled using Clang 19.1.7:
+Below are the latest results from my Linux system with
+`x86_64` Intel N100 processor, compiled using Clang 19.1.7. All time values are
+nanoseconds per plane triangulation of order `n`.
 
 |     Algorithm |  n=1.0e3  |  n=1.0e4  |  n=1.0e5  |  n=1.0e6  |   n=1.0e7  |
 | ------------- | --------- | --------- | --------- | --------- | ---------- |
@@ -135,7 +137,8 @@ and `tcc` on Linux, and `gcc.exe`, `clang.exe`, and `cl.exe` on Windows
 should be supported out-of-the-box.
 Otherwise you will need to define the various flags yourself.
 Run `./build -h` for a full rundown of what needs to be configured,
-and see `emcc_make.sh`, `zig_make.sh`, and `zig_make.bat` for examples.
+and see `crpoc_make.sh`, `emcc_make.sh`, `zig_make.sh`, and `zig_make.bat`
+for examples.
 
 [1]: https://musing.permutationlock.com/static/triangulate/visualization.html
 [2]: https://github.com/permutationlock/implpathcol_paper

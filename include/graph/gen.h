@@ -9,32 +9,28 @@ static inline Graph graph_gen_complete(
     uint32_t size,
     AvenArena *arena
 ) {
-    Graph g = {
-        .len = size,
-        .ptr = aven_arena_create_array(GraphAdjList, arena, size),
+    Graph graph = {
+        .nb = { .len = size * (size - 1) },
+        .adj = { .len = size },
     };
+    graph.nb.ptr = aven_arena_create_array(uint32_t, arena, graph.nb.len);
+    graph.adj.ptr = aven_arena_create_array(GraphAdj, arena, graph.adj.len);
 
-    for (uint32_t v = 0; v < g.len; v += 1) {
-        get(g, v).len = g.len - 1;
-        get(g, v).ptr = aven_arena_create_array(
-            uint32_t,
-            arena,
-            get(g, v).len
-        );
+    uint32_t i = 0;
+    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+        get(graph.adj, v).len = size - 1;
+        get(graph.adj, v).index = i;
 
-        size_t i = 0;
-        GraphAdjList vlist = get(g, v);
-        for (uint32_t u = 0; u < g.len; u += 1) {
-            if (v == u) {
+        for (uint32_t u = 0; u < graph.adj.len; u += 1) {
+            if (u == v) {
                 continue;
             }
-
-            get(vlist, i) = u;
+            get(graph.nb, i) = u;
             i += 1;
         }
     }
 
-    return g;
+    return graph;
 }
 
 static inline Graph graph_gen_grid(
@@ -42,43 +38,47 @@ static inline Graph graph_gen_grid(
     uint32_t height,
     AvenArena *arena
 ) {
-    Graph g = { .len = width * height };
-    g.ptr = aven_arena_create_array(GraphAdjList, arena, g.len);
+    Graph graph = {
+        .nb = {
+            .len = 4 * (width - 2) * (height - 2) +
+                6 * (width - 2) +
+                6 * (height - 2) +
+                8,
+        },
+        .adj = { .len = width * height },
+    };
+    graph.nb.ptr = aven_arena_create_array(uint32_t, arena, graph.nb.len);
+    graph.adj.ptr = aven_arena_create_array(GraphAdj, arena, graph.adj.len);
 
-    for (uint32_t v = 0; v < g.len; v += 1) {
-        GraphAdjList *adj = &get(g, v);
-        adj->len = 4;
-        adj->ptr = aven_arena_create_array(
-            uint32_t,
-            arena,
-            adj->len
-        );
+    uint32_t i = 0;
+    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+        GraphAdj *v_adj = &get(graph.adj, v);
+        v_adj->index = i;
 
         uint32_t x = v % width;
         uint32_t y = v / width;
 
-        uint32_t i = 0;
         if (x > 0) {
-            get(*adj, i) = (x - 1) + y * width;
+            get(graph.nb, i) = (x - 1) + y * width;
             i += 1;
         }
         if (x < width - 1) {
-            get(*adj, i) = (x + 1) + y * width;
+            get(graph.nb, i) = (x + 1) + y * width;
             i += 1;
         }
         if (y > 0) {
-            get(*adj, i) = x + (y - 1) * width;
+            get(graph.nb, i) = x + (y - 1) * width;
             i += 1;
         }
         if (y < height - 1) {
-            get(*adj, i) = x + (y + 1) * width;
+            get(graph.nb, i) = x + (y + 1) * width;
             i += 1;
         }
 
-        adj->len = i;
+        v_adj->len = i - v_adj->index;
     }
 
-    return g;
+    return graph;
 }
 
 #endif // GRAPH_GEN_H

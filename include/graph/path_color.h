@@ -1,6 +1,8 @@
 #ifndef GRAPH_PATH_COLOR_H
 #define GRAPH_PATH_COLOR_H
 
+#include "../graph.h"
+
 typedef struct {
     Graph graph;
     GraphPropUint8 coloring;
@@ -18,7 +20,7 @@ static inline GraphPathColorVerifyCtx graph_path_color_verify_init(
     GraphPathColorVerifyCtx ctx = {
         .graph = graph,
         .coloring = coloring,
-        .visited = { .len = graph.len },
+        .visited = { .len = graph.adj.len },
     };
 
     ctx.visited.ptr = aven_arena_create_array(uint8_t, arena, ctx.visited.len);
@@ -32,12 +34,12 @@ static inline GraphPathColorVerifyCtx graph_path_color_verify_init(
 static inline bool graph_path_color_verify_step(
     GraphPathColorVerifyCtx *ctx
 ) {
-    while (!ctx->maybe_v.valid and ctx->next < ctx->graph.len) {
+    while (!ctx->maybe_v.valid and ctx->next < ctx->graph.adj.len) {
         uint32_t v;
         do {
             v = ctx->next;
             ctx->next += 1;
-            if (v >= ctx->graph.len) {
+            if (v >= ctx->graph.adj.len) {
                 return true;
             }
         } while (get(ctx->visited, v) != 0);
@@ -45,9 +47,9 @@ static inline bool graph_path_color_verify_step(
         uint8_t color = get(ctx->coloring, v);
         uint32_t color_degree = 0;
 
-        GraphAdjList v_adj = get(ctx->graph, v);
+        GraphAdj v_adj = get(ctx->graph.adj, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t n = get(v_adj, i);
+            uint32_t n = graph_nb(ctx->graph.nb, v_adj, i);
             if (get(ctx->coloring, n) == color) {
                 color_degree += 1;
                 if (color_degree > 1) {
@@ -73,9 +75,9 @@ static inline bool graph_path_color_verify_step(
     ctx->checked += 1;
     ctx->maybe_v.valid = false;
 
-    GraphAdjList v_adj = get(ctx->graph, v);
+    GraphAdj v_adj = get(ctx->graph.adj, v);
     for (uint32_t i = 0; i < v_adj.len; i += 1) {
-        uint32_t n = get(v_adj, i);
+        uint32_t n = graph_nb(ctx->graph.nb, v_adj, i);
         if (
             get(ctx->coloring, n) == color and
             get(ctx->visited, n) == 0
@@ -95,7 +97,7 @@ static inline bool graph_path_color_verify_step(
 static inline bool graph_path_color_verify_result(
     GraphPathColorVerifyCtx *ctx
 ) {
-    return ctx->checked == ctx->graph.len;
+    return ctx->checked == ctx->graph.adj.len;
 }
 
 static inline bool graph_path_color_verify(

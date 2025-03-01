@@ -4,10 +4,66 @@
 #include <aven.h>
 #include <aven/arena.h>
 
-typedef Slice(uint32_t) GraphAdjList;
-typedef Slice(GraphAdjList) Graph;
+typedef struct {
+    uint32_t index;
+    uint32_t len;
+} GraphAdj;
+typedef Slice(GraphAdj) GraphAdjSlice;
+
+typedef Slice(uint32_t) GraphNbSlice;
+
+typedef struct {
+    GraphNbSlice nb;
+    GraphAdjSlice adj;
+} Graph;
 
 typedef Slice(uint32_t) GraphSubset;
+
+static inline uint32_t graph_nb(
+    GraphNbSlice nb,
+    GraphAdj v_adj,
+    uint32_t i
+) {
+    assert(i < v_adj.len);
+    return get(nb, v_adj.index + i);
+}
+
+static inline uint32_t graph_adj_next(
+    GraphAdj v_adj,
+    uint32_t i
+) {
+    assert(i < v_adj.len);
+    if (i == v_adj.len - 1) {
+        return 0;
+    }
+    return i + 1;
+}
+
+static inline uint32_t graph_adj_prev(
+    GraphAdj v_adj,
+    uint32_t i
+) {
+    assert(i < v_adj.len);
+    if (i == 0) {
+        return v_adj.len - 1;
+    }
+    return i - 1;
+}
+
+static inline uint32_t graph_nb_index(
+    GraphNbSlice nb,
+    GraphAdj v_adj,
+    uint32_t u
+) {
+    for (uint32_t i = 0; i < v_adj.len; i += 1) {
+        if (graph_nb(nb, v_adj, i) == u) {
+            return i;
+        }
+    }
+
+    assert(false);
+    return 0xffffffff;
+}
 
 typedef Slice(uint64_t) GraphPropUint64;
 typedef Slice(uint32_t) GraphPropUint32;
@@ -17,188 +73,127 @@ typedef Slice(uint8_t) GraphPropUint8;
 typedef struct{
     uint32_t vertex;
     uint32_t back_index;
-} GraphAugAdjListNode;
+} GraphAugNb;
+typedef Slice(GraphAugNb) GraphAugNbSlice;
 
-typedef Slice(GraphAugAdjListNode) GraphAugAdjList;
-typedef Slice(GraphAugAdjList) GraphAug;
+typedef struct {
+    GraphAugNbSlice nb;
+    GraphAdjSlice adj;
+} GraphAug;
 
-static inline uint32_t graph_adj_next(
-    GraphAdjList adj,
+static inline GraphAugNb graph_aug_nb(
+    GraphAugNbSlice nb,
+    GraphAdj v_adj,
     uint32_t i
 ) {
-    if (i + 1 == adj.len) {
-        return 0;
-    }
-
-    return i + 1;
+    assert(i < v_adj.len);
+    return get(nb, v_adj.index + i);
 }
 
-static inline uint32_t graph_adj_prev(
-    GraphAdjList adj,
-    uint32_t i
+static inline uint32_t graph_aug_nb_index(
+    GraphAugNbSlice nb,
+    GraphAdj v_adj,
+    uint32_t u
 ) {
-    if (i == 0) {
-        return (uint32_t)(adj.len - 1);
-    }
-
-    return i - 1;
-}
-
-static inline uint32_t graph_adj_neighbor_index(
-    GraphAdjList adj,
-    uint32_t neighbor
-) {
-    for (uint32_t i = 0; i < adj.len; i += 1) {
-        if (get(adj, i) == neighbor) {
+    for (uint32_t i = 0; i < v_adj.len; i += 1) {
+        if (graph_aug_nb(nb, v_adj, i).vertex == u) {
             return i;
         }
     }
+
     assert(false);
     return 0xffffffff;
 }
 
-static inline uint32_t graph_adj_next_neighbor_index(
-    GraphAdjList adj,
-    uint32_t neighbor
-) {
-    return graph_adj_next(
-        adj,
-        graph_adj_neighbor_index(adj, neighbor)
-    );
-}
-
-static inline uint32_t graph_aug_adj_next(
-    GraphAugAdjList adj,
-    uint32_t i
-) {
-    if (i + 1 == adj.len) {
-        return 0;
-    }
-
-    return i + 1;
-}
-
-static inline uint32_t graph_aug_adj_prev(
-    GraphAugAdjList adj,
-    uint32_t i
-) {
-    if (i == 0) {
-        return (uint32_t)(adj.len - 1);
-    }
-
-    return i - 1;
-}
-
-static inline uint32_t graph_aug_adj_neighbor_index(
-    GraphAugAdjList adj,
-    uint32_t neighbor
-) {
-    for (uint32_t i = 0; i < adj.len; i += 1) {
-        if (get(adj, i).vertex == neighbor) {
-            return i;
-        }
-    }
-    assert(false);
-    return 0xffffffff;
-}
-
-static inline uint32_t graph_aug_adj_next_neighbor_index(
-    GraphAugAdjList adj,
-    uint32_t neighbor
-) {
-    return graph_aug_adj_next(
-        adj,
-        graph_aug_adj_neighbor_index(adj, neighbor)
-    );
+static inline uint32_t graph_aug_deg(GraphAug graph, uint32_t v) {
+    return get(graph.adj, v).len;
 }
 
 static inline GraphAug graph_aug(Graph graph, AvenArena *arena) {
-    GraphAug aug_graph = { .len = graph.len };
-    aug_graph.ptr = aven_arena_create_array(
-        GraphAugAdjList,
+    GraphAug aug_graph = {
+        .nb = { .len = graph.nb.len },
+        .adj = { .len = graph.adj.len },
+    };
+    aug_graph.nb.ptr = aven_arena_create_array(
+        GraphAugNb,
         arena,
-        aug_graph.len
+        aug_graph.nb.len
+    );
+    aug_graph.adj.ptr = aven_arena_create_array(
+        GraphAdj,
+        arena,
+        aug_graph.adj.len
     );
 
-    for (uint32_t v = 0; v < graph.len; v += 1) {
-        GraphAdjList v_adj = get(graph, v);
+    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+        get(aug_graph.adj, v) = get(graph.adj, v);
+    }
 
-        GraphAugAdjListNode *v_aug_adj_nodes = aven_arena_create_array(
-            GraphAugAdjListNode,
-            arena,
-            v_adj.len
-        );
-
-        GraphAugAdjList *v_aug_adj = &get(aug_graph, v);
-        *v_aug_adj = (GraphAugAdjList){
-            .len = v_adj.len,
-            .ptr = v_aug_adj_nodes,
+    for (uint32_t i = 0; i < graph.nb.len; i += 1) {
+        get(aug_graph.nb, i) = (GraphAugNb){
+            .vertex = get(graph.nb, i),
         };
-
-        for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            get(*v_aug_adj, i).vertex = get(v_adj, i);
-        }
     }
 
     AvenArena temp_arena = *arena;
 
-    typedef List(GraphAugAdjListNode) GraphAugWorkList;
+    typedef List(GraphAugNb) GraphAugWorkList;
 
-    Slice(GraphAugWorkList) work_lists = { .len = graph.len };
+    Slice(GraphAugWorkList) work_lists = { .len = graph.adj.len };
     work_lists.ptr = aven_arena_create_array(
         GraphAugWorkList,
         &temp_arena,
         work_lists.len
     );
 
-    for (uint32_t v = 0; v < graph.len; v += 1) {
-        GraphAdjList v_adj = get(graph, v);
+    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+        uint32_t v_deg = get(graph.adj, v).len;
 
-        GraphAugAdjListNode *v_work_nodes = aven_arena_create_array(
-            GraphAugAdjListNode,
+        GraphAugNb *v_work_nodes = aven_arena_create_array(
+            GraphAugNb,
             &temp_arena,
-            v_adj.len
+            v_deg
         );
 
         get(work_lists, v) = (GraphAugWorkList){
-            .cap = v_adj.len,
+            .cap = v_deg,
             .ptr = v_work_nodes,
         };
     }
 
-    for (uint32_t v = 0; v < graph.len; v += 1) {
-        GraphAdjList v_adj = get(graph, v);
+    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+        GraphAdj v_adj = get(graph.adj, v);
         for (uint32_t i = 0; i < v_adj.len; i += 1) {
-            uint32_t u = get(v_adj, i);
+            uint32_t u = graph_nb(graph.nb, v_adj, i);
 
-            list_push(get(work_lists, u)) = (GraphAugAdjListNode){
+            list_push(get(work_lists, u)) = (GraphAugNb){
                 .vertex = v,
                 .back_index = i,
             };
         }
     }
 
-    for (uint32_t k = (uint32_t)graph.len; k > 0; k -= 1) {
+    for (uint32_t k = (uint32_t)graph.adj.len; k > 0; k -= 1) {
         uint32_t v = k - 1;
 
         GraphAugWorkList *v_work_list = &get(work_lists, v);
         for (uint32_t i = 0; i < v_work_list->len; i += 1) {
-            GraphAugAdjListNode v_work_node = get(*v_work_list, i);
+            GraphAugNb v_work_node = get(*v_work_list, i);
             uint32_t u = v_work_node.vertex;
 
             GraphAugWorkList *u_work_list = &get(work_lists, u);
-            GraphAugAdjListNode u_work_node = get(
+            GraphAugNb u_work_node = get(
                 *u_work_list,
                 u_work_list->len - 1
             );
 
             get(
-                get(aug_graph, v),
-                u_work_node.back_index
+                aug_graph.nb,
+                get(aug_graph.adj, v).index + u_work_node.back_index
             ).back_index = v_work_node.back_index;
             get(
-                get(aug_graph, u),
-                v_work_node.back_index
+                aug_graph.nb,
+                get(aug_graph.adj, u).index + v_work_node.back_index
             ).back_index = u_work_node.back_index;
 
             u_work_list->len -= 1;
