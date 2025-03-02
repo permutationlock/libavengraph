@@ -3,7 +3,8 @@
 
 #include <aven.h>
 #include <aven/arena.h>
-#include <aven/thread_pool.h>
+#include <aven/thread/pool.h>
+#include <aven/thread/spinlock.h>
 
 #if !defined(__STDC_VERSION__) or __STDC_VERSION__ < 201112L
     #error "C11 or later is required"
@@ -27,7 +28,7 @@ typedef struct {
     GraphPlaneP3ColorThreadAtomicFrameList frames;
     atomic_int threads_active;
     atomic_int frames_active;
-    atomic_bool frames_lock;
+    AvenThreadSpinlock lock;
 } GraphPlaneP3ColorThreadCtx;
 
 static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
@@ -58,8 +59,8 @@ static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
 
     atomic_init(&ctx.frames.len, 0);
     atomic_init(&ctx.frames_active, 0);
-    atomic_init(&ctx.frames_lock, false);
     atomic_init(&ctx.threads_active, 0);
+    aven_thread_spinlock_init(&ctx.lock);
 
     for (uint32_t v = 0; v < ctx.vertex_info.len; v += 1) {
         get(ctx.vertex_info, v) = (GraphPlaneP3ColorVertex){
@@ -95,33 +96,6 @@ static inline GraphPlaneP3ColorThreadCtx graph_plane_p3color_thread_init(
     return ctx;
 }
 
-static inline void graph_plane_p3color_thread_lock_internal(
-    GraphPlaneP3ColorThreadCtx *ctx
-) {
-    for (;;) {
-        if (
-            !atomic_exchange_explicit(
-                &ctx->frames_lock,
-                true,
-                memory_order_acquire
-            )
-        ) {
-            return;
-        }
-        while (atomic_load_explicit(&ctx->frames_lock, memory_order_relaxed)) {
-#if __has_builtin(__builtin_ia32_pause)
-            __builtin_ia32_pause();
-#endif
-        }
-    }
-}
-
-static inline void graph_plane_p3color_thread_unlock_internal(
-    GraphPlaneP3ColorThreadCtx *ctx
-) {
-    atomic_store_explicit(&ctx->frames_lock, false, memory_order_release);
-}
-
 static inline void graph_plane_p3color_thread_push_internal(
     GraphPlaneP3ColorThreadCtx *ctx,
     GraphPlaneP3ColorThreadFrameList *local_frames,
@@ -129,7 +103,7 @@ static inline void graph_plane_p3color_thread_push_internal(
 ) {
     list_push(*local_frames) = frame;
     if (local_frames->len == local_frames->cap) {
-        graph_plane_p3color_thread_lock_internal(ctx);
+        aven_thread_spinlock_lock(&ctx->lock);
         size_t len = atomic_fetch_add_explicit(
             &ctx->frames.len,
             local_frames->cap / 2,
@@ -143,7 +117,7 @@ static inline void graph_plane_p3color_thread_push_internal(
         ) {
             ctx->frames.ptr[len + i] = list_pop(*local_frames);
         }
-        graph_plane_p3color_thread_unlock_internal(ctx);
+        aven_thread_spinlock_unlock(&ctx->lock);
     }
 }
 
@@ -285,7 +259,7 @@ static inline void graph_plane_p3color_pop_internal(
             atomic_load_explicit(&ctx->frames.len, memory_order_relaxed) > 0 or
             atomic_load_explicit(&ctx->frames_active, memory_order_relaxed) == 0
         ) {
-            graph_plane_p3color_thread_lock_internal(ctx);
+            aven_thread_spinlock_lock(&ctx->lock);
             size_t frames_available = atomic_load_explicit(
                 &ctx->frames.len,
                 memory_order_relaxed
@@ -308,7 +282,7 @@ static inline void graph_plane_p3color_pop_internal(
                     1,
                     memory_order_relaxed
                 );
-                graph_plane_p3color_thread_unlock_internal(ctx);
+                aven_thread_spinlock_unlock(&ctx->lock);
                 return;
             } else if (
                 atomic_load_explicit(
@@ -316,10 +290,10 @@ static inline void graph_plane_p3color_pop_internal(
                     memory_order_relaxed
                 ) == 0
             ) {
-                graph_plane_p3color_thread_unlock_internal(ctx);
+                aven_thread_spinlock_unlock(&ctx->lock);
                 return;
             }
-            graph_plane_p3color_thread_unlock_internal(ctx);
+            aven_thread_spinlock_unlock(&ctx->lock);
         }
         while (
             atomic_load_explicit(

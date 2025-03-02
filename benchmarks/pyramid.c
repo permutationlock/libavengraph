@@ -28,9 +28,9 @@
 #define NGRAPHS 1
 #define FULL_RUNS 1
 #define MAX_VERTICES 10000001
-#define START_VERTICES 1000
+#define START_VERTICES 10000
 
-#define MAX_COLOR 8
+#define MAX_COLOR 6
 
 #define NTHREADS 4
 

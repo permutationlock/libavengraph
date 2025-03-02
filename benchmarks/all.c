@@ -22,7 +22,7 @@
 #include <graph/plane/gen.h>
 
 #ifdef BENCHMARK_THREADED
-    #include <aven/thread_pool.h>
+    #include <aven/thread/pool.h>
     #include <graph/plane/p3color/thread.h>
     #include <graph/plane/p3choose/thread.h>
 #endif
@@ -37,7 +37,7 @@
 #define MAX_VERTICES 10000001
 #define START_VERTICES 10000
 
-#define MAX_COLOR 8
+#define MAX_COLOR 6
 
 #define NTHREADS 4
 
@@ -159,7 +159,7 @@ int main(void) {
                 Graph graph = graph_plane_gen_tri_abs(
                     n,
                     rng,
-                    (Vec2){ 0.333f, 0.666f },
+                    (Vec2){ 0.0833f, 0.1666f },
                     &loop_arena
                 );
                 get(cases, i).graph = graph;

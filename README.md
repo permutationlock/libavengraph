@@ -67,8 +67,8 @@ exectuables, run:
 
 ### Benchmarks
 
-To build and run the algorithm benchmarks you will need ~13GB of
-unused available system RAM. To benchmark the threaded algorithms
+To build and run the algorithm benchmarks you will need ~3GB of
+available system RAM. To benchmark the threaded algorithms
 your C compiler must support C11 atomics. An example full benchmark
 run command for `gcc` or `clang` on Linux would be:
 ```
