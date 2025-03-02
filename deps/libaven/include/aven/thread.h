@@ -8,12 +8,12 @@
     __STDC_VERSION__ < 201112L or \
     (defined(_WIN32) and !defined(_MSC_VER))
 
-    #define AVEN_THREAD_POOL_USE_PTHREADS
+    #define AVEN_THREAD_USE_PTHREADS
 #endif
 
 typedef int (AvenThreadFn)(void *);
 
-#ifndef AVEN_THREAD_POOL_USE_PTHREADS
+#ifndef AVEN_THREAD_USE_PTHREADS
     #include <threads.h>
 
     typedef thrd_t AvenThread;
@@ -91,7 +91,7 @@ typedef int (AvenThreadFn)(void *);
         int error = cnd_wait(cnd, mtx);
         assert(error == thrd_success);
     }
-#else // defined(AVEN_THREAD_POOL_USE_PTHREADS)
+#else // defined(AVEN_THREAD_USE_PTHREADS)
     #ifdef _MSC_VER
         #error "pthreads not supported in MSVC"
     #endif
@@ -107,7 +107,7 @@ typedef int (AvenThreadFn)(void *);
         AvenThreadFn *fn,
         void *arg
     ) {
-        int error = pthread_create(thread, NULL, (void *(*)(void *)fn, arg);
+        int error = pthread_create(thread, NULL, (void *(*)(void *))fn, arg);
         if (error != 0) {
             aven_panic("pthread_create failed");
         }
@@ -171,6 +171,6 @@ typedef int (AvenThreadFn)(void *);
         int error = pthread_cond_wait(cnd, mtx);
         assert(error == 0);
     }
-#endif // defined(AVEN_THREAD_POOL_USE_PTHREADS)
+#endif // defined(AVEN_THREAD_USE_PTHREADS)
 
 #endif // AVEN_THREAD_H
