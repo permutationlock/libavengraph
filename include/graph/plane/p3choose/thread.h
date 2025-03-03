@@ -700,6 +700,11 @@ static inline GraphPropUint8 graph_plane_p3choose_thread(
         &temp_arena,
         nthreads
     );
+    AvenThreadPoolJobSlice jobs = aven_arena_create_slice(
+        AvenThreadPoolJob,
+        &temp_arena,
+        nthreads - 1
+    );
 
     uint32_t chunk_size = (uint32_t)(aug_graph.adj.len / workers.len);
     for (uint32_t i = 0; i < workers.len; i += 1) {
@@ -716,16 +721,13 @@ static inline GraphPropUint8 graph_plane_p3choose_thread(
             .start_vertex = start_vertex,
             .end_vertex = end_vertex,
         };
+        get(jobs, i) = (AvenThreadPoolJob){
+            .fn = graph_plane_p3choose_thread_worker,
+            .args = &get(workers, i),
+        };
     }
 
-    for (uint32_t i = 0; i < workers.len - 1; i += 1) {
-        aven_thread_pool_submit(
-            thread_pool,
-            graph_plane_p3choose_thread_worker,
-            &get(workers, i + 1)
-        );
-    }
-
+    aven_thread_pool_submit_slice(thread_pool, jobs);
     graph_plane_p3choose_thread_worker(&get(workers, 0));
 
     aven_thread_pool_wait(thread_pool);

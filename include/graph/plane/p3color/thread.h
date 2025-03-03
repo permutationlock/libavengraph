@@ -314,11 +314,11 @@ typedef struct {
     GraphPlaneP3ColorThreadCtx *ctx;
     uint32_t start_vertex;
     uint32_t end_vertex;
-} GraphP3ColorThreadWorkerArgs;
+} GraphP3ColorThreadWorker;
 
-static void graph_p3color_thread_worker_internal(void *args) {
-    GraphP3ColorThreadWorkerArgs *wargs = args;
-    GraphPlaneP3ColorThreadCtx *ctx = wargs->ctx;
+static void graph_plane_p3color_thread_worker(void *args) {
+    GraphP3ColorThreadWorker *worker = args;
+    GraphPlaneP3ColorThreadCtx *ctx = worker->ctx;
 
     atomic_fetch_add_explicit(&ctx->threads_active, 1, memory_order_relaxed);
     atomic_fetch_add_explicit(&ctx->frames_active, 1, memory_order_relaxed);
@@ -364,10 +364,10 @@ static void graph_p3color_thread_worker_internal(void *args) {
         }
     }
 
-    for (uint32_t v = wargs->start_vertex; v != wargs->end_vertex; v += 1) {
+    for (uint32_t v = worker->start_vertex; v != worker->end_vertex; v += 1) {
         int32_t v_mark = get(ctx->vertex_info, v).mark;
         assert(v_mark > 0 and v_mark <= 3);
-        get(wargs->coloring, v) = (uint8_t)v_mark;
+        get(worker->coloring, v) = (uint8_t)v_mark;
     }
 }
 
@@ -391,37 +391,39 @@ static inline GraphPropUint8 graph_plane_p3color_thread(
         &temp_arena
     );
 
-    Slice(GraphP3ColorThreadWorkerArgs) wargs_data = aven_arena_create_slice(
-        GraphP3ColorThreadWorkerArgs,
+    Slice(GraphP3ColorThreadWorker) workers = aven_arena_create_slice(
+        GraphP3ColorThreadWorker,
         &temp_arena,
         nthreads
     );
+    AvenThreadPoolJobSlice jobs = aven_arena_create_slice(
+        AvenThreadPoolJob,
+        &temp_arena,
+        nthreads - 1
+    );
 
-    uint32_t chunk_size = (uint32_t)(graph.adj.len / wargs_data.len);
-    for (uint32_t i = 0; i < wargs_data.len; i += 1) {
+    uint32_t chunk_size = (uint32_t)(graph.adj.len / workers.len);
+    for (uint32_t i = 0; i < workers.len; i += 1) {
         uint32_t start_vertex = i * chunk_size;
         uint32_t end_vertex = (i + 1) * chunk_size;
-        if (i + 1 == wargs_data.len) {
+        if (i + 1 == workers.len) {
             end_vertex = (uint32_t)graph.adj.len;
         }
 
-        get(wargs_data, i) = (GraphP3ColorThreadWorkerArgs){
+        get(workers, i) = (GraphP3ColorThreadWorker){
             .coloring = coloring,
             .ctx = &ctx,
             .start_vertex = start_vertex,
             .end_vertex = end_vertex,
         };
+        get(jobs, i) = (AvenThreadPoolJob){
+            .fn = graph_plane_p3color_thread_worker,
+            .args = &get(workers, i),
+        };
     }
 
-    for (size_t i = 0; i < wargs_data.len - 1; i += 1) {
-        aven_thread_pool_submit(
-            thread_pool,
-            graph_p3color_thread_worker_internal,
-            &get(wargs_data, i)
-        );
-    }
-
-    graph_p3color_thread_worker_internal(&get(wargs_data, wargs_data.len - 1));
+    aven_thread_pool_submit_slice(thread_pool, jobs);
+    graph_plane_p3color_thread_worker(&get(workers, workers.len - 1));
 
     aven_thread_pool_wait(thread_pool);
 

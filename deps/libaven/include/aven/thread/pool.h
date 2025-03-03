@@ -11,6 +11,7 @@ typedef struct {
     AvenThreadPoolJobFn fn;
     void *args;
 } AvenThreadPoolJob;
+typedef Slice(AvenThreadPoolJob) AvenThreadPoolJobSlice;
 
 typedef struct {
     Queue(AvenThreadPoolJob) job_queue;
@@ -111,6 +112,18 @@ static void aven_thread_pool_submit(
         .fn = fn,
         .args = args,
     };
+    aven_thread_cnd_broadcast(&thread_pool->job_cond);
+    aven_thread_mtx_unlock(&thread_pool->lock);
+}
+
+static void aven_thread_pool_submit_slice(
+    AvenThreadPool *thread_pool,
+    AvenThreadPoolJobSlice jobs
+) {
+    aven_thread_mtx_lock(&thread_pool->lock);
+    for (size_t i = 0; i < jobs.len; i += 1) {
+        queue_push(thread_pool->job_queue) = get(jobs, i);
+    }
     aven_thread_cnd_broadcast(&thread_pool->job_cond);
     aven_thread_mtx_unlock(&thread_pool->lock);
 }
