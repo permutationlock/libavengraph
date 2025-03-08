@@ -416,6 +416,8 @@ static inline GraphPropUint8 graph_plane_p3color_thread(
             .start_vertex = start_vertex,
             .end_vertex = end_vertex,
         };
+    }
+    for (uint32_t i = 0; i < jobs.len; i += 1) {
         get(jobs, i) = (AvenThreadPoolJob){
             .fn = graph_plane_p3color_thread_worker,
             .args = &get(workers, i),

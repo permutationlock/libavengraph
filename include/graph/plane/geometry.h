@@ -427,7 +427,7 @@ static inline void graph_plane_geometry_push_colored_edges(
                 v,
                 u,
                 trans,
-                &get(draw_infos, v_color - 1)
+                &get(draw_infos, (size_t)(v_color - 1))
             );
         }
     }

@@ -721,6 +721,8 @@ static inline GraphPropUint8 graph_plane_p3choose_thread(
             .start_vertex = start_vertex,
             .end_vertex = end_vertex,
         };
+    }
+    for (uint32_t i = 0; i < jobs.len; i += 1) {
         get(jobs, i) = (AvenThreadPoolJob){
             .fn = graph_plane_p3choose_thread_worker,
             .args = &get(workers, i),
@@ -728,7 +730,7 @@ static inline GraphPropUint8 graph_plane_p3choose_thread(
     }
 
     aven_thread_pool_submit_slice(thread_pool, jobs);
-    graph_plane_p3choose_thread_worker(&get(workers, 0));
+    graph_plane_p3choose_thread_worker(&get(workers, workers.len - 1));
 
     aven_thread_pool_wait(thread_pool);
 
