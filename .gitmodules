@@ -1,0 +1,6 @@
+[submodule "deps/libavengl"]
+	path = deps/libavengl
+	url = https://github.com/permutationlock/libavengl
+[submodule "deps/libaven"]
+	path = deps/libaven
+	url = https://github.com/permutationlock/libaven
