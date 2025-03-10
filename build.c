@@ -41,42 +41,36 @@ int main(int argc, char **argv) {
     AvenArgSlice libaven_args = libaven_build_args();
     AvenArgSlice libavengl_args = libavengl_build_args();
 
-    AvenArgSlice args = {
-        .len = 3 + common_args.len + libavengl_args.len + libaven_args.len
-    };
-    args.ptr = aven_arena_create_array(AvenArg, &arena, args.len);
-
-    size_t arg_index = 0;
-    get(args, arg_index) = (AvenArg){
+    List(AvenArg) arg_list = aven_arena_create_list(
+        AvenArg,
+        &arena,
+        3 + common_args.len + libavengl_args.len + libaven_args.len
+    );
+    list_push(arg_list) = (AvenArg){
         .name = "watch",
         .description = "Build and run visualization and hot-reload src changes",
         .type = AVEN_ARG_TYPE_BOOL,
     };
-    arg_index += 1;
-    get(args, arg_index) = (AvenArg){
+    list_push(arg_list) = (AvenArg){
         .name = "bench",
         .description = "Build and run benchmarks",
         .type = AVEN_ARG_TYPE_BOOL,
     };
-    arg_index += 1;
-    get(args, arg_index) = (AvenArg){
+    list_push(arg_list) = (AvenArg){
         .name = "tikz",
         .description = "Build tikz drawing example generators",
         .type = AVEN_ARG_TYPE_BOOL,
     };
-    arg_index += 1;
+    for(size_t i = 0; i < common_args.len; i += 1) {
+        list_push(arg_list) = get(common_args, i);
+    }
     for (size_t i = 0; i < libaven_args.len; i += 1) {
-        get(args, arg_index) = get(libaven_args, i);
-        arg_index += 1;
+        list_push(arg_list) = get(libaven_args, i);
     }
     for (size_t i = 0; i < libavengl_args.len; i += 1) {
-        get(args, arg_index) = get(libavengl_args, i);
-        arg_index += 1;
+        list_push(arg_list) = get(libavengl_args, i);
     }
-    for(size_t i = 0; i < common_args.len; i += 1) {
-        get(args, arg_index) = get(common_args, i);
-        arg_index += 1;
-    }
+    AvenArgSlice args = slice_list(arg_list);
 
     int error = aven_arg_parse(
         args,
@@ -133,8 +127,8 @@ int main(int argc, char **argv) {
             &arena
         );
     }
-
     AvenStrSlice includes = slice_list(include_list);
+
     AvenStrSlice macros = { 0 };
     AvenStrSlice syslibs = { 0 };
 
@@ -171,11 +165,9 @@ int main(int argc, char **argv) {
 
     AvenStr graphics_include_data[countof(include_data) + 3];
     List(AvenStr) graphics_include_list = list_array(graphics_include_data);
-
     for (size_t i = 0; i < includes.len; i += 1) {
         list_push(graphics_include_list) = get(includes, i);
     }
-
     list_push(graphics_include_list) = libavengl_build_include_path(
         libavengl_path,
         &arena
@@ -188,7 +180,6 @@ int main(int argc, char **argv) {
         libavengl_path,
         &arena
     );
-
     AvenStrSlice graphics_includes = slice_list(graphics_include_list);
 
     Optional(AvenBuildStep) glfw_obj_step = { 0 };
@@ -268,26 +259,20 @@ int main(int argc, char **argv) {
         &arena
     );
 
-
     AvenBuildStep *visualization_hot_obj_data[4];
     List(AvenBuildStep *) visualization_hot_obj_list = list_array(
         visualization_hot_obj_data
     );
-
     list_push(visualization_hot_obj_list) = &visualization_hot_obj_step;
-
     if (winutf8_obj_step.valid) {
         list_push(visualization_hot_obj_list) = &winutf8_obj_step.value;
     }
-
     if (winpthreads_obj_step.valid) {
         list_push(visualization_hot_obj_list) = &winpthreads_obj_step.value;
     }
-
     if (glfw_obj_step.valid) {
         list_push(visualization_hot_obj_list) = &glfw_obj_step.value;
     }
-
     AvenBuildStepPtrSlice visualization_hot_objs = slice_list(
         visualization_hot_obj_list
     );
@@ -332,21 +317,16 @@ int main(int argc, char **argv) {
     List(AvenBuildStep *) visualization_obj_list = list_array(
         visualization_obj_data
     );
-
     list_push(visualization_obj_list) = &visualization_obj_step;
-
     if (winutf8_obj_step.valid) {
         list_push(visualization_obj_list) = &winutf8_obj_step.value;
     }
-
     if (winpthreads_obj_step.valid) {
         list_push(visualization_obj_list) = &winpthreads_obj_step.value;
     }
-
     if (glfw_obj_step.valid) {
         list_push(visualization_obj_list) = &glfw_obj_step.value;
     }
-
     AvenBuildStepPtrSlice visualization_objs = slice_list(
         visualization_obj_list
     );
@@ -384,13 +364,10 @@ int main(int argc, char **argv) {
     List(AvenBuildStep *) p3color_tikz_obj_list = list_array(
         p3color_tikz_obj_data
     );
-
     list_push(p3color_tikz_obj_list) = &p3color_tikz_obj_step;
-
     if (winutf8_obj_step.valid) {
         list_push(p3color_tikz_obj_list) = &winutf8_obj_step.value;
     }
-
     AvenBuildStepPtrSlice p3color_tikz_objs = slice_list(
         p3color_tikz_obj_list
     );
@@ -423,13 +400,10 @@ int main(int argc, char **argv) {
     List(AvenBuildStep *) p3choose_tikz_obj_list = list_array(
         p3choose_tikz_obj_data
     );
-
     list_push(p3choose_tikz_obj_list) = &p3choose_tikz_obj_step;
-
     if (winutf8_obj_step.valid) {
         list_push(p3choose_tikz_obj_list) = &winutf8_obj_step.value;
     }
-
     AvenBuildStepPtrSlice p3choose_tikz_objs = slice_list(
         p3choose_tikz_obj_list
     );
@@ -444,7 +418,7 @@ int main(int argc, char **argv) {
         &arena
     );
 
-    // Default build_out artifact build steps
+    // Tikz build_out artifact build steps
 
     AvenBuildStep tikz_root_step = aven_build_step_root();
     aven_build_step_add_dep(&tikz_root_step, &p3color_tikz_exe_step, &arena);
@@ -457,11 +431,9 @@ int main(int argc, char **argv) {
 
     AvenBuildStep *test_obj_data[1];
     List(AvenBuildStep *) test_obj_list = list_array(test_obj_data);
-
     if (winutf8_obj_step.valid) {
         list_push(test_obj_list) = &winutf8_obj_step.value;
     }
-
     AvenBuildStepPtrSlice test_objs = slice_list(test_obj_list);
 
     AvenStrSlice test_args =  { 0 };
@@ -489,15 +461,12 @@ int main(int argc, char **argv) {
 
     AvenBuildStep *bench_obj_data[2];
     List(AvenBuildStep *) bench_obj_list = list_array(bench_obj_data);
-
     if (winutf8_obj_step.valid) {
         list_push(bench_obj_list) = &winutf8_obj_step.value;
     }
-
     if (winpthreads_obj_step.valid) {
         list_push(bench_obj_list) = &winpthreads_obj_step.value;
     }
-
     AvenBuildStepPtrSlice bench_objs = slice_list(bench_obj_list);
 
     AvenStrSlice bench_args =  { 0 };
