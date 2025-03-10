@@ -31,15 +31,19 @@
         GAME_INFO_LOAD_ERROR_SYM,
     } VInfoError;
 
-    static VInfoResult vinfo_load(AvenStr path) {
+    static VInfoResult vinfo_load(AvenStr path, AvenArena temp_arena) {
         VInfo game_dll = { 0 };
 
-        game_dll.handle = aven_dl_open(path);
+        game_dll.handle = aven_dl_open(path, temp_arena);
         if (game_dll.handle == NULL) {
             return (VInfoResult){ .error = GAME_INFO_LOAD_ERROR_OPEN };
         }
 
-        GameTable *table = aven_dl_sym(game_dll.handle, aven_str("game_table"));
+        GameTable *table = aven_dl_sym(
+            game_dll.handle,
+            aven_str("game_table"),
+            temp_arena
+        );
         if (table == NULL) {
             return (VInfoResult){ .error = GAME_INFO_LOAD_ERROR_SYM };
         }
@@ -228,19 +232,19 @@ int main(void) {
         }
     }
     AvenStr exe_dir_path = aven_path_rel_dir(exe_path, &arena);
+#if defined(_WIN32)
+    AvenStr game_dll_name = aven_str("game.dll");
+#else
+    AvenStr game_dll_name = aven_str("game.so");
+#endif
     AvenStr game_dll_path = aven_path(
         &arena,
-        exe_dir_path.ptr,
-        "game",
-#if defined(_WIN32)
-        "game.dll",
-#else // !defined(_WIN32)
-        "game.so",
-#endif // !defined(_WIN32)
-        NULL
+        exe_dir_path,
+        aven_str("game"),
+        game_dll_name
     );
     {
-        VInfoResult result = vinfo_load(game_dll_path);
+        VInfoResult result = vinfo_load(game_dll_path, arena);
         if (result.error != 0) {
             vinfo_error_print(result.error);
             return 1;
@@ -248,10 +252,14 @@ int main(void) {
         vinfo = result.payload;
     }
 
-    AvenStr watch_dir_path = aven_path(&arena, exe_dir_path.ptr, "watch", NULL);
-    AvenWatchHandle game_watch_handle = aven_watch_init(watch_dir_path);
+    AvenStr watch_dir_path = aven_path(&arena, exe_dir_path, aven_str("watch"));
+    AvenWatchHandle game_watch_handle = aven_watch_init(watch_dir_path, arena);
     if (game_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
-        fprintf(stderr, "FAILED TO WATCH: %s\n", watch_dir_path.ptr);
+        fprintf(
+            stderr,
+            "FAILED TO WATCH: %s\n",
+            aven_str_to_cstr(watch_dir_path, &arena)
+        );
         return 1;
     }
     bool game_valid = true;
@@ -275,7 +283,7 @@ int main(void) {
                 aven_dl_close(vinfo.handle);
                 vinfo.handle = NULL;
             }
-            VInfoResult info_result = vinfo_load(game_dll_path);
+            VInfoResult info_result = vinfo_load(game_dll_path, arena);
             if (info_result.error != 0) {
                 vinfo_error_print(info_result.error);
                 game_valid = false;

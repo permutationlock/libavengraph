@@ -106,15 +106,13 @@ int main(int argc, char **argv) {
 
     AvenStr libaven_path = aven_path(
         &arena,
-        "deps",
-        "libaven",
-        NULL
+        aven_str("deps"),
+        aven_str("libaven")
     );
     AvenStr libavengl_path = aven_path(
         &arena,
-        "deps",
-        "libavengl",
-        NULL
+        aven_str("deps"),
+        aven_str("libavengl")
     );
 
     AvenStr libaven_include_path = libaven_build_include_path(
@@ -226,11 +224,10 @@ int main(int argc, char **argv) {
             (AvenBuildStepPtrSlice){ 0 },
             aven_path(
                 &arena,
-                root_path.ptr,
-                "visualization",
-                "game",
-                "game.c",
-                NULL
+                root_path,
+                aven_str("visualization"),
+                aven_str("game"),
+                aven_str("game.c")
             ),
             &visualization_hot_game_dir_step,
             &arena
@@ -239,9 +236,8 @@ int main(int argc, char **argv) {
     AvenBuildStep hot_dll_signal_step = aven_build_step_trunc(
         aven_path(
             &arena,
-            visualization_hot_watch_dir_step.out_path.value.ptr,
-            "lock",
-            NULL
+            visualization_hot_watch_dir_step.out_path.value,
+            aven_str("lock")
         )
     );
     aven_build_step_add_dep(
@@ -262,7 +258,12 @@ int main(int argc, char **argv) {
         &opts,
         graphics_includes,
         visualization_hot_macros,
-        aven_path(&arena, root_path.ptr, "visualization", "main.c", NULL),
+        aven_path(
+            &arena,
+            root_path,
+            aven_str("visualization"),
+            aven_str("main.c")
+        ),
         &work_dir_step,
         &arena
     );
@@ -317,7 +318,12 @@ int main(int argc, char **argv) {
         &opts,
         graphics_includes,
         macros,
-        aven_path(&arena, root_path.ptr, "visualization", "main.c", NULL),
+        aven_path(
+            &arena,
+            root_path,
+            aven_str("visualization"),
+            aven_str("main.c")
+        ),
         &work_dir_step,
         &arena
     );
@@ -364,7 +370,12 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        aven_path(&arena, root_path.ptr, "tikz", "p3color_tikz.c", NULL),
+        aven_path(
+            &arena,
+            root_path,
+            aven_str("tikz"),
+            aven_str("p3color_tikz.c")
+        ),
         &work_dir_step,
         &arena
     );
@@ -398,7 +409,12 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        aven_path(&arena, root_path.ptr, "tikz", "p3choose_tikz.c", NULL),
+        aven_path(
+            &arena,
+            root_path,
+            aven_str("tikz"),
+            aven_str("p3choose_tikz.c")
+        ),
         &work_dir_step,
         &arena
     );
@@ -456,7 +472,7 @@ int main(int argc, char **argv) {
         macros,
         syslibs,
         test_objs,
-        aven_path(&arena, root_path.ptr, "test.c", NULL),
+        aven_path(&arena, root_path, aven_str("test.c")),
         &test_dir_step,
         false,
         test_args,
@@ -492,7 +508,7 @@ int main(int argc, char **argv) {
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "all.c", NULL),
+        aven_path(&arena, root_path, aven_str("benchmarks"), aven_str("all.c")),
         &bench_dir_step,
         false,
         bench_args,
@@ -507,7 +523,12 @@ int main(int argc, char **argv) {
         macros,
         syslibs,
         bench_objs,
-        aven_path(&arena, root_path.ptr, "benchmarks", "pyramid.c", NULL),
+        aven_path(
+            &arena,
+            root_path,
+            aven_str("benchmarks"),
+            aven_str("pyramid.c")
+        ),
         &bench_dir_step,
         false,
         bench_args,
@@ -523,11 +544,11 @@ int main(int argc, char **argv) {
     // Run build steps according to args
 
     if (opts.clean) {
-        aven_build_step_clean(&root_step);
-        aven_build_step_clean(&hot_root_step);
-        aven_build_step_clean(&tikz_root_step);
-        aven_build_step_clean(&test_root_step);
-        aven_build_step_clean(&bench_root_step);
+        aven_build_step_clean(&root_step, arena);
+        aven_build_step_clean(&hot_root_step, arena);
+        aven_build_step_clean(&tikz_root_step, arena);
+        aven_build_step_clean(&test_root_step, arena);
+        aven_build_step_clean(&bench_root_step, arena);
     } else {
          if (opts.test) {
             error = aven_build_step_run(&test_root_step, arena);
@@ -546,10 +567,17 @@ int main(int argc, char **argv) {
             }
         } else if (opt_watch) {
             AvenWatchHandle src_handle = aven_watch_init(
-                aven_path(&arena, root_path.ptr, "visualization", NULL)
+                aven_path(&arena, root_path, aven_str("visualization")),
+                arena
             );
             AvenWatchHandle game_handle = aven_watch_init(
-                aven_path(&arena, root_path.ptr, "visualization", "game", NULL)
+                aven_path(
+                    &arena,
+                    root_path,
+                    aven_str("visualization"),
+                    aven_str("game")
+                ),
+                arena
             );
             AvenWatchHandle handle_data[] = { src_handle, game_handle };
             AvenWatchHandleSlice handles = slice_array(handle_data);
@@ -564,14 +592,14 @@ int main(int argc, char **argv) {
                             aven_proc_kill(exe_pid.value);
                             exe_pid.valid = false;
                         }
-                        aven_build_step_reset(&hot_root_step);
+                        aven_build_step_reset(&hot_root_step, arena);
                         error = aven_build_step_run(&hot_root_step, arena);
                         if (error != 0) {
                             fprintf(stderr, "BUILD FAILED: %d\n", error);
                         }
                         break;
                     case REBUILD_STATE_GAME:
-                        aven_build_step_reset(&hot_dll_root_step);
+                        aven_build_step_reset(&hot_dll_root_step, arena);
                         error = aven_build_step_run(&hot_dll_root_step, arena);
                         if (error != 0) {
                             fprintf(stderr, "BUILD FAILED: %d\n", error);
