@@ -141,9 +141,8 @@ int main(void) {
                 GraphAug aug_graph;
                 GraphPlaneP3ChooseListProp color_lists;
                 GraphPropUint8 coloring;
-                GraphSubset path;
+                GraphBfsTree tree;
                 uint32_t root;
-                uint32_t target;
             } CaseData;
 
             size_t nruns = max(1, MAX_VERTICES / n);
@@ -168,9 +167,6 @@ int main(void) {
                 }
 
                 get(cases, i).root = aven_rng_rand_bounded(rng, n);
-                do {
-                    get(cases, i).target = aven_rng_rand_bounded(rng, n);
-                } while (get(cases, i).target == get(cases, i).root);
 
                 GraphPlaneP3ChooseListProp *color_lists = &get(
                     cases,
@@ -224,10 +220,9 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
-                        get(cases, i).path = graph_bfs(
+                        get(cases, i).tree = graph_bfs(
                             get(cases, i).graph,
                             get(cases, i).root,
-                            get(cases, i).target,
                             &temp_arena
                         );
                     }
@@ -243,26 +238,45 @@ int main(void) {
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
-                    GraphSubset path = get(cases, i).path;
-                    bool valid = (get(path, 0) == get(cases, i).target) and
-                        (get(path, path.len - 1) == get(cases, i).root);
+                    GraphBfsTree tree = get(cases, i).tree;
+                    bool valid = true;
+                    for (uint32_t v = 0; v < tree.len; v += 1) {
+                        if (!graph_bfs_tree_contains(tree, v)) {
+                            valid = false;
+                            break;
+                        }
+                        if (v == get(cases, i).root) {
+                            if (get(tree, v).dist != 0) {
+                                valid = false;
+                                break;
+                            }
+                            if (graph_bfs_tree_parent(tree, v) != v) {
+                                valid = false;
+                                break;
+                            }
+                        } else {
+                            uint32_t u = graph_bfs_tree_parent(tree, v);
+                            if (get(tree, v).dist - get(tree, u).dist != 1) {
+                                valid = false;
+                                break;
+                            }
+                        }
+                    }
                     if (valid) {
                         nvalid += 1;
                     }
                 }
 
                 if (nvalid < cases.len) {
-                    aven_panic("invalid bfs path");
+                    aven_panic("invalid bfs tree");
                 }
 
                 printf(
                     "bfs on %lu graph(s) with %lu vertices:\n"
-                    "\tvalid paths: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -356,12 +370,10 @@ int main(void) {
 
                 printf(
                     "augmenting %lu graph(s) with %lu vertices:\n"
-                    "\tvalid augmented graphs: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -418,12 +430,10 @@ int main(void) {
 
                 printf(
                     "path 3-coloring (bfs) %lu graph(s) with %lu vertices:\n"
-                    "\tvalid 3-colorings: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -477,12 +487,10 @@ int main(void) {
 
                 printf(
                     "path 3-coloring %lu graph(s) with %lu vertices:\n"
-                    "\tvalid 3-colorings: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -539,13 +547,11 @@ int main(void) {
 
                 printf(
                     "path 3-coloring (%lu threads) %lu graph(s) with %lu vertices:\n"
-                    "\tvalid 3-colorings: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)nthreads,
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -632,12 +638,10 @@ int main(void) {
 
                 printf(
                     "path 3-choosing %lu graph(s) with %lu vertices:\n"
-                    "\tvalid 3-choosings: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -724,13 +728,11 @@ int main(void) {
 
                 printf(
                     "path 3-choosing (%lu threads) %lu graph(s) with %lu vertices:\n"
-                    "\tvalid 3-choosings: %lu\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)nthreads,
                     (unsigned long)cases.len,
                     (unsigned long)n,
-                    (unsigned long)nvalid,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );

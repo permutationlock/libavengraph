@@ -231,7 +231,7 @@ int main(void) {
             exe_path = info_result.payload;
         }
     }
-    AvenStr exe_dir_path = aven_path_rel_dir(exe_path, &arena);
+    AvenStr exe_dir_path = aven_path_containing_dir(exe_path);
 #if defined(_WIN32)
     AvenStr game_dll_name = aven_str("game.dll");
 #else

@@ -7,8 +7,14 @@
 #include "../graph.h"
 
 typedef struct {
-    GraphAdj adj;
     uint32_t parent;
+    uint32_t dist;    
+} GraphBfsTreeNode;
+typedef Slice(GraphBfsTreeNode) GraphBfsTree;
+
+typedef struct {
+    GraphAdj adj;
+    GraphBfsTreeNode node;
 } GraphBfsVertex;
 
 typedef struct {
@@ -50,7 +56,7 @@ static inline GraphBfsCtx graph_bfs_init(
         };
     }
 
-    get(ctx.vertex_info, ctx.vertex).parent = ctx.vertex + 1;
+    get(ctx.vertex_info, ctx.vertex).node.parent = ctx.vertex + 1;
 
     return ctx;
 }
@@ -69,64 +75,25 @@ static inline bool graph_bfs_step(GraphBfsCtx *ctx) {
 
     uint32_t u = graph_nb(ctx->nb, v_info->adj, ctx->edge_index);
     GraphBfsVertex *u_info = &get(ctx->vertex_info, u);
-    if (u_info->parent == 0) {
+    if (u_info->node.parent == 0) {
         queue_push(ctx->bfs_queue) = u;
-        u_info->parent = ctx->vertex + 1;
+        u_info->node.parent = ctx->vertex + 1;
+        u_info->node.dist = v_info->node.dist + 1;
     }
     ctx->edge_index += 1;
 
     return false;
 }
 
-static inline GraphSubset graph_bfs_path(
-    GraphSubset path_space,
-    GraphBfsCtx *ctx,
-    uint32_t vertex
-) {
-    if (get(ctx->vertex_info, vertex).parent == 0) {
-        return (GraphSubset){ 0 };
-    }
-
-    size_t len = 0;
-    uint32_t last_vertex;
-    do {
-        get(path_space, len) = vertex;
-        last_vertex = vertex;
-        assert(get(ctx->vertex_info, last_vertex).parent != 0);
-        vertex = get(ctx->vertex_info, last_vertex).parent - 1;
-        len += 1;
-    } while (last_vertex != vertex);
-
-    return (GraphSubset){ .ptr = path_space.ptr, .len = len };
-}
-
-static inline uint32_t graph_bfs_backtrace(GraphBfsCtx *ctx, uint32_t v) {
-    uint32_t parent = get(ctx->vertex_info, v).parent;
-    if (parent == 0) {
-        return v;
-    }
-
-    return parent - 1;
-}
-
-static inline GraphSubset graph_bfs(
+static inline GraphBfsTree graph_bfs(
     Graph graph,
     uint32_t root_vertex,
-    uint32_t vertex,
     AvenArena *arena
 ) {
-    if (root_vertex == vertex) {
-        GraphSubset path = { .len = 1 };
-        path.ptr = aven_arena_create(uint32_t, arena);
-        get(path, 0) = root_vertex;
-        return path;
-    }
-
-    GraphSubset path_space = { .len = graph.adj.len };
-    path_space.ptr = aven_arena_create_array(
-        uint32_t,
+    GraphBfsTree tree = aven_arena_create_slice(
+        GraphBfsTreeNode,
         arena,
-        path_space.len
+        graph.adj.len
     );
 
     AvenArena temp_arena = *arena;
@@ -138,15 +105,51 @@ static inline GraphSubset graph_bfs(
 
     while (!graph_bfs_step(&ctx)) {};
 
-    GraphSubset path = graph_bfs_path(path_space, &ctx, vertex);
-    path.ptr = aven_arena_resize_array(
+    for (uint32_t v = 0; v < tree.len; v += 1) {
+        get(tree, v) = get(ctx.vertex_info, v).node;
+    }
+    
+    return tree;
+}
+
+static inline bool graph_bfs_tree_contains(
+    GraphBfsTree tree,
+    uint32_t v
+) {
+    return get(tree, v).parent != 0;
+}
+
+static inline uint32_t graph_bfs_tree_parent(GraphBfsTree tree, uint32_t v) {
+    assert(graph_bfs_tree_contains(tree, v));
+    return get(tree, v).parent - 1;
+}
+
+static inline GraphSubset graph_bfs_tree_path_to_root(
+    GraphBfsTree tree,
+    uint32_t v,
+    AvenArena *arena
+) {
+    List(uint32_t) path_list = aven_arena_create_list(
         uint32_t,
         arena,
-        path_space.ptr,
-        path_space.len,
-        path.len
+        tree.len
     );
-    assert(path.ptr == path_space.ptr);
+
+    if (get(tree, v).parent == 0) {
+        aven_arena_shrink_list_to_len(uint32_t, arena, path_list);
+        return (GraphSubset){ 0 };
+    }
+
+    uint32_t last_v;
+    do {
+        list_push(path_list) = v;
+        last_v = v;
+        assert(get(tree, last_v).parent != 0);
+        v = get(tree, last_v).parent - 1;
+    } while (last_v != v);
+
+    aven_arena_shrink_list_to_len(uint32_t, arena, path_list);
+    GraphSubset path = slice_list(path_list);
 
     return path;
 }

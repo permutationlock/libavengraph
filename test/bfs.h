@@ -1,6 +1,7 @@
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/fs.h>
+#include <aven/math.h>
 #include <aven/path.h>
 #include <aven/str.h>
 #include <aven/test.h>
@@ -14,27 +15,57 @@
 typedef struct {
     uint32_t size;
     uint32_t start;
-    uint32_t end;
 } TestBfsCompleteArgs;
 
-AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
+AvenTestResult test_bfs_complete(
+    AvenArena *emsg_arena,
+    AvenArena arena,
+    void *opaque_args
+) {
     TestBfsCompleteArgs *args = opaque_args;
     Graph g = graph_gen_complete(args->size, &arena);
-    GraphSubset path = graph_bfs(g, args->end, args->start, &arena);
+    GraphBfsTree tree = graph_bfs(g, args->start, &arena);
 
-    size_t expected_len = (args->start == args->end) ? 1 : 2;
+    uint32_t root_dist = 0;
+    size_t in_tree_valid = 0;
+    size_t parents_valid = 0;
+    size_t dists_valid = 0;
+    for (uint32_t v = 0; v < g.adj.len; v += 1) {
+        if (!graph_bfs_tree_contains(tree, v)) {
+            continue;
+        }
 
-    if (path.len != expected_len) {
-        char fmt[] = "expected path.len = %lu, found path.len = %lu";
+        in_tree_valid += 1;
+
+        if (graph_bfs_tree_parent(tree, v) == args->start) {
+            parents_valid += 1;
+        }
+
+        if (v == args->start) {
+            root_dist = get(tree, v).dist;
+        } else {
+            if (get(tree, v).dist == 1) {
+                dists_valid += 1;
+            }
+        }
+    }
+
+    if (in_tree_valid != g.adj.len) {
+        char fmt[] = "expected all %lu vertices in BFS tree, found %lu";
 
         char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 4,
+            emsg_arena,
+            sizeof(fmt) + 16,
             1,
             1
         );
 
-        int len = sprintf(buffer, fmt, expected_len, path.len);
+        int len = sprintf(
+            buffer,
+            fmt,
+            (unsigned long)g.adj.len,
+            (unsigned long)in_tree_valid
+        );
         assert(len > 0);
 
         return (AvenTestResult){
@@ -43,26 +74,8 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
         };
     }
 
-    if (get(path, 0) != args->start) {
-        char fmt[] = "expected first vertex %lu, found %lu";
-        char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(buffer, fmt, args->start, get(path, 0));
-        assert(len > 0);
-
-        return (AvenTestResult){
-            .error = 1,
-            .message = buffer,
-        };
-    }
-
-    if (get(path, expected_len - 1) != args->end) {
-        char fmt[] = "expected last vertex %lu, found %lu";
+    if (root_dist != 0) {
+        char fmt[] = "expected root vertex to have dist 0, found dist %lu";
         char *buffer = aven_arena_alloc(
             &arena,
             sizeof(fmt) + 8,
@@ -73,8 +86,56 @@ AvenTestResult test_bfs_complete(AvenArena arena, void *opaque_args) {
         int len = sprintf(
             buffer,
             fmt,
-            args->end,
-            get(path, expected_len - 1)
+            (unsigned long)root_dist,
+            dists_valid
+        );
+        assert(len > 0);
+
+        return (AvenTestResult){
+            .error = 1,
+            .message = buffer,
+        };
+    }
+
+    if (dists_valid != g.adj.len - 1) {
+        char fmt[] =
+            "expected all %lu non-root vertices to have dist 1, found %lu";
+        char *buffer = aven_arena_alloc(
+            &arena,
+            sizeof(fmt) + 8,
+            1,
+            1
+        );
+
+        int len = sprintf(
+            buffer,
+            fmt,
+            (unsigned long)g.adj.len,
+            dists_valid
+        );
+        assert(len > 0);
+
+        return (AvenTestResult){
+            .error = 1,
+            .message = buffer,
+        };
+    }
+
+    if (parents_valid != g.adj.len) {
+        char fmt[] =
+            "expected all %lu vertices to have root as parent, found %lu";
+        char *buffer = aven_arena_alloc(
+            &arena,
+            sizeof(fmt) + 8,
+            1,
+            1
+        );
+
+        int len = sprintf(
+            buffer,
+            fmt,
+            (unsigned long)g.adj.len,
+            parents_valid
         );
         assert(len > 0);
 
@@ -91,104 +152,127 @@ typedef struct {
     uint32_t width;
     uint32_t height;
     uint32_t start;
-    uint32_t end;
 } TestBfsGridArgs;
 
-AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
+AvenTestResult test_bfs_grid(
+    AvenArena *emsg_arena,
+    AvenArena arena,
+    void *opaque_args
+) {
     TestBfsGridArgs *args = opaque_args;
     Graph g = graph_gen_grid(args->width, args->height, &arena);
-    GraphSubset path = graph_bfs(g, args->end, args->start, &arena);
+    GraphBfsTree tree = graph_bfs(g, args->start, &arena);
 
-    bool match = true;
+    size_t in_tree_valid = 0;
+    size_t parents_valid = 0;
+    size_t dists_valid = 0;
 
-    // verify start and end vertices
-    if (
-        get(path, 0) != args->start or
-        get(path, path.len - 1) != args->end
-    ) {
-        match = false;
-    }
-
-    // verify shortest path
-    if (match) {
-        uint32_t startx = args->start % args->width;
-        uint32_t starty = args->start / args->width;
-        uint32_t endx = args->end % args->width;
-        uint32_t endy = args->end / args->width;
-
-        uint32_t distx = endx - startx;
-        if (startx > endx) {
-            distx = startx - endx;
-        }
-
-        uint32_t disty = endy - starty;
-        if (starty > endy) {
-            disty = starty - endy;
-        }
-
-        if (path.len != distx + disty + 1) {
-            match = false;
-        }
-    }
-
-    // verify path
-    if (match) {
-        for (size_t i = 0; i < path.len - 1; i += 1) {
-            uint32_t v = get(path, i);
-            uint32_t u = get(path, i + 1);
-
-            uint32_t xv = v % args->width;
-            uint32_t yv = v / args->width;
-            uint32_t xu = u % args->width;
-            uint32_t yu = u / args->width;
-
-            if (xv != xu) {
-                if (yv != yu or (xv - xu) * (xv - xu) != 1) {
-                    match = false;
-                    break;
-                }
+    uint32_t s_x = args->start % args->width;
+    uint32_t s_y = args->start / args->width;
+    
+    for (uint32_t x = 0; x < args->width; x += 1) {
+        for (uint32_t y = 0; y < args->height; y += 1) {
+            uint32_t v = y * args->width + x;
+            if (!graph_bfs_tree_contains(tree, v)) {
+                continue;
             }
 
-            if (yv != yu) {
-                if (xv != xu or (yv - yu) * (yv - yu) != 1) {
-                    match = false;
-                    break;
+            in_tree_valid += 1;
+
+            if (v == args->start) {
+                if (graph_bfs_tree_parent(tree, v) == v) {
+                    parents_valid += 1;
+                }
+                if (get(tree, v).dist == 0) {
+                    dists_valid += 1;
+                }
+            } else {
+                uint32_t u = graph_bfs_tree_parent(tree, v);
+                uint32_t u_x = u % args->width;
+                uint32_t u_y = u / args->width;
+
+                uint32_t vu_dist = ((u_x > x) ? (u_x - x) : (x - u_x)) +
+                    ((u_y > y) ? (u_y - y) : (y - u_y));
+
+                if (vu_dist == 1) {
+                    parents_valid += 1;
+                }
+
+                uint32_t vs_dist = ((s_x > x) ? (s_x - x) : (x - s_x)) +
+                    ((s_y > y) ? (s_y - y) : (y - s_y));
+
+                if (get(tree, v).dist == vs_dist) {
+                    dists_valid += 1;
                 }
             }
         }
     }
 
-    if (!match) {
-        AvenStr str1 = aven_str("path { ");
-        AvenStr str2 = aven_str("} invalid");
+    if (in_tree_valid != g.adj.len) {
+        char fmt[] = "expected all %lu vertices in BFS tree, found %lu";
 
-        size_t buffer_len = str1.len +
-            str1.len +
-            str2.len +
-            8 * path.len +
-            1;
         char *buffer = aven_arena_alloc(
-            &arena,
-            buffer_len,
+            emsg_arena,
+            sizeof(fmt) + 16,
             1,
             1
         );
 
-        size_t len = 0;
-        len += (size_t)sprintf(buffer + len, "%s", str1.ptr);
-        assert(len < buffer_len);
+        int len = sprintf(
+            buffer,
+            fmt,
+            (unsigned long)g.adj.len,
+            (unsigned long)in_tree_valid
+        );
+        assert(len > 0);
 
-        for (size_t i = 0; i < path.len; i += 1) {
-            len += (size_t)sprintf(
-                buffer + len,
-                "%u, ",
-                get(path, i)
-            );
-            assert(len < buffer_len);
-        }
+        return (AvenTestResult){
+            .error = 1,
+            .message = buffer,
+        };
+    }
 
-        len += (size_t)sprintf(buffer + len, "%s", str2.ptr);
-        assert(len < buffer_len);
+    if (dists_valid != g.adj.len) {
+        char fmt[] =
+            "expected all %lu vertices to have grid dist to root, found %lu";
+        char *buffer = aven_arena_alloc(
+            &arena,
+            sizeof(fmt) + 8,
+            1,
+            1
+        );
+
+        int len = sprintf(
+            buffer,
+            fmt,
+            (unsigned long)g.adj.len,
+            dists_valid
+        );
+        assert(len > 0);
+
+        return (AvenTestResult){
+            .error = 1,
+            .message = buffer,
+        };
+    }
+
+    if (parents_valid != g.adj.len) {
+        char fmt[] =
+            "expected all %lu vertices to have grid adjacent parent, found %lu";
+        char *buffer = aven_arena_alloc(
+            &arena,
+            sizeof(fmt) + 8,
+            1,
+            1
+        );
+
+        int len = sprintf(
+            buffer,
+            fmt,
+            (unsigned long)g.adj.len,
+            parents_valid
+        );
+        assert(len > 0);
 
         return (AvenTestResult){
             .error = 1,
@@ -202,68 +286,61 @@ AvenTestResult test_bfs_grid(AvenArena arena, void *opaque_args) {
 static void test_bfs(AvenArena arena) {
     AvenTestCase tcase_data[] = {
         {
-            .desc = "K_1 same start and target",
+            .desc = "K_1 start 0",
             .args = &(TestBfsCompleteArgs){
                 .size = 1,
                 .start = 0,
-                .end = 0,
             },
             .fn = test_bfs_complete,
         },
         {
-            .desc = "K_2 same start and target",
+            .desc = "K_2 start 0",
             .args = &(TestBfsCompleteArgs){
                 .size = 2,
                 .start = 0,
-                .end = 0,
             },
             .fn = test_bfs_complete,
         },
         {
-            .desc = "K_2 start 0, end 1",
+            .desc = "K_2 start 1",
             .args = &(TestBfsCompleteArgs){
-                .size = 2,
-                .start = 0,
-                .end = 1,
+                .size = 3,
+                .start = 1,
             },
             .fn = test_bfs_complete,
         },
         {
-            .desc = "K_7 start 6, end 0",
+            .desc = "K_7 start 6",
             .args = &(TestBfsCompleteArgs){
                 .size = 7,
                 .start = 6,
-                .end = 0,
             },
             .fn = test_bfs_complete,
         },
         {
-            .desc = "2x2 Grid start 0, end 3",
+            .desc = "2x2 Grid start 0 (0, 0)",
             .args = &(TestBfsGridArgs){
                 .width = 2,
                 .height = 2,
                 .start = 0,
-                .end = 3,
             },
             .fn = test_bfs_grid,
         },
         {
-            .desc = "2x2 Grid start 0, end 2",
+            .desc = "2x2 Grid start 3 (1,1)",
             .args = &(TestBfsGridArgs){
                 .width = 2,
                 .height = 2,
-                .start = 0,
-                .end = 2,
+                .start = 3,
             },
             .fn = test_bfs_grid,
         },
         {
-            .desc = "4x4 Grid start 0, end 15",
+            .desc = "4x4 Grid start 5 (1,1)",
             .args = &(TestBfsGridArgs){
                 .width = 4,
                 .height = 4,
                 .start = 5,
-                .end = 10,
             },
             .fn = test_bfs_grid,
         },
