@@ -196,9 +196,13 @@ int main(int argc, char **argv) {
 
     // Build steps for visualizaiton
 
-    AvenStr visualization_hot_macro_data[] = { aven_str("HOT_RELOAD") };
-    AvenStrSlice visualization_hot_macros = slice_array(
+    AvenStr visualization_hot_macro_data[3];
+    List(AvenStr) visualization_hot_macro_list = list_array(
         visualization_hot_macro_data
+    );
+    list_push(visualization_hot_macro_list) = aven_str("HOT_RELOAD");
+    AvenStrSlice visualization_dll_hot_macros = slice_list(
+        visualization_hot_macro_list
     );
 
     AvenBuildStep visualization_hot_game_dir_step =
@@ -210,7 +214,7 @@ int main(int argc, char **argv) {
         aven_build_common_step_cc_ld_so_ex(
             &opts,
             graphics_includes,
-            visualization_hot_macros,
+            visualization_dll_hot_macros,
             (AvenStrSlice){ 0 },
             (AvenBuildStepPtrSlice){ 0 },
             aven_path(
@@ -240,6 +244,36 @@ int main(int argc, char **argv) {
         &hot_dll_signal_step,
         &visualization_hot_dll_step,
         &arena
+    );
+
+    list_push(visualization_hot_macro_list) = aven_str_concat(
+        aven_str_concat(
+            aven_str("HOT_DLL_PATH=\""),
+            aven_path_rel_diff(
+                visualization_hot_dll_step.out_path.value,
+                out_dir_step.out_path.value,
+                &arena
+            ),
+            &arena
+        ),
+        aven_str("\""),
+        &arena
+    );
+    list_push(visualization_hot_macro_list) = aven_str_concat(
+        aven_str_concat(
+            aven_str("HOT_WATCH_PATH=\""),
+            aven_path_rel_diff(
+                visualization_hot_watch_dir_step.out_path.value,
+                out_dir_step.out_path.value,
+                &arena
+            ),
+            &arena
+        ),
+        aven_str("\""),
+        &arena
+    );
+    AvenStrSlice visualization_hot_macros = slice_list(
+        visualization_hot_macro_list
     );
 
     AvenBuildStep hot_dll_root_step = aven_build_step_root();
@@ -604,7 +638,7 @@ int main(int argc, char **argv) {
                     };
                     AvenStrSlice cmd = slice_array(cmd_parts);
 
-                    AvenProcIdResult result = aven_proc_cmd(cmd, arena);
+                    AvenProcCmdResult result = aven_proc_cmd(cmd, arena);
                     if (result.error != 0) {
                         fprintf(stderr, "RUN FAILED: %d\n", result.error);
                     } else {

@@ -16,6 +16,15 @@
 #include "game.h"
 
 #if defined(HOT_RELOAD)
+    #ifndef HOT_DLL_PATH
+        #error "must define HOT_DLL_PATH for hot watch build"
+    #endif
+    #ifndef HOT_WATCH_PATH
+        #error "must define HOT_WATCH_PATH for hot watch build"
+    #endif
+#endif
+
+#if defined(HOT_RELOAD)
     #include <aven/dl.h>
     #include <aven/watch.h>
 
@@ -23,13 +32,12 @@
         void *handle;
         GameTable vtable;
     } VInfo;
-    typedef Result(VInfo) VInfoResult;
-
     typedef enum {
         GAME_INFO_LOAD_ERROR_NONE = 0,
         GAME_INFO_LOAD_ERROR_OPEN,
         GAME_INFO_LOAD_ERROR_SYM,
     } VInfoError;
+    typedef Result(VInfo, VInfoError) VInfoResult;
 
     static VInfoResult vinfo_load(AvenStr path, AvenArena temp_arena) {
         VInfo game_dll = { 0 };
@@ -232,16 +240,10 @@ int main(void) {
         }
     }
     AvenStr exe_dir_path = aven_path_containing_dir(exe_path);
-#if defined(_WIN32)
-    AvenStr game_dll_name = aven_str("game.dll");
-#else
-    AvenStr game_dll_name = aven_str("game.so");
-#endif
     AvenStr game_dll_path = aven_path(
         &arena,
         exe_dir_path,
-        aven_str("game"),
-        game_dll_name
+        aven_str(HOT_DLL_PATH)
     );
     {
         VInfoResult result = vinfo_load(game_dll_path, arena);
@@ -252,7 +254,11 @@ int main(void) {
         vinfo = result.payload;
     }
 
-    AvenStr watch_dir_path = aven_path(&arena, exe_dir_path, aven_str("watch"));
+    AvenStr watch_dir_path = aven_path(
+        &arena,
+        exe_dir_path,
+        aven_str(HOT_WATCH_PATH)
+    );
     AvenWatchHandle game_watch_handle = aven_watch_init(watch_dir_path, arena);
     if (game_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
         fprintf(
