@@ -136,7 +136,7 @@ static inline GraphSubset graph_bfs_tree_path_to_root(
     );
 
     if (get(tree, v).parent == 0) {
-        aven_arena_shrink_list_to_len(uint32_t, arena, path_list);
+        aven_arena_resize_list_to_len(arena, path_list);
         return (GraphSubset){ 0 };
     }
 
@@ -148,7 +148,7 @@ static inline GraphSubset graph_bfs_tree_path_to_root(
         v = get(tree, last_v).parent - 1;
     } while (last_v != v);
 
-    aven_arena_shrink_list_to_len(uint32_t, arena, path_list);
+    aven_arena_resize_list_to_len(arena, path_list);
     GraphSubset path = slice_list(path_list);
 
     return path;
