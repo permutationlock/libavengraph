@@ -246,6 +246,24 @@ int main(int argc, char **argv) {
         &arena
     );
 
+#ifdef _WIN32
+    list_push(visualization_hot_macro_list) = aven_str_escape(
+        aven_str_concat(
+            aven_str_concat(
+                aven_str("HOT_DLL_PATH=\""),
+                aven_path_rel_diff(
+                    visualization_hot_dll_step.out_path.value,
+                    out_dir_step.out_path.value,
+                    &arena
+                ),
+                &arena
+            ),
+            aven_str("\""),
+            &arena
+        ),
+        &arena
+    );
+#else
     list_push(visualization_hot_macro_list) = aven_str_concat(
         aven_str_concat(
             aven_str("HOT_DLL_PATH=\""),
@@ -259,6 +277,25 @@ int main(int argc, char **argv) {
         aven_str("\""),
         &arena
     );
+#endif
+#ifdef _WIN32
+    list_push(visualization_hot_macro_list) = aven_str_escape(
+        aven_str_concat(
+            aven_str_concat(
+                aven_str("HOT_WATCH_PATH=\""),
+                aven_path_rel_diff(
+                    visualization_hot_watch_dir_step.out_path.value,
+                    out_dir_step.out_path.value,
+                    &arena
+                ),
+                &arena
+            ),
+            aven_str("\""),
+            &arena
+        ),
+        &arena
+    );
+#else
     list_push(visualization_hot_macro_list) = aven_str_concat(
         aven_str_concat(
             aven_str("HOT_WATCH_PATH=\""),
@@ -272,6 +309,7 @@ int main(int argc, char **argv) {
         aven_str("\""),
         &arena
     );
+#endif
     AvenStrSlice visualization_hot_macros = slice_list(
         visualization_hot_macro_list
     );
