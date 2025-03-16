@@ -135,23 +135,17 @@ static inline GraphSubset graph_bfs_tree_path_to_root(
         tree.len
     );
 
-    if (get(tree, v).parent == 0) {
-        aven_arena_resize_list_to_len(arena, path_list);
-        return (GraphSubset){ 0 };
+    if (get(tree, v).parent != 0) {
+        uint32_t last_v;
+        do {
+            list_push(path_list) = v;
+            last_v = v;
+            assert(get(tree, last_v).parent != 0);
+            v = get(tree, last_v).parent - 1;
+        } while (last_v != v);
     }
 
-    uint32_t last_v;
-    do {
-        list_push(path_list) = v;
-        last_v = v;
-        assert(get(tree, last_v).parent != 0);
-        v = get(tree, last_v).parent - 1;
-    } while (last_v != v);
-
-    aven_arena_resize_list_to_len(arena, path_list);
-    GraphSubset path = slice_list(path_list);
-
-    return path;
+    return aven_arena_commit_list_to_slice(GraphSubset, arena, path_list);
 }
 
 #endif // GRAPH_BFS_H
