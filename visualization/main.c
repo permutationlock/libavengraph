@@ -94,9 +94,63 @@ static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
 
+void main_loop_update(void) {
+    int width;
+    int height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
+        glfwSwapBuffers(window);
+    } else {
+        aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
+    }
+}
+
+void main_loop(void) {
+#if defined(HOT_RELOAD)
+    AvenWatchResult watch_result = aven_watch_check(game_watch_handle, 0);
+    if (watch_result.error != 0) {
+        fprintf(stderr, "FAILED TO WATCH: %s\n", watch_dir_path.ptr);
+        return 1;
+    }
+    if (watch_result.payload != 0) {
+        if (vinfo.handle != NULL) {
+            aven_dl_close(vinfo.handle);
+            vinfo.handle = NULL;
+        }
+        VInfoResult info_result = vinfo_load(game_dll_path, arena);
+        if (info_result.error != 0) {
+            vinfo_error_print(info_result.error);
+            game_valid = false;
+        } else {
+            printf("reloading\n");
+            vinfo = info_result.payload;
+            vinfo.vtable.reload(&ctx, &gl);
+            game_valid = true;
+        }
+    }
+    if (!game_valid) {
+        continue;
+    }
+#endif // defined(HOT_RELOAD)
+    main_loop_update();
+    glfwPollEvents();
+}
+
 static void on_damage(GLFWwindow *w) {
     (void)w;
     vinfo.vtable.damage(&ctx);
+#ifdef _WIN32
+    main_loop_update();
+#endif
+}
+
+static void on_move(GLFWwindow *w, int x, int y) {
+    (void)x;
+    (void)y;
+#ifdef _WIN32
+    on_damage(w);
+#endif
 }
 
 static void key_callback(
@@ -153,19 +207,7 @@ static void cursor_callback(
     void on_resize(int width, int height) {
         glfwSetWindowSize(window, width, height);
         on_damage(window);
-    }
 
-    void main_loop(void) {
-        int width;
-        int height;
-        glfwGetFramebufferSize(window, &width, &height);
-
-        if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
-            glfwSwapBuffers(window);
-        } else {
-            aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
-        }
-        glfwPollEvents();
     }
 #endif // defined(__EMSCRIPTEN__)
 
@@ -220,6 +262,7 @@ int main(void) {
     }
 
     glfwSetWindowRefreshCallback(window, on_damage);
+    glfwSetWindowPosCallback(window, on_move);
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 0);
@@ -278,40 +321,7 @@ int main(void) {
 
 #if !defined(__EMSCRIPTEN__) // !defined(__EMSCRIPTEN__)
     while (!glfwWindowShouldClose(window)) {
-#if defined(HOT_RELOAD)
-        AvenWatchResult watch_result = aven_watch_check(game_watch_handle, 0);
-        if (watch_result.error != 0) {
-            fprintf(stderr, "FAILED TO WATCH: %s\n", watch_dir_path.ptr);
-            return 1;
-        }
-        if (watch_result.payload != 0) {
-            if (vinfo.handle != NULL) {
-                aven_dl_close(vinfo.handle);
-                vinfo.handle = NULL;
-            }
-            VInfoResult info_result = vinfo_load(game_dll_path, arena);
-            if (info_result.error != 0) {
-                vinfo_error_print(info_result.error);
-                game_valid = false;
-            } else {
-                printf("reloading\n");
-                vinfo = info_result.payload;
-                vinfo.vtable.reload(&ctx, &gl);
-                game_valid = true;
-            }
-        }
-        if (!game_valid) {
-            continue;
-        }
-#endif // defined(HOT_RELOAD)
-        glfwGetFramebufferSize(window, &width, &height);
-
-        if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
-            glfwSwapBuffers(window);
-        } else {
-            aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
-        }
-        glfwPollEvents();
+        main_loop();
     }
 
     vinfo.vtable.deinit(&ctx, &gl);
