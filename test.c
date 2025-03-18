@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include "test/bfs.h"
+#include "test/io.h"
 
 #define ARENA_SIZE (4096 * 16)
 
@@ -23,6 +24,7 @@ int main(void) {
     AvenArena test_arena = aven_arena_init(mem, ARENA_SIZE);
 
     test_bfs(test_arena);
+    test_io(test_arena);
 
     return 0;
 }
