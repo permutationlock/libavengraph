@@ -7,13 +7,11 @@
 
 #include "../graph.h"
 
-typedef enum {
-    GRAPH_IO_TYPE_ADJ = 0xad762af,
-    GRAPH_IO_TYPE_ADJ_AUG = 0xa8662af,
-} GraphIoType;
+#define GRAPH_IO_TYPE_ADJ ((uint64_t)0xad7062af0UL)
+#define GRAPH_IO_TYPE_ADJ_AUG ((uint64_t)0xa860ad7062afUL)
 
 typedef struct {
-    size_t type;
+    uint64_t type;
 } GraphIoHeader;
 
 #define graph_io_size(g) ( \
@@ -25,9 +23,7 @@ typedef struct {
 typedef Result(Graph, int) GraphIoResult;
 
 static inline int graph_io_push(AvenIoWriter *writer, Graph graph) {
-    GraphIoHeader header = {
-        .type = (size_t)GRAPH_IO_TYPE_ADJ,
-    };
+    GraphIoHeader header = { .type = GRAPH_IO_TYPE_ADJ };
     int hd_error = aven_io_writer_push_struct(writer, &header);
     if (hd_error != 0) {
         return hd_error;
@@ -55,7 +51,7 @@ static inline GraphIoResult graph_io_pop(
     if (hd_error != 0) {
         return (GraphIoResult){ .error = hd_error };
     }
-    if (header.type != (size_t)GRAPH_IO_TYPE_ADJ) {
+    if (header.type != GRAPH_IO_TYPE_ADJ) {
         return (GraphIoResult){ .error = AVEN_IO_ERROR_MISMATCH };
     }
 
@@ -87,9 +83,7 @@ static inline GraphIoResult graph_io_pop(
 typedef Result(GraphAug, int) GraphIoAugResult;
 
 static inline int graph_io_aug_push(AvenIoWriter *writer, GraphAug graph) {
-    GraphIoHeader header = {
-        .type = (size_t)GRAPH_IO_TYPE_ADJ_AUG,
-    };
+    GraphIoHeader header = { .type = GRAPH_IO_TYPE_ADJ_AUG };
     int hd_error = aven_io_writer_push_struct(writer, &header);
     if (hd_error != 0) {
         return hd_error;
@@ -117,7 +111,7 @@ static inline GraphIoAugResult graph_io_aug_pop(
     if (hd_error != 0) {
         return (GraphIoAugResult){ .error = hd_error };
     }
-    if (header.type != (size_t)GRAPH_IO_TYPE_ADJ_AUG) {
+    if (header.type != GRAPH_IO_TYPE_ADJ_AUG) {
         return (GraphIoAugResult){ .error = AVEN_IO_ERROR_MISMATCH };
     }
 

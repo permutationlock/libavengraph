@@ -150,6 +150,8 @@ static void on_move(GLFWwindow *w, int x, int y) {
     (void)y;
 #ifdef _WIN32
     on_damage(w);
+#else
+    (void)w;
 #endif
 }
 

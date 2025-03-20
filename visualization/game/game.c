@@ -290,7 +290,7 @@ static GameInfoSession game_info_session_init(
 
     Aff2 identity;
     aff2_identity(identity);
-    GraphPlaneGenData gen_data = graph_plane_gen_tri(
+    GraphPlaneGenData gen_data = graph_plane_gen_triangulation(
         GAME_MAX_VERTICES,
         identity,
         1.8f * (radius * radius),

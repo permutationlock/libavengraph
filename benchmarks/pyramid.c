@@ -132,7 +132,7 @@ int main(void) {
             );
 
             for (uint32_t i = 0; i < cases.len; i += 1) {
-                Graph graph = graph_plane_gen_pyramid_abs(
+                Graph graph = graph_gen_pyramid(
                     ka,
                     &loop_arena
                 );

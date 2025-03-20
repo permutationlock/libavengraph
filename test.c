@@ -15,6 +15,7 @@
 
 #include "test/bfs.h"
 #include "test/io.h"
+#include "test/plane.h"
 
 #define ARENA_SIZE (4096 * 16)
 
@@ -25,6 +26,7 @@ int main(void) {
 
     test_bfs(test_arena);
     test_io(test_arena);
+    test_plane(test_arena);
 
     return 0;
 }

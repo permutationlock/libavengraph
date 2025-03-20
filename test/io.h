@@ -40,7 +40,7 @@ AvenTestResult test_graph_io(
             graph = graph_gen_grid(args->size, args->size, &arena);
             break;
         case TEST_IO_TYPE_PYRAMID:
-            graph = graph_plane_gen_pyramid_abs(args->size, &arena);
+            graph = graph_gen_pyramid(args->size, &arena);
             break;
         default:
             assert(false);
@@ -187,7 +187,7 @@ AvenTestResult test_graph_io_aug(
             graph = graph_gen_grid(args->size, args->size, &arena);
             break;
         case TEST_IO_TYPE_PYRAMID:
-            graph = graph_plane_gen_pyramid_abs(args->size, &arena);
+            graph = graph_gen_pyramid(args->size, &arena);
             break;
         default:
             assert(false);

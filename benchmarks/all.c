@@ -155,7 +155,7 @@ int main(void) {
             );
 
             for (uint32_t i = 0; i < cases.len; i += 1) {
-                Graph graph = graph_plane_gen_tri_abs(
+                Graph graph = graph_gen_triangulation(
                     n,
                     rng,
                     (Vec2){ 0.0833f, 0.1666f },
