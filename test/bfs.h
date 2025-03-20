@@ -1,9 +1,8 @@
+#ifndef TEST_BFS_H
+#define TEST_BFS_H
+
 #include <aven.h>
 #include <aven/arena.h>
-#include <aven/fs.h>
-#include <aven/math.h>
-#include <aven/path.h>
-#include <aven/str.h>
 #include <aven/test.h>
 
 #include <graph.h>
@@ -17,7 +16,7 @@ typedef struct {
     uint32_t start;
 } TestBfsCompleteArgs;
 
-AvenTestResult test_bfs_complete(
+static AvenTestResult test_bfs_complete(
     AvenArena *emsg_arena,
     AvenArena arena,
     void *opaque_args
@@ -154,7 +153,7 @@ typedef struct {
     uint32_t start;
 } TestBfsGridArgs;
 
-AvenTestResult test_bfs_grid(
+static AvenTestResult test_bfs_grid(
     AvenArena *emsg_arena,
     AvenArena arena,
     void *opaque_args
@@ -353,4 +352,6 @@ static void test_bfs(AvenArena arena) {
 
     aven_test(tcases, __FILE__, arena);
 }
+
+#endif // TEST_BFS_H
 

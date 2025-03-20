@@ -5,6 +5,7 @@
 #include <aven/arena.h>
 
 #include "../../graph.h"
+#include "../path_color.h"
 
 typedef struct {
     uint8_t len;
@@ -556,6 +557,30 @@ static inline GraphPlaneP3ChooseCase graph_plane_p3choose_frame_case(
 
     assert(false);
     return GRAPH_PLANE_P3CHOOSE_CASE_BASE;
+}
+
+bool graph_plane_p3choose_verify(
+    Graph graph,
+    GraphPlaneP3ChooseListProp list_assignment,
+    GraphPropUint8 coloring,
+    AvenArena temp_arena
+) {
+    for (size_t v = 0; v < graph.adj.len; v += 1) {
+        GraphPlaneP3ChooseList v_list = get(list_assignment, v);
+        uint8_t v_color = get(coloring, v);
+        bool found = false;
+        for (size_t i = 0; i < v_list.len; i += 1) {
+            if (get(v_list, i) == v_color) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
+        }
+    }
+
+    return graph_path_color_verify(graph, coloring, temp_arena);
 }
 
 #endif // GRAPH_PLANE_P3CHOOSE_H

@@ -1,3 +1,6 @@
+#ifndef TEST_IO_H
+#define TEST_IO_H
+
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/fs.h>
@@ -14,38 +17,20 @@
 
 #include <stdio.h>
 
-typedef enum {
-    TEST_IO_TYPE_COMPLETE,
-    TEST_IO_TYPE_GRID,
-    TEST_IO_TYPE_PYRAMID,
-} TestIoType;
+#include "gen.h"
 
 typedef struct {
     uint32_t size;
-    TestIoType type;
+    TestGraphType type;
 } TestGraphIoArgs;
 
-AvenTestResult test_graph_io(
+static AvenTestResult test_io_graph(
     AvenArena *emsg_arena,
     AvenArena arena,
     void *opaque_args
 ) {
     TestGraphIoArgs *args = opaque_args;
-    Graph graph;
-    switch (args->type) {
-        case TEST_IO_TYPE_COMPLETE:
-            graph = graph_gen_complete(args->size, &arena);
-            break;
-        case TEST_IO_TYPE_GRID:
-            graph = graph_gen_grid(args->size, args->size, &arena);
-            break;
-        case TEST_IO_TYPE_PYRAMID:
-            graph = graph_gen_pyramid(args->size, &arena);
-            break;
-        default:
-            assert(false);
-            break;
-    }
+    Graph graph = test_gen_graph(args->size, args->type, &arena);
 
     ByteSlice space = aven_arena_create_slice(
         unsigned char,
@@ -172,7 +157,7 @@ AvenTestResult test_graph_io(
     return (AvenTestResult){ 0 };
 }
 
-AvenTestResult test_graph_io_aug(
+static AvenTestResult test_io_graph_aug(
     AvenArena *emsg_arena,
     AvenArena arena,
     void *opaque_args
@@ -180,13 +165,13 @@ AvenTestResult test_graph_io_aug(
     TestGraphIoArgs *args = opaque_args;
     Graph graph;
     switch (args->type) {
-        case TEST_IO_TYPE_COMPLETE:
+        case TEST_GEN_GRAPH_TYPE_COMPLETE:
             graph = graph_gen_complete(args->size, &arena);
             break;
-        case TEST_IO_TYPE_GRID:
+        case TEST_GEN_GRAPH_TYPE_GRID:
             graph = graph_gen_grid(args->size, args->size, &arena);
             break;
-        case TEST_IO_TYPE_PYRAMID:
+        case TEST_GEN_GRAPH_TYPE_PYRAMID:
             graph = graph_gen_pyramid(args->size, &arena);
             break;
         default:
@@ -326,117 +311,119 @@ static void test_io(AvenArena arena) {
             .desc = "push pop K_1",
             .args = &(TestGraphIoArgs){
                 .size = 1,
-                .type = TEST_IO_TYPE_COMPLETE,
+                .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop K_5",
             .args = &(TestGraphIoArgs){
                 .size = 5,
-                .type = TEST_IO_TYPE_COMPLETE,
+                .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop K_19",
             .args = &(TestGraphIoArgs){
                 .size = 19,
-                .type = TEST_IO_TYPE_COMPLETE,
+                .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop 2x2 grid",
             .args = &(TestGraphIoArgs){
                 .size = 2,
-                .type = TEST_IO_TYPE_GRID,
+                .type = TEST_GEN_GRAPH_TYPE_GRID,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop 9x9 grid",
             .args = &(TestGraphIoArgs){
                 .size = 9,
-                .type = TEST_IO_TYPE_GRID,
+                .type = TEST_GEN_GRAPH_TYPE_GRID,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop pyramid A_3",
             .args = &(TestGraphIoArgs){
                 .size = 3,
-                .type = TEST_IO_TYPE_PYRAMID,
+                .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop pyramid A_9",
             .args = &(TestGraphIoArgs){
                 .size = 9,
-                .type = TEST_IO_TYPE_PYRAMID,
+                .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
             },
-            .fn = test_graph_io,
+            .fn = test_io_graph,
         },
         {
             .desc = "push pop augmented K_1",
             .args = &(TestGraphIoArgs){
                 .size = 1,
-                .type = TEST_IO_TYPE_COMPLETE,
+                .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
         {
             .desc = "push pop augmented K_5",
             .args = &(TestGraphIoArgs){
                 .size = 5,
-                .type = TEST_IO_TYPE_COMPLETE,
+                .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
         {
             .desc = "push pop augmented K_19",
             .args = &(TestGraphIoArgs){
                 .size = 19,
-                .type = TEST_IO_TYPE_COMPLETE,
+                .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
         {
             .desc = "push pop augmented 2x2 grid",
             .args = &(TestGraphIoArgs){
                 .size = 2,
-                .type = TEST_IO_TYPE_GRID,
+                .type = TEST_GEN_GRAPH_TYPE_GRID,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
         {
             .desc = "push pop augmented 9x9 grid",
             .args = &(TestGraphIoArgs){
                 .size = 9,
-                .type = TEST_IO_TYPE_GRID,
+                .type = TEST_GEN_GRAPH_TYPE_GRID,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
         {
             .desc = "push pop augmented pyramid A_3",
             .args = &(TestGraphIoArgs){
                 .size = 3,
-                .type = TEST_IO_TYPE_PYRAMID,
+                .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
         {
             .desc = "push pop augmented pyramid A_9",
             .args = &(TestGraphIoArgs){
                 .size = 9,
-                .type = TEST_IO_TYPE_PYRAMID,
+                .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
             },
-            .fn = test_graph_io_aug,
+            .fn = test_io_graph_aug,
         },
     };
     AvenTestCaseSlice tcases = slice_array(tcase_data);
 
     aven_test(tcases, __FILE__, arena);
 }
+
+#endif // TEST_IO_H
 
