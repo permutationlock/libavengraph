@@ -4,6 +4,7 @@
 
 #define AVEN_IMPLEMENTATION
 #include <aven.h>
+#include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/gl.h>
 #include <aven/path.h>
@@ -87,12 +88,19 @@ static void error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error: %s\n", description);
 }
 
-// App data (made global for Emscripten)
+// App data (made global for Emscripten and GLFW callbacks on Windows)
 static GLFWwindow *window;
 static AvenGl gl;
 static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
+
+#ifdef HOT_RELOAD
+    static AvenWatchHandle game_watch_handle;
+    static AvenStr game_dll_path;
+    static AvenStr watch_dir_path;
+    static bool game_valid;
+#endif
 
 void main_loop_update(void) {
     int width;
@@ -111,7 +119,7 @@ void main_loop(void) {
     AvenWatchResult watch_result = aven_watch_check(game_watch_handle, 0);
     if (watch_result.error != 0) {
         fprintf(stderr, "FAILED TO WATCH: %s\n", watch_dir_path.ptr);
-        return 1;
+        aven_panic("aven_watch_check failed");
     }
     if (watch_result.payload != 0) {
         if (vinfo.handle != NULL) {
@@ -130,7 +138,7 @@ void main_loop(void) {
         }
     }
     if (!game_valid) {
-        continue;
+        return;
     }
 #endif // defined(HOT_RELOAD)
     main_loop_update();
@@ -285,7 +293,7 @@ int main(void) {
         }
     }
     AvenStr exe_dir_path = aven_path_containing_dir(exe_path);
-    AvenStr game_dll_path = aven_path(
+    game_dll_path = aven_path(
         &arena,
         exe_dir_path,
         aven_str(HOT_DLL_PATH)
@@ -299,12 +307,12 @@ int main(void) {
         vinfo = result.payload;
     }
 
-    AvenStr watch_dir_path = aven_path(
+    watch_dir_path = aven_path(
         &arena,
         exe_dir_path,
         aven_str(HOT_WATCH_PATH)
     );
-    AvenWatchHandle game_watch_handle = aven_watch_init(watch_dir_path, arena);
+    game_watch_handle = aven_watch_init(watch_dir_path, arena);
     if (game_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
         fprintf(
             stderr,
@@ -313,7 +321,7 @@ int main(void) {
         );
         return 1;
     }
-    bool game_valid = true;
+    game_valid = true;
 #else // !defined(HOT_RELOAD)
     vinfo.vtable = game_table;
 #endif // !defined(HOT_RELOAD)
