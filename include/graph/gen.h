@@ -23,7 +23,10 @@ static inline Graph graph_gen_complete(
         get(graph.adj, v).len = size - 1;
         get(graph.adj, v).index = i;
 
-        for (uint32_t u = 0; u < graph.adj.len; u += 1) {
+        for (uint32_t j = 0; j < graph.adj.len; j += 1) {
+            uint32_t u = ((v & 1) == 0) ?
+                ((uint32_t)graph.adj.len - (j + 1)) :
+                j;
             if (u == v) {
                 continue;
             }

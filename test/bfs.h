@@ -195,7 +195,11 @@ AvenTestResult test_bfs_grid(
                     ((u_y > y) ? (u_y - y) : (y - u_y));
 
                 if (vu_dist == 1) {
-                    parents_valid += 1;
+                    if (get(tree, v).dist == 1 and u == args->start) {
+                        parents_valid += 1;
+                    } else {
+                        parents_valid += 1;
+                    }
                 }
 
                 uint32_t vs_dist = ((s_x > x) ? (s_x - x) : (x - s_x)) +

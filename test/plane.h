@@ -4,6 +4,8 @@
 #include <aven/io.h>
 #include <aven/math.h>
 #include <aven/path.h>
+#include <aven/rng.h>
+#include <aven/rng/pcg.h>
 #include <aven/str.h>
 #include <aven/test.h>
 
@@ -16,6 +18,7 @@ typedef enum {
     TEST_PLANE_TYPE_COMPLETE,
     TEST_PLANE_TYPE_GRID,
     TEST_PLANE_TYPE_PYRAMID,
+    TEST_PLANE_TYPE_TRIANGULATION,
 } TestPlaneType;
 
 typedef struct {
@@ -32,6 +35,9 @@ AvenTestResult test_graph_plane(
     (void)emsg_arena;
     TestGraphPlaneArgs *args = opaque_args;
 
+    AvenRngPcg pcg = aven_rng_pcg_seed(0xdead, 0xbeef);
+    AvenRng rng = aven_rng_pcg(&pcg);
+
     Graph graph;
     switch (args->type) {
         case TEST_PLANE_TYPE_COMPLETE:
@@ -42,6 +48,14 @@ AvenTestResult test_graph_plane(
             break;
         case TEST_PLANE_TYPE_PYRAMID:
             graph = graph_gen_pyramid(args->size, &arena);
+            break;
+        case TEST_PLANE_TYPE_TRIANGULATION:
+            graph = graph_gen_triangulation(
+                args->size,
+                rng,
+                (Vec2){ 0.33f, 0.33f },
+                &arena
+            );
             break;
         default:
             assert(false);
@@ -88,6 +102,15 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
+            .desc = "verify embedding K_4",
+            .args = &(TestGraphPlaneArgs){
+                .size = 4,
+                .type = TEST_PLANE_TYPE_COMPLETE,
+                .planar = true,
+            },
+            .fn = test_graph_plane,
+        },
+        {
             .desc = "verify embedding K_5",
             .args = &(TestGraphPlaneArgs){
                 .size = 5,
@@ -115,9 +138,9 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding 3x3 grid",
+            .desc = "verify embedding 9x9 grid",
             .args = &(TestGraphPlaneArgs){
-                .size = 3,
+                .size = 9,
                 .type = TEST_PLANE_TYPE_GRID,
                 .planar = true,
             },
@@ -137,6 +160,24 @@ static void test_plane(AvenArena arena) {
             .args = &(TestGraphPlaneArgs){
                 .size = 9,
                 .type = TEST_PLANE_TYPE_PYRAMID,
+                .planar = true,
+            },
+            .fn = test_graph_plane,
+        },
+        {
+            .desc = "verify embedding order 9 triangulation",
+            .args = &(TestGraphPlaneArgs){
+                .size = 9,
+                .type = TEST_PLANE_TYPE_TRIANGULATION,
+                .planar = true,
+            },
+            .fn = test_graph_plane,
+        },
+        {
+            .desc = "verify embedding order 21 triangulation",
+            .args = &(TestGraphPlaneArgs){
+                .size = 21,
+                .type = TEST_PLANE_TYPE_TRIANGULATION,
                 .planar = true,
             },
             .fn = test_graph_plane,
