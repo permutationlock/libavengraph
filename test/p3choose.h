@@ -63,7 +63,7 @@ static AvenTestResult test_p3choose_graph(
 static void test_p3choose(AvenArena arena) {
     AvenTestCase tcase_data[] = {
         {
-            .desc = "path choose K_3 w/BFS",
+            .desc = "path choose K_3",
             .args = &(TestP3ChooseArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -79,7 +79,7 @@ static void test_p3choose(AvenArena arena) {
             .fn = test_p3choose_graph,
         },
         {
-            .desc = "path choose K_4 w/BFS",
+            .desc = "path choose K_4",
             .args = &(TestP3ChooseArgs){
                 .size = 4,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -96,7 +96,7 @@ static void test_p3choose(AvenArena arena) {
             .fn = test_p3choose_graph,
         },
         {
-            .desc = "path choose pyramid A_5 w/BFS",
+            .desc = "path choose pyramid A_5",
             .args = &(TestP3ChooseArgs){
                 .size = 5,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,

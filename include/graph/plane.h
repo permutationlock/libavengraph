@@ -9,7 +9,7 @@
 
 typedef Slice(Vec2) GraphPlaneEmbedding;
 
-// Verify simple adjacency list grpah represents a combinatorial embedding
+// Verify simple adjacency list graph represents a combinatorial embedding
 
 static inline bool graph_plane_aug_validate(
     GraphAug graph,
@@ -30,6 +30,11 @@ static inline bool graph_plane_aug_validate(
 
     uint32_t vertices = (uint32_t)graph.adj.len;
     uint32_t edges = (uint32_t)graph.nb.len / 2;
+
+    if (edges > 3 * vertices - 6) {
+        return false;
+    }
+    
     uint32_t faces = 0;
 
     for (uint32_t v = 0; v < graph.adj.len; v += 1) {

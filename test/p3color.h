@@ -146,7 +146,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color K_3 w/BFS",
+            .desc = "path color K_3",
             .args = &(TestP3ColorArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -157,7 +157,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color K_4 w/BFS",
+            .desc = "path color K_4",
             .args = &(TestP3ColorArgs){
                 .size = 4,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -168,7 +168,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color pyramid A_5 w/BFS",
+            .desc = "path color pyramid A_5",
             .args = &(TestP3ColorArgs){
                 .size = 5,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -179,7 +179,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color pyramid A_19 w/BFS",
+            .desc = "path color pyramid A_19",
             .args = &(TestP3ColorArgs){
                 .size = 19,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -190,7 +190,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color order 9 triangulation w/BFS",
+            .desc = "path color order 9 triangulation",
             .args = &(TestP3ColorArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
@@ -201,7 +201,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color order 19 triangulation w/BFS",
+            .desc = "path color order 19 triangulation",
             .args = &(TestP3ColorArgs){
                 .size = 19,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
@@ -212,7 +212,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color order 119 triangulation w/BFS",
+            .desc = "path color order 119 triangulation",
             .args = &(TestP3ColorArgs){
                 .size = 119,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
@@ -223,7 +223,7 @@ static void test_p3color(AvenArena arena) {
             .fn = test_p3color_graph,
         },
         {
-            .desc = "path color order 1119 triangulation w/BFS",
+            .desc = "path color order 1119 triangulation",
             .args = &(TestP3ColorArgs){
                 .size = 1119,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
