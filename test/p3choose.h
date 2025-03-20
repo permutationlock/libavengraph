@@ -6,6 +6,7 @@
 #include <aven/test.h>
 
 #include <graph.h>
+#include <graph/path_color.h>
 #include <graph/plane/p3choose.h>
 
 #include "gen.h"
@@ -14,7 +15,7 @@ typedef struct {
     uint32_t size;
     GraphSubset outer_face;
     GraphPlaneP3ChooseListProp list_assignment;
-    TestGraphType type;
+    TestGenGraphType type;
 } TestP3ChooseArgs;
 
 static AvenTestResult test_p3choose_graph(
@@ -38,16 +39,21 @@ static AvenTestResult test_p3choose_graph(
     );
 
     if (
-        !graph_plane_p3choose_verify(
-            graph,
+        !graph_plane_p3choose_verify_list_coloring(
             args->list_assignment,
-            coloring,
-            arena
+            coloring
         )
     ) {
         return (AvenTestResult){
             .error = 1,
-            .message = "invalid path choosing",
+            .message = "invalid list coloring",
+        };
+    }
+
+    if (!graph_path_color_verify(graph, coloring, arena)) {
+        return (AvenTestResult){
+            .error = 1,
+            .message = "invalid path coloring",
         };
     }
 

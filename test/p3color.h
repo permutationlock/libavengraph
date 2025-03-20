@@ -21,7 +21,7 @@ typedef struct {
     uint32_t size;
     GraphSubset p1;
     GraphSubset p2;
-    TestGraphType type;
+    TestGenGraphType type;
     TestP3ColorAlg alg;
 } TestP3ColorArgs;
 

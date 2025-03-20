@@ -12,21 +12,18 @@
 
 #include <graph.h>
 #include <graph/gen.h>
-#include <graph/path_color.h>
-#include <graph/plane.h>
 #include <graph/plane/gen.h>
-#include <graph/plane/p3choose.h>
 
 typedef enum {
     TEST_GEN_GRAPH_TYPE_COMPLETE,
     TEST_GEN_GRAPH_TYPE_GRID,
     TEST_GEN_GRAPH_TYPE_PYRAMID,
     TEST_GEN_GRAPH_TYPE_TRIANGULATION,
-} TestGraphType;
+} TestGenGraphType;
 
 static Graph test_gen_graph(
     uint32_t size,
-    TestGraphType type,
+    TestGenGraphType type,
     AvenArena *arena
 ) {
     AvenRngPcg pcg = aven_rng_pcg_seed(0xdead, 0xbeef);
