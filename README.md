@@ -7,16 +7,17 @@ of a few [path coloring algorithms for plane graphs][2].
 
 The header-only graph library is contained in the `include` directory.
 The majority of the library depends only on a couple files from
-the simple `libaven` header-only library, which is vendored in the
+the simple `libaven` header-only library, which is a submodule in the
 `deps` directory.
 
 The `*/geometry.h` files define functions to construct vector geometry
 for graph visualization and depend on the headers from
 `libavengl`. The `libavengl` library draws 2D vector
 graphics using the OpenGL ES 2.0 API.
+The`libavengl` library is a submodule in the `deps` directory.
 The provided visualization uses GLFW for window creation.
-The GLFW and `libavengl` libraries and the headers
-for X11, xkbcommon, and Wayland are vendored in `deps`.
+The `libavengl` submodule provides a vendored GLFW, and headers
+for GLES2, X11, xkbcommon, and Wayland.
 
 ## Building the project
 
@@ -34,21 +35,21 @@ cc -o build build.c
 where `cc` is your favorite C compiler that supports C99 or later [^1].
 
 To build the algorithm visualization run:
-```
+```Shell
 ./build
 ```
-The resulting executables will be in the `build_out` directory.
+The resulting `visualization` executable will be in the `build_out` directory.
 
 For a release build using `clang` or `gcc` run:
-```
+```Shell
   ./build -ccflags "-O3 -ffast-math" -glfw-ccflags "-O3 -DNDEBUG"
 ```
 
 ### Watch mode and hot reloading
 
 To build and run the visualization in "watch mode" you may run:
-```
-  ./build watch
+```Shell
+./build watch
 ```
 The build system will watch for changes to files in `visualization/`. If a
 file in `visualization/game/` is modified, then the changes will be compiled
@@ -61,7 +62,7 @@ will close, compile, and run.
 A couple rudimentary programs were written to find and draw
 algorithm examples as a series of Tikz drawings. To build these
 exectuables, run:
-```
+```Shell
 ./build tikz
 ```
 
@@ -71,15 +72,22 @@ To build and run the algorithm benchmarks you will need ~3GB of
 available system RAM. To benchmark the threaded algorithms
 your C compiler must support C11 atomics. An example full benchmark
 run command for `gcc` or `clang` on Linux would be:
-```
+```Shell
 ./build bench -ccflags "-std=c11 -O3 -march=native -DBENCHMARK_THREADED"
 ```
 The benchmarks may take up to a few hours to complete.
+
+### Tests
+
+To build and run the tests:
+```Shell
+./build run
+```
  
 ### Cleaning up
 
-To clean all build artifacts:
-```
+To remove all build artifacts:
+```Shell
 ./build clean
 ```
 
