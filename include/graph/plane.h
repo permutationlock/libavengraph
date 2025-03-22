@@ -31,7 +31,19 @@ static inline bool graph_plane_aug_validate(
     uint32_t vertices = (uint32_t)graph.adj.len;
     uint32_t edges = (uint32_t)graph.nb.len / 2;
 
-    if (edges > 3 * vertices - 6) {
+    if (vertices > 2) {
+        if (edges > 3 * vertices - 6) {
+            return false;
+        }
+    } else if (vertices == 2) {
+        if (edges > 1) {
+            return false;
+        }
+    } else if (vertices == 1) {
+        if (edges != 0) {
+            return false;
+        }
+    } else {
         return false;
     }
     
