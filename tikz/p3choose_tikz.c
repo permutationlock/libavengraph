@@ -48,7 +48,7 @@ static TestCase gen_test_case(
 
     Aff2 ident;
     aff2_identity(ident);
-    GraphPlaneGenData data = graph_plane_gen_tri(
+    GraphPlaneGenData data = graph_plane_gen_triangulation(
         vertices,
         ident,
         min_area,
