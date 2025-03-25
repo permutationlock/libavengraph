@@ -13,6 +13,7 @@
 #include "deps/libaven/include/aven/arg.h"
 #include "deps/libaven/include/aven/build.h"
 #include "deps/libaven/include/aven/build/common.h"
+#include "deps/libaven/include/aven/io.h"
 #include "deps/libaven/include/aven/path.h"
 #include "deps/libaven/include/aven/watch.h"
 
@@ -31,7 +32,9 @@ typedef enum {
 
 int main(int argc, char **argv) {
     void *mem = malloc(ARENA_SIZE);
-    assert(mem != NULL);
+    if (mem == NULL) {
+        aven_panic("malloc failed");
+    }
 
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
@@ -47,18 +50,18 @@ int main(int argc, char **argv) {
         3 + common_args.len + libavengl_args.len + libaven_args.len
     );
     list_push(arg_list) = (AvenArg){
-        .name = "watch",
-        .description = "Build and run visualization and hot-reload src changes",
+        .name = aven_str("watch"),
+        .description = aven_str("Build and run visualization and hot-reload src changes"),
         .type = AVEN_ARG_TYPE_BOOL,
     };
     list_push(arg_list) = (AvenArg){
-        .name = "bench",
-        .description = "Build and run benchmarks",
+        .name = aven_str("bench"),
+        .description = aven_str("Build and run benchmarks"),
         .type = AVEN_ARG_TYPE_BOOL,
     };
     list_push(arg_list) = (AvenArg){
-        .name = "tikz",
-        .description = "Build tikz drawing example generators",
+        .name = aven_str("tikz"),
+        .description = aven_str("Build tikz drawing example generators"),
         .type = AVEN_ARG_TYPE_BOOL,
     };
     for(size_t i = 0; i < common_args.len; i += 1) {
@@ -72,17 +75,17 @@ int main(int argc, char **argv) {
     }
     AvenArgSlice args = slice_list(arg_list);
 
-    int error = aven_arg_parse(
+    AvenArgError parse_error = aven_arg_parse(
         args,
         argv,
         argc,
-        aven_build_common_overview().ptr,
-        aven_build_common_usage().ptr
+        aven_build_common_overview(),
+        aven_build_common_usage()
     );
-    if (error != 0) {
-        if (error != AVEN_ARG_ERROR_HELP) {
-            fprintf(stderr, "ARG PARSE ERROR: %d\n", error);
-            return error;
+    if (parse_error != 0) {
+        if (parse_error != AVEN_ARG_ERROR_HELP) {
+            aven_io_perrf("ARG PARSE ERROR: {}\n", aven_fmt_int(parse_error));
+            return 1;
         }
         return 0;
     }
@@ -592,19 +595,37 @@ int main(int argc, char **argv) {
         aven_build_step_clean(&bench_root_step, arena);
     } else {
          if (opts.test) {
-            error = aven_build_step_run(&test_root_step, arena);
-            if (error != 0) {
-                fprintf(stderr, "TEST FAILED\n");
+            AvenBuildStepRunError run_error = aven_build_step_run(
+                &test_root_step,
+                arena
+            );
+            if (run_error != 0) {
+                aven_io_perrf("TESTS FAILED: {}\n", aven_fmt_int(run_error));
+                return 1;
             }
         } else if (opt_bench) {
-            error = aven_build_step_run(&bench_root_step, arena);
-            if (error != 0) {
-                fprintf(stderr, "BENCHMARK FAILED\n");
+            AvenBuildStepRunError run_error = aven_build_step_run(
+                &bench_root_step,
+                arena
+            );
+            if (run_error != 0) {
+                aven_io_perrf(
+                    "BENCHMARKS FAILED: {}\n",
+                    aven_fmt_int(run_error)
+                );
+                return 1;
             }
         } else if (opt_tikz) {
-            error = aven_build_step_run(&tikz_root_step, arena);
-            if (error != 0) {
-                fprintf(stderr, "BUILD FAILED\n");
+            AvenBuildStepRunError run_error = aven_build_step_run(
+                &tikz_root_step,
+                arena
+            );
+            if (run_error != 0) {
+                aven_io_perrf(
+                    "TIKZ BUILD FAILED: {}\n",
+                    aven_fmt_int(run_error)
+                );
+                return 1;
             }
         } else if (opt_watch) {
             AvenWatchHandle src_handle = aven_watch_init(
@@ -628,26 +649,41 @@ int main(int argc, char **argv) {
             RebuildState rebuild_state = REBUILD_STATE_EXE;
             for (;;) {
                 switch (rebuild_state) {
-                    case REBUILD_STATE_EXE:
+                    case REBUILD_STATE_EXE: {
                         if (exe_pid.valid) {
                             aven_proc_kill(exe_pid.value);
                             exe_pid.valid = false;
                         }
                         aven_build_step_reset(&hot_root_step, arena);
-                        error = aven_build_step_run(&hot_root_step, arena);
-                        if (error != 0) {
-                            fprintf(stderr, "BUILD FAILED: %d\n", error);
+                        AvenBuildStepRunError run_error = aven_build_step_run(
+                            &hot_root_step,
+                            arena
+                        );
+                        if (run_error != 0) {
+                            aven_io_perrf(
+                                "BUILD FAILED: {}\n",
+                                aven_fmt_int(run_error)
+                            );
                         }
                         break;
-                    case REBUILD_STATE_GAME:
+                    }
+                    case REBUILD_STATE_GAME: {
                         aven_build_step_reset(&hot_dll_root_step, arena);
-                        error = aven_build_step_run(&hot_dll_root_step, arena);
-                        if (error != 0) {
-                            fprintf(stderr, "BUILD FAILED: %d\n", error);
+                        AvenBuildStepRunError run_error = aven_build_step_run(
+                            &hot_dll_root_step,
+                            arena
+                        );
+                        if (run_error != 0) {
+                            aven_io_perrf(
+                                "BUILD FAILED: {}\n",
+                                aven_fmt_int(run_error)
+                            );
                         }
                         break;
-                    default:
+                    }
+                    default: {
                         break;
+                    }
                 }
                 rebuild_state = REBUILD_STATE_NONE;
 
@@ -657,9 +693,12 @@ int main(int argc, char **argv) {
                     );
                     if (result.error == 0) {
                         if (result.payload == 0) {
-                            printf("APPLICATION EXITED CLEANLY\n");
+                            aven_io_perr("APPLICATION EXITED CLEANLY\n");
                         } else {
-                            printf("APPLICATION FAILED: %d\n", result.payload);
+                            aven_io_perrf(
+                                "APPLICATION FAILED: {}\n",
+                                aven_fmt_int(result.payload)
+                            );
                         }
                         exe_pid.valid = false;
                     } else if (result.error != AVEN_PROC_WAIT_ERROR_TIMEOUT) {
@@ -669,7 +708,7 @@ int main(int argc, char **argv) {
                 }
 
                 if (!exe_pid.valid) {
-                    printf("RUNNING:\n");
+                    aven_io_perr("RUNNING:\n");
 
                     AvenStr cmd_parts[] = {
                         visualization_hot_exe_step.out_path.value
@@ -678,7 +717,10 @@ int main(int argc, char **argv) {
 
                     AvenProcCmdResult result = aven_proc_cmd(cmd, arena);
                     if (result.error != 0) {
-                        fprintf(stderr, "RUN FAILED: %d\n", result.error);
+                        aven_io_perrf(
+                            "RUN FAILED: {}\n",
+                            aven_fmt_int(result.error)
+                        );
                     } else {
                         exe_pid.valid = true;
                         exe_pid.value = result.payload;
@@ -687,7 +729,10 @@ int main(int argc, char **argv) {
 
                 AvenWatchResult result = aven_watch_check_multiple(handles, -1);
                 if (result.error != 0) {
-                    fprintf(stderr, "WATCH CHECK FAILED: %d\n", result.error);
+                    aven_io_perrf(
+                        "WATCH CHECK FAILED: {}\n",
+                        aven_fmt_int(result.error)
+                    );
                     return 1;
                 }
 
@@ -708,19 +753,24 @@ int main(int argc, char **argv) {
                 while (result.payload != 0) {
                     result = aven_watch_check_multiple(handles, 100);
                     if (result.error != 0) {
-                        fprintf(
-                            stderr,
-                            "WATCH CHECK FAILED: %d\n",
-                            result.error
+                        aven_io_perrf(
+                            "WATCH CHECK FAILED: {}\n",
+                            aven_fmt_int(result.error)
                         );
                         return 1;
                     }
                 }
             }
         } else {
-            error = aven_build_step_run(&root_step, arena);
-            if (error != 0) {
-                fprintf(stderr, "BUILD FAILED\n");
+            AvenBuildStepRunError run_error = aven_build_step_run(
+                &root_step,
+                arena
+            );
+            if (run_error != 0) {
+                aven_io_perrf(
+                    "BUILD FAILED: {}\n",
+                    aven_fmt_int(run_error)
+                );
             }
         }
     }

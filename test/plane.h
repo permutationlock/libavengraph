@@ -29,7 +29,7 @@ AvenTestResult test_graph_plane(
 
     if (graph_plane_validate(graph, arena) != args->planar) {
         return (AvenTestResult){
-            .message = "generated graph not a plane triangulation",
+            .message = aven_str("generated graph not a plane triangulation"),
             .error = 1,
         };        
     }
@@ -40,7 +40,7 @@ AvenTestResult test_graph_plane(
 static void test_plane(AvenArena arena) {
     AvenTestCase tcase_data[] = {
         {
-            .desc = "verify embedding K_1",
+            .desc = aven_str("verify embedding K_1"),
             .args = &(TestGraphPlaneArgs){
                 .size = 1,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -49,7 +49,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding K_2",
+            .desc = aven_str("verify embedding K_2"),
             .args = &(TestGraphPlaneArgs){
                 .size = 2,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -58,7 +58,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding K_3",
+            .desc = aven_str("verify embedding K_3"),
             .args = &(TestGraphPlaneArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -67,7 +67,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding K_4",
+            .desc = aven_str("verify embedding K_4"),
             .args = &(TestGraphPlaneArgs){
                 .size = 4,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -76,7 +76,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding K_5",
+            .desc = aven_str("verify embedding K_5"),
             .args = &(TestGraphPlaneArgs){
                 .size = 5,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -85,7 +85,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding K_19",
+            .desc = aven_str("verify embedding K_19"),
             .args = &(TestGraphPlaneArgs){
                 .size = 19,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -94,7 +94,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding 2x2 grid",
+            .desc = aven_str("verify embedding 2x2 grid"),
             .args = &(TestGraphPlaneArgs){
                 .size = 2,
                 .type = TEST_GEN_GRAPH_TYPE_GRID,
@@ -103,7 +103,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding 9x9 grid",
+            .desc = aven_str("verify embedding 9x9 grid"),
             .args = &(TestGraphPlaneArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_GRID,
@@ -112,7 +112,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding pyramid A_3",
+            .desc = aven_str("verify embedding pyramid A_3"),
             .args = &(TestGraphPlaneArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -121,7 +121,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding pyramid A_9",
+            .desc = aven_str("verify embedding pyramid A_9"),
             .args = &(TestGraphPlaneArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -130,7 +130,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding order 9 triangulation",
+            .desc = aven_str("verify embedding order 9 triangulation"),
             .args = &(TestGraphPlaneArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
@@ -139,7 +139,7 @@ static void test_plane(AvenArena arena) {
             .fn = test_graph_plane,
         },
         {
-            .desc = "verify embedding order 21 triangulation",
+            .desc = aven_str("verify embedding order 21 triangulation"),
             .args = &(TestGraphPlaneArgs){
                 .size = 21,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
@@ -150,7 +150,7 @@ static void test_plane(AvenArena arena) {
     };
     AvenTestCaseSlice tcases = slice_array(tcase_data);
 
-    aven_test(tcases, __FILE__, arena);
+    aven_test(tcases, arena);
 }
 
 #endif // TEST_PLANE_H

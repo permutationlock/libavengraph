@@ -46,14 +46,14 @@ static AvenTestResult test_p3choose_graph(
     ) {
         return (AvenTestResult){
             .error = 1,
-            .message = "invalid list coloring",
+            .message = aven_str("invalid list coloring"),
         };
     }
 
     if (!graph_path_color_verify(graph, coloring, arena)) {
         return (AvenTestResult){
             .error = 1,
-            .message = "invalid path coloring",
+            .message = aven_str("invalid path coloring"),
         };
     }
 
@@ -63,7 +63,7 @@ static AvenTestResult test_p3choose_graph(
 static void test_p3choose(AvenArena arena) {
     AvenTestCase tcase_data[] = {
         {
-            .desc = "path choose K_3",
+            .desc = aven_str("path choose K_3"),
             .args = &(TestP3ChooseArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -79,7 +79,7 @@ static void test_p3choose(AvenArena arena) {
             .fn = test_p3choose_graph,
         },
         {
-            .desc = "path choose K_4",
+            .desc = aven_str("path choose K_4"),
             .args = &(TestP3ChooseArgs){
                 .size = 4,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -96,7 +96,7 @@ static void test_p3choose(AvenArena arena) {
             .fn = test_p3choose_graph,
         },
         {
-            .desc = "path choose pyramid A_5",
+            .desc = aven_str("path choose pyramid A_5"),
             .args = &(TestP3ChooseArgs){
                 .size = 5,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -127,7 +127,7 @@ static void test_p3choose(AvenArena arena) {
             .fn = test_p3choose_graph,
         },
         {
-            .desc = "path choose order 18 triangulation",
+            .desc = aven_str("path choose order 18 triangulation"),
             .args = &(TestP3ChooseArgs){
                 .size = 18,
                 .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
@@ -160,7 +160,7 @@ static void test_p3choose(AvenArena arena) {
     };
     AvenTestCaseSlice tcases = slice_array(tcase_data);
 
-    aven_test(tcases, __FILE__, arena);
+    aven_test(tcases, arena);
 }
 
 #endif // TEST_P3CHOOSE_H

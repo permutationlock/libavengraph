@@ -24,6 +24,9 @@
 int main(void) {
     aven_fs_utf8_mode();
     void *mem = malloc(ARENA_SIZE);
+    if (mem == NULL) {
+        aven_panic("malloc failed");
+    }
     AvenArena test_arena = aven_arena_init(mem, ARENA_SIZE);
 
     test_bfs(test_arena);

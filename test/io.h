@@ -38,7 +38,7 @@ static AvenTestResult test_io_graph(
     int wr_error = graph_io_push(&writer, graph);
     if (wr_error != 0) {
         return (AvenTestResult){
-            .message = "failed to push graph to writer",
+            .message = aven_str("failed to push graph to writer"),
             .error = wr_error,
         };
     }
@@ -47,7 +47,7 @@ static AvenTestResult test_io_graph(
     GraphIoResult rd_res = graph_io_pop(&reader, &arena);
     if (rd_res.error != 0) {
         return (AvenTestResult){
-            .message = "failed to pop graph from reader",
+            .message = aven_str("failed to pop graph from reader"),
             .error = rd_res.error,
         };
     }
@@ -56,56 +56,32 @@ static AvenTestResult test_io_graph(
 
     if (!graph_io_validate(read_graph)) {
         return (AvenTestResult){
-            .message = "poped graph invalid",
+            .message = aven_str("poped graph invalid"),
             .error = 1,
         };        
     }
     
     if (read_graph.adj.len != graph.adj.len) {
-        char fmt[] = "expected %lu vertices, found %lu";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 16,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)graph.adj.len,
-            (unsigned long)read_graph.adj.len
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected {} vertices, found {}",
+                aven_fmt_uint(graph.adj.len),
+                aven_fmt_uint(read_graph.adj.len)
+            ),
         };
     }
 
     if (read_graph.nb.len != graph.nb.len) {
-        char fmt[] = "expected %lu half-edges, found %lu";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 16,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)graph.nb.len,
-            (unsigned long)read_graph.nb.len
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected {} half-edges, found {}",
+                aven_fmt_uint(graph.nb.len),
+                aven_fmt_uint(read_graph.nb.len)
+            ),
         };
     }
 
@@ -129,25 +105,13 @@ static AvenTestResult test_io_graph(
     }
 
     if (inv_adj != 0) {
-        char fmt[] = "graph adj lists differed from original in %lu places";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)inv_adj
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "read graph adj lists differed from original in {} places",
+                aven_fmt_uint(inv_adj)
+            ),
         };
     }
 
@@ -172,7 +136,7 @@ static AvenTestResult test_io_graph_aug(
     int wr_error = graph_io_aug_push(&writer, aug_graph);
     if (wr_error != 0) {
         return (AvenTestResult){
-            .message = "failed to push graph to writer",
+            .message = aven_str("failed to push graph to writer"),
             .error = wr_error,
         };
     }
@@ -181,7 +145,7 @@ static AvenTestResult test_io_graph_aug(
     GraphIoAugResult rd_res = graph_io_aug_pop(&reader, &arena);
     if (rd_res.error != 0) {
         return (AvenTestResult){
-            .message = "failed to pop graph from reader",
+            .message = aven_str("failed to pop graph from reader"),
             .error = rd_res.error,
         };
     }
@@ -190,56 +154,32 @@ static AvenTestResult test_io_graph_aug(
 
     if (!graph_io_aug_validate(read_graph)) {
         return (AvenTestResult){
-            .message = "poped graph invalid",
+            .message = aven_str("poped graph invalid"),
             .error = 1,
         };        
     }
     
     if (read_graph.adj.len != aug_graph.adj.len) {
-        char fmt[] = "expected %lu vertices, found %lu";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 16,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)aug_graph.adj.len,
-            (unsigned long)read_graph.adj.len
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected {} vertices, found {}",
+                aven_fmt_uint(aug_graph.adj.len),
+                aven_fmt_uint(read_graph.adj.len)
+            ),
         };
     }
 
     if (read_graph.nb.len != aug_graph.nb.len) {
-        char fmt[] = "expected %lu half-edges, found %lu";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 16,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)aug_graph.nb.len,
-            (unsigned long)read_graph.nb.len
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected {} half-edges, found {}",
+                aven_fmt_uint(aug_graph.nb.len),
+                aven_fmt_uint(read_graph.nb.len)
+            ),
         };
     }
 
@@ -263,25 +203,13 @@ static AvenTestResult test_io_graph_aug(
     }
 
     if (inv_adj != 0) {
-        char fmt[] = "graph adj lists differed from original in %lu places";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)inv_adj
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "read graph adj lists differed from original in {} places",
+                aven_fmt_uint(inv_adj)
+            ),
         };
     }
 
@@ -291,7 +219,7 @@ static AvenTestResult test_io_graph_aug(
 static void test_io(AvenArena arena) {
     AvenTestCase tcase_data[] = {
         {
-            .desc = "push pop K_1",
+            .desc = aven_str("push pop K_1"),
             .args = &(TestIoGraphArgs){
                 .size = 1,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -299,7 +227,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop K_5",
+            .desc = aven_str("push pop K_5"),
             .args = &(TestIoGraphArgs){
                 .size = 5,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -307,7 +235,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop K_19",
+            .desc = aven_str("push pop K_19"),
             .args = &(TestIoGraphArgs){
                 .size = 19,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -315,7 +243,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop 2x2 grid",
+            .desc = aven_str("push pop 2x2 grid"),
             .args = &(TestIoGraphArgs){
                 .size = 2,
                 .type = TEST_GEN_GRAPH_TYPE_GRID,
@@ -323,7 +251,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop 9x9 grid",
+            .desc = aven_str("push pop 9x9 grid"),
             .args = &(TestIoGraphArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_GRID,
@@ -331,7 +259,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop pyramid A_3",
+            .desc = aven_str("push pop pyramid A_3"),
             .args = &(TestIoGraphArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -339,7 +267,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop pyramid A_9",
+            .desc = aven_str("push pop pyramid A_9"),
             .args = &(TestIoGraphArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -347,7 +275,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph,
         },
         {
-            .desc = "push pop augmented K_1",
+            .desc = aven_str("push pop augmented K_1"),
             .args = &(TestIoGraphArgs){
                 .size = 1,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -355,7 +283,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph_aug,
         },
         {
-            .desc = "push pop augmented K_5",
+            .desc = aven_str("push pop augmented K_5"),
             .args = &(TestIoGraphArgs){
                 .size = 5,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -363,7 +291,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph_aug,
         },
         {
-            .desc = "push pop augmented K_19",
+            .desc = aven_str("push pop augmented K_19"),
             .args = &(TestIoGraphArgs){
                 .size = 19,
                 .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
@@ -371,7 +299,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph_aug,
         },
         {
-            .desc = "push pop augmented 2x2 grid",
+            .desc = aven_str("push pop augmented 2x2 grid"),
             .args = &(TestIoGraphArgs){
                 .size = 2,
                 .type = TEST_GEN_GRAPH_TYPE_GRID,
@@ -379,7 +307,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph_aug,
         },
         {
-            .desc = "push pop augmented 9x9 grid",
+            .desc = aven_str("push pop augmented 9x9 grid"),
             .args = &(TestIoGraphArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_GRID,
@@ -387,7 +315,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph_aug,
         },
         {
-            .desc = "push pop augmented pyramid A_3",
+            .desc = aven_str("push pop augmented pyramid A_3"),
             .args = &(TestIoGraphArgs){
                 .size = 3,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -395,7 +323,7 @@ static void test_io(AvenArena arena) {
             .fn = test_io_graph_aug,
         },
         {
-            .desc = "push pop augmented pyramid A_9",
+            .desc = aven_str("push pop augmented pyramid A_9"),
             .args = &(TestIoGraphArgs){
                 .size = 9,
                 .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
@@ -405,7 +333,7 @@ static void test_io(AvenArena arena) {
     };
     AvenTestCaseSlice tcases = slice_array(tcase_data);
 
-    aven_test(tcases, __FILE__, arena);
+    aven_test(tcases, arena);
 }
 
 #endif // TEST_IO_H

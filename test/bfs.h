@@ -3,6 +3,7 @@
 
 #include <aven.h>
 #include <aven/arena.h>
+#include <aven/fmt.h>
 #include <aven/test.h>
 
 #include <graph.h>
@@ -50,73 +51,37 @@ static AvenTestResult test_bfs_complete(
     }
 
     if (in_tree_valid != g.adj.len) {
-        char fmt[] = "expected all %lu vertices in BFS tree, found %lu";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 16,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)g.adj.len,
-            (unsigned long)in_tree_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected all {} vertices in BFS tree, found {}",
+                aven_fmt_uint(g.adj.len),
+                aven_fmt_uint(in_tree_valid)
+            ),
         };
     }
 
     if (root_dist != 0) {
-        char fmt[] = "expected root vertex to have dist 0, found dist %lu";
-        char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)root_dist,
-            dists_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected root vertex to have dist 0, found {}",
+                aven_fmt_uint(root_dist)
+            ),
         };
     }
 
     if (dists_valid != g.adj.len - 1) {
-        char fmt[] =
-            "expected all %lu non-root vertices to have dist 1, found %lu";
-        char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)g.adj.len,
-            dists_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected all {} non-root vertices to have dist 1, found {}",
+                aven_fmt_uint(g.adj.len - 1),
+                aven_fmt_uint(dists_valid)
+            ),
         };
     }
 
@@ -140,7 +105,12 @@ static AvenTestResult test_bfs_complete(
 
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected all {} vertices to have root as parent, found {}",
+                aven_fmt_uint(g.adj.len),
+                aven_fmt_uint(parents_valid)
+            ),
         };
     }
 
@@ -231,55 +201,37 @@ static AvenTestResult test_bfs_grid(
 
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected all {} vertices in BFS tree, found {}",
+                aven_fmt_uint(g.adj.len),
+                aven_fmt_uint(in_tree_valid)
+            ),
         };
     }
 
     if (dists_valid != g.adj.len) {
-        char fmt[] =
-            "expected all %lu vertices to have grid dist to root, found %lu";
-        char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)g.adj.len,
-            dists_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected all {} vertices to have grid dist to root, found {}",
+                aven_fmt_uint(g.adj.len),
+                aven_fmt_uint(dists_valid)
+            ),
         };
     }
 
     if (parents_valid != g.adj.len) {
-        char fmt[] =
-            "expected all %lu vertices to have grid adjacent parent, found %lu";
-        char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)g.adj.len,
-            parents_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
-            .message = buffer,
+            .message = aven_fmt(
+                emsg_arena,
+                "expected all {} vertices to have grid adjacent parent, "
+                "found {}",
+                aven_fmt_uint(g.adj.len),
+                aven_fmt_uint(parents_valid)
+            ),
         };
     }
 
@@ -289,7 +241,7 @@ static AvenTestResult test_bfs_grid(
 static void test_bfs(AvenArena arena) {
     AvenTestCase tcase_data[] = {
         {
-            .desc = "K_1 start 0",
+            .desc = aven_str("K_1 start 0"),
             .args = &(TestBfsCompleteArgs){
                 .size = 1,
                 .start = 0,
@@ -297,7 +249,7 @@ static void test_bfs(AvenArena arena) {
             .fn = test_bfs_complete,
         },
         {
-            .desc = "K_2 start 0",
+            .desc = aven_str("K_2 start 0"),
             .args = &(TestBfsCompleteArgs){
                 .size = 2,
                 .start = 0,
@@ -305,7 +257,7 @@ static void test_bfs(AvenArena arena) {
             .fn = test_bfs_complete,
         },
         {
-            .desc = "K_2 start 1",
+            .desc = aven_str("K_2 start 1"),
             .args = &(TestBfsCompleteArgs){
                 .size = 3,
                 .start = 1,
@@ -313,7 +265,7 @@ static void test_bfs(AvenArena arena) {
             .fn = test_bfs_complete,
         },
         {
-            .desc = "K_7 start 6",
+            .desc = aven_str("K_7 start 6"),
             .args = &(TestBfsCompleteArgs){
                 .size = 7,
                 .start = 6,
@@ -321,7 +273,7 @@ static void test_bfs(AvenArena arena) {
             .fn = test_bfs_complete,
         },
         {
-            .desc = "2x2 Grid start 0 (0, 0)",
+            .desc = aven_str("2x2 Grid start 0 (0, 0)"),
             .args = &(TestBfsGridArgs){
                 .width = 2,
                 .height = 2,
@@ -330,7 +282,7 @@ static void test_bfs(AvenArena arena) {
             .fn = test_bfs_grid,
         },
         {
-            .desc = "2x2 Grid start 3 (1,1)",
+            .desc = aven_str("2x2 Grid start 3 (1,1)"),
             .args = &(TestBfsGridArgs){
                 .width = 2,
                 .height = 2,
@@ -339,7 +291,7 @@ static void test_bfs(AvenArena arena) {
             .fn = test_bfs_grid,
         },
         {
-            .desc = "4x4 Grid start 5 (1,1)",
+            .desc = aven_str("4x4 Grid start 5 (1,1)"),
             .args = &(TestBfsGridArgs){
                 .width = 4,
                 .height = 4,
@@ -350,7 +302,7 @@ static void test_bfs(AvenArena arena) {
     };
     AvenTestCaseSlice tcases = slice_array(tcase_data);
 
-    aven_test(tcases, __FILE__, arena);
+    aven_test(tcases, arena);
 }
 
 #endif // TEST_BFS_H
