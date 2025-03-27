@@ -133,7 +133,6 @@ int main(int argc, char **argv) {
     AvenStrSlice includes = slice_list(include_list);
 
     AvenStrSlice macros = { 0 };
-    AvenStrSlice syslibs = { 0 };
 
     AvenStr work_dir = aven_str("build_work");
     AvenBuildStep work_dir_step = aven_build_step_mkdir(work_dir);
@@ -517,7 +516,7 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        syslibs,
+        libavengl_opts.syslibs,
         test_objs,
         aven_path(&arena, root_path, aven_str("test.c")),
         &test_dir_step,
@@ -550,7 +549,7 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        syslibs,
+        libavengl_opts.syslibs,
         bench_objs,
         aven_path(&arena, root_path, aven_str("benchmarks"), aven_str("all.c")),
         &bench_dir_step,
@@ -565,7 +564,7 @@ int main(int argc, char **argv) {
         &opts,
         includes,
         macros,
-        syslibs,
+        libavengl_opts.syslibs,
         bench_objs,
         aven_path(
             &arena,

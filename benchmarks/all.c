@@ -14,12 +14,11 @@
 
 #include <graph.h>
 #include <graph/path_color.h>
-#include <graph/plane.h>
 #include <graph/bfs.h>
 #include <graph/plane/p3color_bfs.h>
 #include <graph/plane/p3color.h>
 #include <graph/plane/p3choose.h>
-#include <graph/plane/gen.h>
+#include <graph/gen.h>
 
 #ifdef BENCHMARK_THREADED
     #include <aven/thread/pool.h>
