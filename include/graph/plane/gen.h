@@ -19,6 +19,7 @@ typedef struct {
 static inline GraphPlaneGenData graph_plane_gen_grid(
     uint32_t width,
     uint32_t height,
+    Aff2 trans,
     AvenArena *arena
 ) {
     Graph graph = graph_gen_grid(width, height, arena);
@@ -41,7 +42,94 @@ static inline GraphPlaneGenData graph_plane_gen_grid(
 
         get(embedding, v)[0] = -1.0f + (float)x * x_scale;
         get(embedding, v)[1] = -1.0f + (float)y * y_scale;
+        aff2_transform(get(embedding, v), trans, get(embedding, v));
     }
+
+    return (GraphPlaneGenData){
+        .graph = graph,
+        .embedding = embedding,
+    };
+}
+
+static inline GraphPlaneGenData graph_plane_gen_pyramid(
+    uint32_t k,
+    Aff2 trans,
+    float min_area,
+    AvenArena *arena
+) {
+    AvenArena temp_arena;
+    Graph graph;
+    GraphPlaneEmbedding embedding;
+    float area;
+    do {
+        temp_arena = *arena;
+        graph = graph_gen_pyramid(k, &temp_arena);
+        embedding = (GraphPlaneEmbedding)aven_arena_create_slice(
+            Vec2,
+            &temp_arena,
+            graph.adj.len
+        );
+        area = 1.0f;
+
+        aff2_transform(get(embedding, 0), trans, (Vec2){ 0.0f, 1.0f });
+        aff2_transform(get(embedding, 1), trans, (Vec2){ 1.0f, -1.0f });
+        aff2_transform(get(embedding, 2), trans, (Vec2){ -1.0f, -1.0f });
+
+        float y_top_space = 0.35f;
+        float y_bot_space = 0.1f;
+        float side_space = 0.1f;
+        // float side_scale = 1.0f / (float)(k + 2);
+        float y_scale = (2.0f - y_top_space - y_bot_space) / (float)(k + 1);
+        // float x_start_scale = 2.0f / (float)(k + 1);
+        for (uint32_t y = 0; y < k; y += 1) {
+            uint32_t width = k - y;
+            float y_coord = -1.0f + y_bot_space + (float)(y + 1) * y_scale;
+            float x_start = (y_coord - 1.0f) / 2.0f;
+            float x_end = -(y_coord - 1.0f) / 2.0f;
+            float x_scale = (x_end - x_start - 2.0f * side_space) /
+                (float)(width + 1);
+            for (uint32_t x = 0; x < width; x += 1) {
+                uint32_t v = graph_gen_pyramid_coord(k, x, y);
+                float x_coord = x_start + side_space +
+                    (float)(x + 1) * x_scale;
+                aff2_transform(
+                    get(embedding, v),
+                    trans,
+                    (Vec2){ x_coord, y_coord }
+                );
+            }
+        }
+        for (uint32_t y = 0; y < min(2, k); y += 1) {
+            uint32_t width = k - y;
+            uint32_t v = graph_gen_pyramid_coord(k, 0, y);
+            if (y == 0) {
+                uint32_t u = (width == 1) ?
+                    1 :
+                    graph_gen_pyramid_coord(k, 1, y);
+                area = min(
+                    area,
+                    vec2_triangle_area(
+                        get(embedding, 2),
+                        get(embedding, v),
+                        get(embedding, u)
+                    )
+                );
+            } else {
+                area = min(
+                    area,
+                    vec2_triangle_area(
+                        get(embedding, 2),
+                        get(embedding, v),
+                        get(embedding, 0)
+                    )
+                );
+            }
+        }
+
+        k -= 1;
+    } while(area < min_area and k > 0);
+
+    *arena = temp_arena;
 
     return (GraphPlaneGenData){
         .graph = graph,

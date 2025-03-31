@@ -86,7 +86,6 @@ typedef struct {
 typedef enum {
     GAME_INFO_GRAPH_TYPE_RAND = 0,
     GAME_INFO_GRAPH_TYPE_PYRAMID,
-    GAME_INFO_GRAPH_TYPE_GRID,
 } GameInfoGraphType;
 
 typedef struct {
@@ -139,6 +138,7 @@ typedef enum {
     GAME_UI_WINDOW_THREAD,
     GAME_UI_WINDOW_RADIUS,
     GAME_UI_WINDOW_ALG,
+    GAME_UI_WINDOW_GRAPH,
     GAME_UI_WINDOW_PREVIEW,
 } GameUiWindow;
 

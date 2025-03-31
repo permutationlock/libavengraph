@@ -287,44 +287,81 @@ static GameInfoSession game_info_session_init(
     float radius = vertex_radii[
         min(session_opts->radius, countof(vertex_radii))
     ];
+    (void)radius;
 
-    Aff2 identity;
-    aff2_identity(identity);
-    GraphPlaneGenData gen_data = graph_plane_gen_triangulation(
-        GAME_MAX_VERTICES,
-        identity,
-        1.8f * (radius * radius),
-        GAME_MIN_COEFF,
-        true,
-        rng,
-        arena
-    );
-    session.graph = gen_data.graph;
-    session.embedding = gen_data.embedding;
-    session.aug_graph = graph_aug(session.graph, arena);
+    switch (session_opts->graph_type) {
+        case GAME_INFO_GRAPH_TYPE_PYRAMID: {
+            Aff2 identity;
+            aff2_identity(identity);
+            GraphPlaneGenData gen_data = graph_plane_gen_pyramid(
+                33,
+                identity,
+                5.0f * (radius * radius) + 0.35f * radius,
+                arena
+            );
 
-    uint32_t v1 = aven_rng_rand_bounded(rng, 4);
-    uint32_t p1_len = 1 + aven_rng_rand_bounded(rng, 3);
+            session.graph = gen_data.graph;
+            session.embedding = gen_data.embedding;
+            session.aug_graph = graph_aug(session.graph, arena);
 
-    List(uint32_t) p1_list = aven_arena_create_list(uint32_t, arena, 4);
-    for (uint32_t i = 0; i < p1_len; i += 1) {
-        list_push(p1_list) = (v1 + i) % 4;
+            GraphSubset p1 = aven_arena_create_slice(uint32_t, arena, 2);
+            get(p1, 0) = 1;
+            get(p1, 1) = 2;
+            session.p1 = p1;
+
+            GraphSubset p2 = aven_arena_create_slice(uint32_t, arena, 1);
+            get(p2, 0) = 0;
+            session.p2 = p2;
+            
+            GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 3);
+            for (uint32_t v = 0; v < 3; v += 1) {
+                get(outer_face, v) = v;
+            }
+            session.outer_cycle = outer_face;
+            break;
+        }
+        case GAME_INFO_GRAPH_TYPE_RAND: {
+            Aff2 identity;
+            aff2_identity(identity);
+            GraphPlaneGenData gen_data = graph_plane_gen_triangulation(
+                GAME_MAX_VERTICES,
+                identity,
+                1.8f * (radius * radius),
+                GAME_MIN_COEFF,
+                true,
+                rng,
+                arena
+            );
+
+            session.graph = gen_data.graph;
+            session.embedding = gen_data.embedding;
+            session.aug_graph = graph_aug(session.graph, arena);
+
+            uint32_t v1 = aven_rng_rand_bounded(rng, 4);
+            uint32_t p1_len = 1 + aven_rng_rand_bounded(rng, 3);
+
+            List(uint32_t) p1_list = aven_arena_create_list(uint32_t, arena, 4);
+            for (uint32_t i = 0; i < p1_len; i += 1) {
+                list_push(p1_list) = (v1 + i) % 4;
+            }
+            GraphSubset p1 = slice_list(p1_list);
+            session.p1 = p1;
+
+            List(uint32_t) p2_list = aven_arena_create_list(uint32_t, arena, 4);
+            for (uint32_t i = 0; i < 4 - p1_len; i += 1) {
+                list_push(p2_list) = (v1 + 3 - i) % 4;
+            }
+            GraphSubset p2 = slice_list(p2_list);
+            session.p2 = p2;
+
+            GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 4);
+            for (uint32_t i = 0; i < 4; i += 1) {
+                get(outer_face, i) = (v1 + i) % 4;
+            }
+            session.outer_cycle = outer_face;
+            break;
+        }
     }
-    GraphSubset p1 = slice_list(p1_list);
-    session.p1 = p1;
-
-    List(uint32_t) p2_list = aven_arena_create_list(uint32_t, arena, 4);
-    for (uint32_t i = 0; i < 4 - p1_len; i += 1) {
-        list_push(p2_list) = (v1 + 3 - i) % 4;
-    }
-    GraphSubset p2 = slice_list(p2_list);
-    session.p2 = p2;
-
-    GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 4);
-    for (uint32_t i = 0; i < 4; i += 1) {
-        get(outer_face, i) = (v1 + i) % 4;
-    }
-    session.outer_cycle = outer_face;
 
     uint32_t color_divisions = GAME_COLOR_DIVISIONS;
     uint32_t max_color = ((color_divisions + 2) * (color_divisions + 1)) / 2U;
@@ -559,6 +596,7 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
         .height = GAME_INIT_HEIGHT,
         .session_opts = {
             .alg_type = GAME_DATA_ALG_TYPE_P3COLOR_BFS,
+            .graph_type = GAME_INFO_GRAPH_TYPE_PYRAMID,
             .nthreads = 1,
             .radius = 0,
         },
@@ -770,7 +808,7 @@ bool game_update(
             aven_gl_ui_window(
                 &ctx->ui,
                 backdrop_trans,
-                aven_gl_ui_border_all
+                AVEN_GL_UI_BORDER_ALL
             )
         ) {
             ctx->active_window = GAME_UI_WINDOW_NONE;
@@ -1378,6 +1416,110 @@ bool game_update(
         button_count += 1;
     }
 
+    if (ctx->active_window == GAME_UI_WINDOW_GRAPH) {
+        float window_left_x = 1.5f * padding + ui_width / 2.0f;
+        float window_y = top_y - (button_count * ui_width);
+        float window_buttons = 2.0f;
+
+        Aff2 window_trans;
+        aff2_position(
+            window_trans,
+            (Vec2){
+                window_left_x + window_buttons * ui_width / 2.0f,
+                window_y
+            },
+            (Vec2){
+                (window_buttons / 2.0f) * ui_width + padding,
+                ui_width / 2.0f + padding,
+            }
+        );
+        aff2_compose(window_trans, ui_trans, window_trans);
+        aven_gl_ui_window(
+            &ctx->ui,
+            window_trans,
+            popup_border
+        );
+
+        float window_button_count = 0.0f;
+        {
+            Aff2 button_trans;
+            aff2_position_rangle(
+                button_trans,
+                (Vec2){
+                    window_left_x +
+                        ui_width / 2.0f +
+                        window_button_count * ui_width,
+                    window_y
+                },
+                (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                -draw_angle
+            );
+            aff2_compose(button_trans, ui_trans, button_trans);
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_DICE
+                )
+            ) {
+                ctx->pcg = ctx->info.pcg;
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->session_opts.graph_type = GAME_INFO_GRAPH_TYPE_RAND;
+                game_info_setup(
+                    &ctx->info,
+                    &ctx->session_opts,
+                    GAME_ALG_ARENA_SIZE,
+                    ctx->pcg
+                );
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+                ctx->graph_up_to_date = false;
+            }
+            window_button_count += 1;
+        }
+        {
+            Aff2 button_trans;
+            aff2_position_rangle(
+                button_trans,
+                (Vec2){
+                    window_left_x +
+                        ui_width / 2.0f +
+                        window_button_count * ui_width,
+                    window_y
+                },
+                (Vec2){ ui_width / 2.15f, ui_width / 2.15f },
+                -draw_angle
+            );
+            aff2_compose(button_trans, ui_trans, button_trans);
+            if (
+                aven_gl_ui_button(
+                    &ctx->ui,
+                    button_trans,
+                    AVEN_GL_UI_BUTTON_TYPE_TRIANGLE
+                )
+            ) {
+                ctx->pcg = ctx->info.pcg;
+                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->session_opts.graph_type = GAME_INFO_GRAPH_TYPE_PYRAMID;
+                game_info_setup(
+                    &ctx->info,
+                    &ctx->session_opts,
+                    GAME_ALG_ARENA_SIZE,
+                    ctx->pcg
+                );
+                game_info_alg_setup(
+                    &ctx->info.session,
+                    &ctx->info.alg,
+                    &ctx->session_opts
+                );
+                ctx->graph_up_to_date = false;
+            }
+            window_button_count += 1;
+        }
+    }
     {
         Aff2 button_trans;
         aff2_position_rangle(
@@ -1390,28 +1532,35 @@ bool game_update(
             -draw_angle
         );
         aff2_compose(button_trans, ui_trans, button_trans);
-        if (
-            aven_gl_ui_button_maybe(
-                &ctx->ui,
-                button_trans,
-                AVEN_GL_UI_BUTTON_TYPE_DICE,
-                !ctx->alg_opts.playing
-            )
-        ) {
-            ctx->pcg = ctx->info.pcg;
-            ctx->active_window = GAME_UI_WINDOW_NONE;
-            game_info_setup(
-                &ctx->info,
-                &ctx->session_opts,
-                GAME_ALG_ARENA_SIZE,
-                ctx->pcg
-            );
-            game_info_alg_setup(
-                &ctx->info.session,
-                &ctx->info.alg,
-                &ctx->session_opts
-            );
-            ctx->graph_up_to_date = false;
+        switch (ctx->session_opts.graph_type) {
+            case GAME_INFO_GRAPH_TYPE_RAND: {
+                if (
+                    aven_gl_ui_button_maybe(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_DICE,
+                        !ctx->alg_opts.playing and
+                            ctx->active_window != GAME_UI_WINDOW_GRAPH
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_GRAPH;
+                }
+                break;
+            }
+            case GAME_INFO_GRAPH_TYPE_PYRAMID: {
+                if (
+                    aven_gl_ui_button_maybe(
+                        &ctx->ui,
+                        button_trans,
+                        AVEN_GL_UI_BUTTON_TYPE_TRIANGLE,
+                        !ctx->alg_opts.playing  and
+                            ctx->active_window != GAME_UI_WINDOW_GRAPH
+                    )
+                ) {
+                    ctx->active_window = GAME_UI_WINDOW_GRAPH;
+                }
+                break;
+            }
         }
 
         button_count += 1;
