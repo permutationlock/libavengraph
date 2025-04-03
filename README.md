@@ -21,9 +21,17 @@ for GLES2, X11, xkbcommon, and Wayland.
 
 ## Building the project
 
-The visualization should build with no system dependencies other
-than a C compiler on most modern Windows or Linux systems.
+The project should build with no system dependencies other
+than a C compiler on most modern Windows or Linux systems. To run the
+visualization binary you will need graphics drivers that support OpenGL ES 2.0.
+On Linux/BSD you will also need an X11 or Wayland display server running.
+Mac/OSX is currently not supported as I don't have an Apple device to test with.
 
+To clone the `libaven` and `libavengl` dependencies run:
+``Shell
+git submodule init
+git submodule update
+```
 To build the build system:
 ```Shell
 make
