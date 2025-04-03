@@ -1,4 +1,4 @@
-make
+./zig_make.sh
 mkdir build_release
 ./build \
     -ccflags "cc -target x86_64-linux-gnu -std=c11 -g0 -O3 -ffast-math -DNDEBUG" \
