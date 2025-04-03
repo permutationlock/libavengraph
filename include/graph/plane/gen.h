@@ -75,7 +75,7 @@ static inline GraphPlaneGenData graph_plane_gen_pyramid(
         aff2_transform(get(embedding, 1), trans, (Vec2){ 1.0f, -1.0f });
         aff2_transform(get(embedding, 2), trans, (Vec2){ -1.0f, -1.0f });
 
-        float y_top_space = 0.35f;
+        float y_top_space = 0.5f;
         float y_bot_space = 0.1f;
         float side_space = 0.1f;
         // float side_scale = 1.0f / (float)(k + 2);
