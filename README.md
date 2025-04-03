@@ -28,7 +28,7 @@ On Linux/BSD you will also need an X11 or Wayland display server running.
 Mac/OSX is currently not supported as I don't have an Apple device to test with.
 
 To clone the `libaven` and `libavengl` dependencies run:
-``Shell
+```Shell
 git submodule init
 git submodule update
 ```
