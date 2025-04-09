@@ -145,6 +145,35 @@ void main_loop(void) {
     glfwPollEvents();
 }
 
+#ifdef _WIN32
+    void *glfwGetWin32Window(void *window);
+    typedef void (*TimerCallbackFn)(
+        void *,
+        unsigned int,
+        unsigned int,
+        uint32_t
+    );
+    AVEN_WIN32_FN(int) SetTimer(
+        void *hWnd,
+        unsigned int id,
+        unsigned int tstep,
+        TimerCallbackFn callback
+    );
+
+    static void on_win_timestep(
+        void *p1,
+        unsigned int p2,
+        unsigned int p3,
+        uint32_t p4
+    ) {
+        (void)p1;
+        (void)p2;
+        (void)p3;
+        (void)p4;
+        main_loop_update();
+    }
+#endif
+
 static void on_damage(GLFWwindow *w) {
     (void)w;
     vinfo.vtable.damage(&ctx);
@@ -217,7 +246,6 @@ static void cursor_callback(
     void on_resize(int width, int height) {
         glfwSetWindowSize(window, width, height);
         on_damage(window);
-
     }
 #endif // defined(__EMSCRIPTEN__)
 
@@ -328,6 +356,18 @@ int main(void) {
 
     gl = aven_gl_load(glfwGetProcAddress);
     ctx = vinfo.vtable.init(&gl, &arena);
+
+#ifdef _WIN32
+    int success = SetTimer(
+        glfwGetWin32Window(window),
+        1,
+        AVEN_TIME_MSEC_PER_SEC / 60,
+        on_win_timestep
+    );
+    if (!success) {
+        aven_panic("failed to set window timer");
+    }
+#endif // defined(_WIN32)
 
 #if !defined(__EMSCRIPTEN__) // !defined(__EMSCRIPTEN__)
     while (!glfwWindowShouldClose(window)) {
