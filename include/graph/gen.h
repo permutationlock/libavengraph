@@ -7,6 +7,65 @@
 #include <aven/rng.h>
 #include "../graph.h"
 
+static inline Graph graph_gen_path(
+    uint32_t size,
+    AvenArena *arena
+) {
+    assert(size > 0);
+    GraphAdjSlice adj = aven_arena_create_slice(GraphAdj, arena, size);
+    List(uint32_t) nb = aven_arena_create_list(
+        uint32_t,
+        arena,
+        2 * (size - 1)
+    );
+
+    for (uint32_t v = 0; v < size; v += 1) {
+        get(adj, v).index = (uint32_t)nb.len;
+        if (v > 0) {
+            list_push(nb) = v - 1;
+        }
+        if (v < size - 1) {
+            list_push(nb) = v + 1;
+        }
+        get(adj, v).len = (uint32_t)(nb.len - get(adj, v).index);
+    }
+    assert(nb.len == nb.cap);
+
+    return (Graph){ .adj = adj, .nb = slice_list(nb) };
+}
+
+static inline Graph graph_gen_cycle(
+    uint32_t size,
+    AvenArena *arena
+) {
+    assert(size > 0);
+    GraphAdjSlice adj = aven_arena_create_slice(GraphAdj, arena, size);
+    List(uint32_t) nb = aven_arena_create_list(
+        uint32_t,
+        arena,
+        2 * size
+    );
+
+    for (uint32_t v = 0; v < size; v += 1) {
+        get(adj, v).index = (uint32_t)nb.len;
+        get(adj, v).len = 2;
+
+        if (v > 0) {
+            list_push(nb) = v - 1;
+        } else {
+            list_push(nb) = size - 1;
+        }
+        if (v < size - 1) {
+            list_push(nb) = v + 1;
+        } else {
+            list_push(nb) = 0;
+        }
+    }
+    assert(nb.len == nb.cap);
+
+    return (Graph){ .adj = adj, .nb = slice_list(nb) };
+}
+
 static inline Graph graph_gen_complete(
     uint32_t size,
     AvenArena *arena
@@ -43,6 +102,7 @@ static inline Graph graph_gen_grid(
     uint32_t height,
     AvenArena *arena
 ) {
+    assert(width > 1 and height > 1);
     Graph graph = {
         .nb = {
             .len = 4 * (width - 2) * (height - 2) +

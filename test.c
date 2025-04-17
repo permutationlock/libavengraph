@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include "test/bfs.h"
+#include "test/dfs.h"
 #include "test/io.h"
 #include "test/plane.h"
 #include "test/p3color.h"
@@ -30,6 +31,7 @@ int main(void) {
     AvenArena test_arena = aven_arena_init(mem, ARENA_SIZE);
 
     test_bfs(test_arena);
+    test_dfs(test_arena);
     test_io(test_arena);
     test_plane(test_arena);
     test_p3color(test_arena);

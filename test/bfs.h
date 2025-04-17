@@ -86,23 +86,6 @@ static AvenTestResult test_bfs_complete(
     }
 
     if (parents_valid != g.adj.len) {
-        char fmt[] =
-            "expected all %lu vertices to have root as parent, found %lu";
-        char *buffer = aven_arena_alloc(
-            &arena,
-            sizeof(fmt) + 8,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)g.adj.len,
-            parents_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
             .message = aven_fmt(
@@ -182,23 +165,6 @@ static AvenTestResult test_bfs_grid(
     }
 
     if (in_tree_valid != g.adj.len) {
-        char fmt[] = "expected all %lu vertices in BFS tree, found %lu";
-
-        char *buffer = aven_arena_alloc(
-            emsg_arena,
-            sizeof(fmt) + 16,
-            1,
-            1
-        );
-
-        int len = sprintf(
-            buffer,
-            fmt,
-            (unsigned long)g.adj.len,
-            (unsigned long)in_tree_valid
-        );
-        assert(len > 0);
-
         return (AvenTestResult){
             .error = 1,
             .message = aven_fmt(
@@ -306,4 +272,3 @@ static void test_bfs(AvenArena arena) {
 }
 
 #endif // TEST_BFS_H
-

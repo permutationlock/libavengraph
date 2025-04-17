@@ -140,8 +140,7 @@ static inline GraphSubset graph_bfs_tree_path_to_root(
         do {
             list_push(path_list) = v;
             last_v = v;
-            assert(get(tree, last_v).parent != 0);
-            v = get(tree, last_v).parent - 1;
+            v = graph_bfs_tree_parent(tree, v);
         } while (last_v != v);
     }
 
