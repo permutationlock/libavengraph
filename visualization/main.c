@@ -62,7 +62,7 @@
         return (VInfoResult){ .payload = game_dll };
     }
 
-    static void vinfo_error_print(int error) {
+    static void vinfo_error_print(VInfoError error) {
         switch (error) {
             case GAME_INFO_LOAD_ERROR_OPEN:
                 fprintf(stderr, "error opening dll\n");
