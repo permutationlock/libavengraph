@@ -51,7 +51,9 @@ int main(int argc, char **argv) {
     );
     list_push(arg_list) = (AvenArg){
         .name = aven_str("watch"),
-        .description = aven_str("Build and run visualization and hot-reload src changes"),
+        .description = aven_str(
+            "Build and run visualization and hot-reload src changes"
+        ),
         .type = AVEN_ARG_TYPE_BOOL,
     };
     list_push(arg_list) = (AvenArg){
@@ -64,7 +66,7 @@ int main(int argc, char **argv) {
         .description = aven_str("Build tikz drawing example generators"),
         .type = AVEN_ARG_TYPE_BOOL,
     };
-    for(size_t i = 0; i < common_args.len; i += 1) {
+    for (size_t i = 0; i < common_args.len; i += 1) {
         list_push(arg_list) = get(common_args, i);
     }
     for (size_t i = 0; i < libaven_args.len; i += 1) {
@@ -120,10 +122,7 @@ int main(int argc, char **argv) {
     AvenStr include_data[3];
     List(AvenStr) include_list = list_array(include_data);
     list_push(include_list) = libaven_include_path;
-    list_push(include_list) = libavengraph_build_include_path(
-        root_path,
-        &arena
-    );
+    list_push(include_list) = libavengraph_build_include_path(root_path, &arena);
     if (libaven_opts.winpthreads.local) {
         list_push(include_list) = libaven_build_include_winpthreads(
             libaven_path,
@@ -367,11 +366,7 @@ int main(int argc, char **argv) {
         &visualization_hot_watch_dir_step,
         &arena
     );
-    aven_build_step_add_dep(
-        &hot_root_step,
-        &visualization_hot_exe_step,
-        &arena
-    );
+    aven_build_step_add_dep(&hot_root_step, &visualization_hot_exe_step, &arena);
 
     AvenBuildStep visualization_obj_step = aven_build_common_step_cc_ex(
         &opts,
@@ -442,9 +437,7 @@ int main(int argc, char **argv) {
     if (winutf8_obj_step.valid) {
         list_push(p3color_tikz_obj_list) = &winutf8_obj_step.value;
     }
-    AvenBuildStepPtrSlice p3color_tikz_objs = slice_list(
-        p3color_tikz_obj_list
-    );
+    AvenBuildStepPtrSlice p3color_tikz_objs = slice_list(p3color_tikz_obj_list);
 
     AvenBuildStep p3color_tikz_exe_step = aven_build_common_step_ld_exe_ex(
         &opts,
@@ -510,7 +503,7 @@ int main(int argc, char **argv) {
     }
     AvenBuildStepPtrSlice test_objs = slice_list(test_obj_list);
 
-    AvenStrSlice test_args =  { 0 };
+    AvenStrSlice test_args = { 0 };
 
     AvenBuildStep test_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
@@ -543,7 +536,7 @@ int main(int argc, char **argv) {
     }
     AvenBuildStepPtrSlice bench_objs = slice_list(bench_obj_list);
 
-    AvenStrSlice bench_args =  { 0 };
+    AvenStrSlice bench_args = { 0 };
 
     AvenBuildStep bench_all_step = aven_build_common_step_cc_ld_run_exe_ex(
         &opts,
@@ -592,8 +585,20 @@ int main(int argc, char **argv) {
         aven_build_step_clean(&tikz_root_step, arena);
         aven_build_step_clean(&test_root_step, arena);
         aven_build_step_clean(&bench_root_step, arena);
+    } else if (opts.dry_run) {
+        if (opts.test) {
+            aven_build_step_dry_run(&test_root_step, arena);
+        } else if (opt_bench) {
+            aven_build_step_dry_run(&bench_root_step, arena);
+        } else if (opt_tikz) {
+            aven_build_step_dry_run(&tikz_root_step, arena);
+        } else if (opt_watch) {
+            aven_build_step_dry_run(&hot_root_step, arena);
+        } else {
+            aven_build_step_dry_run(&root_step, arena);
+        }
     } else {
-         if (opts.test) {
+        if (opts.test) {
             AvenBuildStepRunError run_error = aven_build_step_run(
                 &test_root_step,
                 arena
@@ -687,9 +692,7 @@ int main(int argc, char **argv) {
                 rebuild_state = REBUILD_STATE_NONE;
 
                 if (exe_pid.valid) {
-                    AvenProcWaitResult result = aven_proc_check(
-                        exe_pid.value
-                    );
+                    AvenProcWaitResult result = aven_proc_check(exe_pid.value);
                     if (result.error == 0) {
                         if (result.payload == 0) {
                             aven_io_perr("APPLICATION EXITED CLEANLY\n");
@@ -710,7 +713,7 @@ int main(int argc, char **argv) {
                     aven_io_perr("RUNNING:\n");
 
                     AvenStr cmd_parts[] = {
-                        visualization_hot_exe_step.out_path.value
+                        visualization_hot_exe_step.out_path.value,
                     };
                     AvenStrSlice cmd = slice_array(cmd_parts);
 
@@ -766,10 +769,8 @@ int main(int argc, char **argv) {
                 arena
             );
             if (run_error != 0) {
-                aven_io_perrf(
-                    "BUILD FAILED: {}\n",
-                    aven_fmt_int(run_error)
-                );
+                aven_io_perrf("BUILD FAILED: {}\n", aven_fmt_int(run_error));
+                return 1;
             }
         }
     }

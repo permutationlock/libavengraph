@@ -28,15 +28,12 @@
 #define FULL_RUNS 1
 #define MAX_VERTICES 10000001
 #define START_VERTICES 10000
-
 #define MAX_COLOR 6
-
 #define NTHREADS 4
-
 #define NBENCHES 5
 
 #ifdef __GNUC__
-    #define BENCHMARK_COMPILER_BARRIER __asm volatile( "" ::: "memory" );
+    #define BENCHMARK_COMPILER_BARRIER __asm__ volatile ("" ::: "memory")
 #else
     #define BENCHMARK_COMPILER_BARRIER
 #endif
@@ -123,7 +120,9 @@ int main(void) {
 
             size_t nruns = 1;
 
-            Slice(CaseData) cases = { .len = NGRAPHS * max(MAX_VERTICES / n, 1) };
+            Slice(CaseData) cases = {
+                .len = NGRAPHS * max(MAX_VERTICES / n, 1),
+            };
             cases.ptr = aven_arena_create_array(
                 CaseData,
                 &loop_arena,
@@ -131,10 +130,7 @@ int main(void) {
             );
 
             for (uint32_t i = 0; i < cases.len; i += 1) {
-                Graph graph = graph_gen_pyramid(
-                    ka,
-                    &loop_arena
-                );
+                Graph graph = graph_gen_pyramid(ka, &loop_arena);
                 get(cases, i).graph = graph;
                 if (graph.adj.len != n) {
                     aven_panic("graph generation failed");
@@ -147,12 +143,12 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).tree = graph_bfs(
@@ -161,15 +157,16 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                 }
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(cases.len * nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -222,14 +219,14 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 size_t ncases = max(cases.len / 10, 1);
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < ncases; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color_bfs(
@@ -239,15 +236,16 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                 }
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns / (double)(ncases * nruns);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(ncases * nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < ncases; i += 1) {
@@ -281,12 +279,12 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color(
@@ -296,15 +294,16 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                 }
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(cases.len * nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -338,14 +337,14 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 size_t ncases = max(cases.len / 10, 1);
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < ncases; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color_bfs(
@@ -355,15 +354,16 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                 }
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns / (double)(ncases * nruns);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(ncases * nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < ncases; i += 1) {
@@ -382,7 +382,8 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-coloring (bfs) (flipped) %lu graph(s) with %lu vertices:\n"
+                    "path 3-coloring (bfs) (flipped) %lu graph(s) "
+                    "with %lu vertices:\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)ncases,
@@ -397,12 +398,12 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
                         get(cases, i).coloring = graph_plane_p3color(
@@ -412,15 +413,16 @@ int main(void) {
                             &temp_arena
                         );
                     }
-                    BENCHMARK_COMPILER_BARRIER
+                    BENCHMARK_COMPILER_BARRIER;
                 }
 
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER
+                BENCHMARK_COMPILER_BARRIER;
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns / (double)(cases.len * nruns);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(cases.len * nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
@@ -439,7 +441,8 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-coloring (flipped) %lu graph(s) with %lu vertices:\n"
+                    "path 3-coloring (flipped) %lu graph(s) "
+                    "with %lu vertices:\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
