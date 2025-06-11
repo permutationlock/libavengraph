@@ -157,6 +157,7 @@ int main(int argc, char **argv) {
             &libaven_opts,
             libaven_path,
             &work_dir_step,
+            false,
             &arena
         );
         winpthreads_obj_step.valid = true;
@@ -190,6 +191,7 @@ int main(int argc, char **argv) {
             &libavengl_opts,
             libavengl_path,
             &work_dir_step,
+            false,
             &arena
         );
         glfw_obj_step.valid = true;
@@ -329,6 +331,7 @@ int main(int argc, char **argv) {
             aven_str("main.c")
         ),
         &work_dir_step,
+        false,
         &arena
     );
 
@@ -379,6 +382,7 @@ int main(int argc, char **argv) {
             aven_str("main.c")
         ),
         &work_dir_step,
+        false,
         &arena
     );
 
@@ -426,6 +430,7 @@ int main(int argc, char **argv) {
             aven_str("p3color_tikz.c")
         ),
         &work_dir_step,
+        false,
         &arena
     );
 
@@ -460,6 +465,7 @@ int main(int argc, char **argv) {
             aven_str("p3choose_tikz.c")
         ),
         &work_dir_step,
+        false,
         &arena
     );
 
