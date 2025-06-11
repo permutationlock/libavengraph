@@ -7,6 +7,7 @@
 #include <aven/arena.h>
 #include <aven/fs.h>
 #include <aven/gl.h>
+#include <aven/gl/window.h>
 #include <aven/path.h>
 
 #include <stdio.h>
@@ -83,14 +84,8 @@
     } VInfo;
 #endif // !defined(HOT_RELOAD)
 
-static void error_callback(int error, const char* description) {
-    (void)error;
-    fprintf(stderr, "GLFW Error: %s\n", description);
-}
-
 // App data (made global for Emscripten and GLFW callbacks on Windows)
-static GLFWwindow *window;
-static AvenGl gl;
+static AvenGlWindow win;
 static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
@@ -105,10 +100,10 @@ static AvenArena arena;
 void main_loop_update(void) {
     int width;
     int height;
-    glfwGetFramebufferSize(window, &width, &height);
+    glfwGetFramebufferSize(win.window, &width, &height);
 
-    if (vinfo.vtable.update(&ctx, &gl, width, height, arena)) {
-        glfwSwapBuffers(window);
+    if (vinfo.vtable.update(&ctx, &win.gl, width, height, arena)) {
+        glfwSwapBuffers(win.window);
     } else {
         aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
     }
@@ -133,7 +128,7 @@ void main_loop(void) {
         } else {
             printf("reloading\n");
             vinfo = info_result.payload;
-            vinfo.vtable.reload(&ctx, &gl);
+            vinfo.vtable.reload(&ctx, &win.gl);
             game_valid = true;
         }
     }
@@ -193,7 +188,7 @@ static void on_move(GLFWwindow *w, int x, int y) {
 }
 
 static void key_callback(
-    GLFWwindow* w,
+    GLFWwindow *w,
     int key,
     int scancode,
     int action,
@@ -206,12 +201,7 @@ static void key_callback(
     }
 }
 
-static void click_callback(
-    GLFWwindow* w,
-    int button,
-    int action,
-    int mods
-) {
+static void click_callback(GLFWwindow *w, int button, int action, int mods) {
     (void)mods;
     double xpos;
     double ypos;
@@ -227,11 +217,7 @@ static void click_callback(
     }
 }
 
-static void cursor_callback(
-    GLFWwindow *w,
-    double xpos,
-    double ypos
-) {
+static void cursor_callback(GLFWwindow *w, double xpos, double ypos) {
     (void)w;
     vinfo.vtable.mouse_move(&ctx, (Vec2){ (float)xpos, (float)ypos });
 }
@@ -244,18 +230,14 @@ static void cursor_callback(
     #endif
 
     void on_resize(int width, int height) {
-        glfwSetWindowSize(window, width, height);
-        on_damage(window);
+        glfwSetWindowSize(win.window, width, height);
+        on_damage(win.window);
     }
 #endif // defined(__EMSCRIPTEN__)
 
 #define ARENA_SIZE (GAME_LEVEL_ARENA_SIZE + GAME_GL_ARENA_SIZE + 4096 * 4)
 
-#if defined(_MSC_VER)
-int WinMain(void) {
-#else // !defined(_MSC_VER)
-int main(void) {
-#endif // !defined(_MSC_VER)
+int run(void) {
     aven_fs_utf8_mode();
 
     // should probably switch to raw page allocation, but malloc is cross
@@ -268,48 +250,19 @@ int main(void) {
     int width = GAME_INIT_WIDTH;
     int height = GAME_INIT_HEIGHT;
 
-    glfwInit();
-    glfwSetErrorCallback(error_callback);
+    win = aven_gl_window(width, height, "Path Coloring Plane Triangulations");
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
-    glfwWindowHint(GLFW_SAMPLES, 16);
-
-    window = glfwCreateWindow(
-        (int)width,
-        (int)height,
-        "Path Coloring Plane Triangulations",
-        NULL,
-        NULL
-    );
-    if (window == NULL) {
-        glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
-        window = glfwCreateWindow(
-            (int)width,
-            (int)height,
-            "Path Coloring Plane Triangulations",
-            NULL,
-            NULL
-        );
-        if (window == NULL) {
-            printf("test failed: glfwCreateWindow\n");
-            return 1;
-        }
-    }
-
-    glfwSetWindowRefreshCallback(window, on_damage);
-    glfwSetWindowPosCallback(window, on_move);
+    glfwSetWindowRefreshCallback(win.window, on_damage);
+    glfwSetWindowPosCallback(win.window, on_move);
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 0);
 #endif // __EMSCRIPTEN__
 
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetCursorPosCallback(window, cursor_callback);
-    glfwSetMouseButtonCallback(window, click_callback);
-    glfwMakeContextCurrent(window);
+    glfwSetKeyCallback(win.window, key_callback);
+    glfwSetCursorPosCallback(win.window, cursor_callback);
+    glfwSetMouseButtonCallback(win.window, click_callback);
+    glfwMakeContextCurrent(win.window);
     glfwSwapInterval(1);
 
 #if defined(HOT_RELOAD)
@@ -321,11 +274,7 @@ int main(void) {
         }
     }
     AvenStr exe_dir_path = aven_path_containing_dir(exe_path);
-    game_dll_path = aven_path(
-        &arena,
-        exe_dir_path,
-        aven_str(HOT_DLL_PATH)
-    );
+    game_dll_path = aven_path(&arena, exe_dir_path, aven_str(HOT_DLL_PATH));
     {
         VInfoResult result = vinfo_load(game_dll_path, arena);
         if (result.error != 0) {
@@ -335,11 +284,7 @@ int main(void) {
         vinfo = result.payload;
     }
 
-    watch_dir_path = aven_path(
-        &arena,
-        exe_dir_path,
-        aven_str(HOT_WATCH_PATH)
-    );
+    watch_dir_path = aven_path(&arena, exe_dir_path, aven_str(HOT_WATCH_PATH));
     game_watch_handle = aven_watch_init(watch_dir_path, arena);
     if (game_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
         fprintf(
@@ -354,12 +299,11 @@ int main(void) {
     vinfo.vtable = game_table;
 #endif // !defined(HOT_RELOAD)
 
-    gl = aven_gl_load(glfwGetProcAddress);
-    ctx = vinfo.vtable.init(&gl, &arena);
+    ctx = vinfo.vtable.init(&win.gl, &arena);
 
 #ifdef _WIN32
     int success = SetTimer(
-        glfwGetWin32Window(window),
+        glfwGetWin32Window(win.window),
         1,
         AVEN_TIME_MSEC_PER_SEC / 60,
         on_win_timestep
@@ -370,17 +314,27 @@ int main(void) {
 #endif // defined(_WIN32)
 
 #if !defined(__EMSCRIPTEN__) // !defined(__EMSCRIPTEN__)
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(win.window)) {
         main_loop();
     }
 
-    vinfo.vtable.deinit(&ctx, &gl);
+    vinfo.vtable.deinit(&ctx, &win.gl);
 
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(win.window);
     glfwTerminate();
 #endif // !defined(__EMSCRIPTEN__)
 
     // we let the OS free arena memory (or leave it in the case of Emscripten)
 
     return 0;
+}
+
+#if defined(_MSC_VER)
+    int WinMain(void) {
+        return run();
+    }
+#endif // !defined(_MSC_VER)
+
+int main(void) {
+    return run();
 }
