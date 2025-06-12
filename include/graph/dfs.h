@@ -97,7 +97,7 @@
                     v_info->node.lowpoint
                 );
             }
-            list_pop(ctx->dfs_list);
+            (void)list_pop(ctx->dfs_list);
             return false;
         }
 

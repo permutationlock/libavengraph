@@ -37,5 +37,7 @@ int main(void) {
     test_p3color(test_arena);
     test_p3choose(test_arena);
 
+    free(mem);
+
     return 0;
 }

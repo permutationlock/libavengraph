@@ -8,7 +8,8 @@
                     "-std=c11 -pedantic -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
                     "-Wshadow -Wconversion -Wdouble-promotion -Winit-self " \
                     "-Wcast-align -Wstrict-prototypes -Wold-style-definition " \
-                    "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"
+                    "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined " \
+                    "-fsanitize=address"
     #endif
     #ifndef LIBAVENGL_DEFAULT_GLFW_CCFLAGS
         #define LIBAVENGL_DEFAULT_GLFW_CCFLAGS \
@@ -25,6 +26,9 @@
                     "-Wno-unused-parameter -Wno-unused-function -Wno-sign-compare " \
                     "-Wno-missing-field-initializers " \
                     "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"
+    #endif
+    #ifndef AVEN_BUILD_COMMON_DEFAULT_LDFLAGS
+        #define AVEN_BUILD_COMMON_DEFAULT_LDFLAGS "-g3 -fsanitize=address"
     #endif
 #endif
 
