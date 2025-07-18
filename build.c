@@ -184,19 +184,6 @@ int main(int argc, char **argv) {
     );
     AvenStrSlice graphics_includes = slice_list(graphics_include_list);
 
-    Optional(AvenBuildStep) glfw_obj_step = { 0 };
-    if (!libavengl_opts.no_glfw) {
-        glfw_obj_step.value = libavengl_build_step_glfw(
-            &opts,
-            &libavengl_opts,
-            libavengl_path,
-            &work_dir_step,
-            false,
-            &arena
-        );
-        glfw_obj_step.valid = true;
-    }
-
     // Build steps for visualizaiton
 
     AvenStr visualization_hot_macro_data[3];
@@ -331,7 +318,7 @@ int main(int argc, char **argv) {
             aven_str("main.c")
         ),
         &work_dir_step,
-        false,
+        libavengl_opts.android.enabled,
         &arena
     );
 
@@ -346,20 +333,19 @@ int main(int argc, char **argv) {
     if (winpthreads_obj_step.valid) {
         list_push(visualization_hot_obj_list) = &winpthreads_obj_step.value;
     }
-    if (glfw_obj_step.valid) {
-        list_push(visualization_hot_obj_list) = &glfw_obj_step.value;
-    }
     AvenBuildStepPtrSlice visualization_hot_objs = slice_list(
         visualization_hot_obj_list
     );
 
-    AvenBuildStep visualization_hot_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep visualization_hot_exe_step = libavengl_build_step_ld(
         &opts,
-        libavengl_opts.syslibs,
+        &libavengl_opts,
+        libaven_include_path,
+        libavengl_path,
         visualization_hot_objs,
+        &work_dir_step,
         &out_dir_step,
         aven_str("visualization_hot"),
-        true,
         &arena
     );
     AvenBuildStep hot_root_step = aven_build_step_root();
@@ -382,7 +368,7 @@ int main(int argc, char **argv) {
             aven_str("main.c")
         ),
         &work_dir_step,
-        false,
+        libavengl_opts.android.enabled,
         &arena
     );
 
@@ -397,20 +383,19 @@ int main(int argc, char **argv) {
     if (winpthreads_obj_step.valid) {
         list_push(visualization_obj_list) = &winpthreads_obj_step.value;
     }
-    if (glfw_obj_step.valid) {
-        list_push(visualization_obj_list) = &glfw_obj_step.value;
-    }
     AvenBuildStepPtrSlice visualization_objs = slice_list(
         visualization_obj_list
     );
 
-    AvenBuildStep visualization_exe_step = aven_build_common_step_ld_exe_ex(
+    AvenBuildStep visualization_exe_step = libavengl_build_step_ld(
         &opts,
-        libavengl_opts.syslibs,
+        &libavengl_opts,
+        libaven_include_path,
+        libavengl_path,
         visualization_objs,
+        &work_dir_step,
         &out_dir_step,
         aven_str("visualization"),
-        true,
         &arena
     );
 

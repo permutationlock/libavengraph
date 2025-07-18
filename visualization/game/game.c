@@ -441,7 +441,8 @@ static void game_info_setup(
 #endif
 const GameTable game_table = {
     .init = game_init,
-    .reload = game_reload,
+    .load = game_load,
+    .unload = game_unload,
     .update = game_update,
     .damage = game_damage,
     .deinit = game_deinit,
@@ -449,7 +450,7 @@ const GameTable game_table = {
     .mouse_move = game_mouse_move,
 };
 
-static void game_load(GameCtx *ctx, AvenGl *gl) {
+void game_load(GameCtx *ctx, AvenGl *gl) {
     ctx->arena = ctx->init_arena;
 
     ctx->shapes.ctx = aven_gl_shape_ctx_init(gl);
@@ -539,7 +540,7 @@ static void game_load(GameCtx *ctx, AvenGl *gl) {
     ctx->screen_updates = 0;
 }
 
-static void game_unload(GameCtx *ctx, AvenGl *gl) {
+void game_unload(GameCtx *ctx, AvenGl *gl) {
     aven_gl_ui_deinit(gl, &ctx->ui);
 
 #ifdef TEXTURE_OPTIMIZATION
@@ -598,13 +599,6 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
 void game_deinit(GameCtx *ctx, AvenGl *gl) {
     game_unload(ctx, gl);
     *ctx = (GameCtx){ 0 };
-}
-
-int game_reload(GameCtx *ctx, AvenGl *gl) {
-    game_unload(ctx, gl);
-    game_load(ctx, gl);
-
-    return 0;
 }
 
 void game_mouse_move(GameCtx *ctx, Vec2 pos) {

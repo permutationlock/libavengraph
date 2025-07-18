@@ -90,6 +90,24 @@ static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
 
+#ifdef __ANDROID__
+    #ifdef HOT_RELOAD
+        #error "hot reloading dll incompatible with android"
+    #endif
+    bool minimized;
+
+    void on_android_pause_resume(GLFWwindow *window, int iconified) {
+        if (iconified) {
+            vinfo.vtable.unload(&ctx, &win.gl);
+            minimized = true;
+        } else {
+            win.gl = aven_gl_load(glfwGetProcAddress, win.gl.es);
+            vinfo.vtable.load(&ctx, &win.gl);
+            minimized = false;
+        }
+    }
+#endif
+
 #ifdef HOT_RELOAD
     static AvenWatchHandle game_watch_handle;
     static AvenStr game_dll_path;
@@ -128,7 +146,8 @@ void main_loop(void) {
         } else {
             printf("reloading\n");
             vinfo = info_result.payload;
-            vinfo.vtable.reload(&ctx, &win.gl);
+            vinfo.vtable.unload(&ctx, &win.gl);
+            vinfo.vtable.load(&ctx, &win.gl);
             game_valid = true;
         }
     }
@@ -138,6 +157,11 @@ void main_loop(void) {
 #endif // defined(HOT_RELOAD)
     main_loop_update();
     glfwPollEvents();
+#ifdef __ANDROID__
+    while (minimized) {
+        glfwWaitEvents();
+    }
+#endif
 }
 
 #ifdef _WIN32
@@ -258,6 +282,10 @@ int run(void) {
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 0);
 #endif // __EMSCRIPTEN__
+
+#ifdef __ANDROID__
+    glfwSetWindowIconifyCallback(win.window, on_android_pause_resume);
+#endif
 
     glfwSetKeyCallback(win.window, key_callback);
     glfwSetCursorPosCallback(win.window, cursor_callback);
