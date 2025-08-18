@@ -28,7 +28,7 @@ cd ..
 cd android
 
 mkdir -p build_android/apk/lib/arm64-v8a
-cp ../build_out/visualization.so build_android/apk/lib/arm64-v8a/lib$APP_NAME.so
+cp ../build_out/visualization.so build_android/apk/lib/arm64-v8a/libmain.so
 
 # build so for arm32
 cd ..
@@ -37,7 +37,7 @@ cd ..
 cd android
 
 mkdir -p build_android/apk/lib/armeabi-v7a
-cp ../build_out/visualization.so build_android/apk/lib/armeabi-v7a/lib$APP_NAME.so
+cp ../build_out/visualization.so build_android/apk/lib/armeabi-v7a/libmain.so
 
 # build so for x86
 cd ..
@@ -46,7 +46,7 @@ cd ..
 cd android
 
 mkdir -p build_android/apk/lib/x86
-cp ../build_out/visualization.so build_android/apk/lib/x86/lib$APP_NAME.so
+cp ../build_out/visualization.so build_android/apk/lib/x86/libmain.so
 
 # build for x86_64
 cd ..
@@ -55,7 +55,7 @@ cd ..
 cd android
 
 mkdir -p build_android/apk/lib/x86_64
-cp ../build_out/visualization.so build_android/apk/lib/x86_64/lib$APP_NAME.so
+cp ../build_out/visualization.so build_android/apk/lib/x86_64/libmain.so
 
 # build temporary apk and unzip back to directory
 $ANDROID_AAPT package -f -F build_android/temp.apk -I $ANDROID_JAR -M build_android/AndroidManifest.xml -S build_android/apk/res -v --target-sdk-version $ANDROID_VERSION
