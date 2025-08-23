@@ -8,16 +8,16 @@
 
 #define AVEN_IMPLEMENTATION
 
-#include "deps/libaven/include/aven.h"
-#include "deps/libaven/include/aven/arena.h"
-#include "deps/libaven/include/aven/arg.h"
-#include "deps/libaven/include/aven/build.h"
-#include "deps/libaven/include/aven/build/common.h"
-#include "deps/libaven/include/aven/io.h"
-#include "deps/libaven/include/aven/path.h"
-#include "deps/libaven/include/aven/watch.h"
+#include "deps/libavengl/deps/libaven/include/aven.h"
+#include "deps/libavengl/deps/libaven/include/aven/arena.h"
+#include "deps/libavengl/deps/libaven/include/aven/arg.h"
+#include "deps/libavengl/deps/libaven/include/aven/build.h"
+#include "deps/libavengl/deps/libaven/include/aven/build/common.h"
+#include "deps/libavengl/deps/libaven/include/aven/io.h"
+#include "deps/libavengl/deps/libaven/include/aven/path.h"
+#include "deps/libavengl/deps/libaven/include/aven/watch.h"
 
-#include "deps/libaven/build.h"
+#include "deps/libavengl/deps/libaven/build.h"
 #include "deps/libavengl/build.h"
 
 #include "build.h"
@@ -103,15 +103,16 @@ int main(int argc, char **argv) {
 
     AvenStr root_path = aven_str(".");
 
-    AvenStr libaven_path = aven_path(
-        &arena,
-        aven_str("deps"),
-        aven_str("libaven")
-    );
     AvenStr libavengl_path = aven_path(
         &arena,
         aven_str("deps"),
         aven_str("libavengl")
+    );
+    AvenStr libaven_path = aven_path(
+        &arena,
+        libavengl_path,
+        aven_str("deps"),
+        aven_str("libaven")
     );
 
     AvenStr libaven_include_path = libaven_build_include_path(
