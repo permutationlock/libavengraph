@@ -19,9 +19,11 @@ cd ..
     --ldflags "$LDFLAGS \
         -s ASYNCIFY \
         -s USE_GLFW=3 \
+        -s MAX_WEBGL_VERSION=2 \
+        -s MIN_WEBGL_VERSION=2 \
         -s EXPORTED_RUNTIME_METHODS=cwrap \
         -s EXPORTED_FUNCTIONS=_main,_on_resize \
-        --shell-file web/build_web/shell.html" \
+        --shell-file web/shell.html" \
     --arflags "-rcs" \
     --exext ".html .js .wasm" \
     --obext ".o" \
@@ -30,7 +32,7 @@ cd ..
     --winutf8 false \
     --glfw-external \
     --syslibs ""
-cp build_out/visualization.html web/build_web/public/index.html
-cp build_out/visualization.js web/build_web/public/index.js
-cp build_out/visualization.wasm web/build_web/public/index.wasm
+cp build_out/visualization.html web/build_web/public/
+cp build_out/visualization.js web/build_web/public/
+cp build_out/visualization.wasm web/build_web/public/
 cd web

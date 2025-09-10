@@ -90,7 +90,7 @@ The benchmarks may take up to a few hours to complete.
 
 To build and run the tests:
 ```Shell
-./build run
+./build test
 ```
  
 ### Cleaning up

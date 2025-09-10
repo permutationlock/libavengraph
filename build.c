@@ -15,6 +15,7 @@
 #include "deps/libavengl/deps/libaven/include/aven/build/common.h"
 #include "deps/libavengl/deps/libaven/include/aven/io.h"
 #include "deps/libavengl/deps/libaven/include/aven/path.h"
+#include "deps/libavengl/deps/libaven/include/aven/str.h"
 #include "deps/libavengl/deps/libaven/include/aven/watch.h"
 
 #include "deps/libavengl/deps/libaven/build.h"
@@ -86,7 +87,6 @@ int main(int argc, char **argv) {
     );
     if (parse_error != 0) {
         if (parse_error != AVEN_ARG_ERROR_HELP) {
-            aven_io_perrf("ARG PARSE ERROR: {}\n", aven_fmt_int(parse_error));
             return 1;
         }
         return 0;
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
         libavengl_path,
         &arena
     );
-    list_push(graphics_include_list) = libavengl_build_include_gles2(
+    list_push(graphics_include_list) = libavengl_build_include_gles3(
         libavengl_path,
         &arena
     );
@@ -341,7 +341,6 @@ int main(int argc, char **argv) {
     AvenBuildStep visualization_hot_exe_step = libavengl_build_step_ld(
         &opts,
         &libavengl_opts,
-        libaven_include_path,
         libavengl_path,
         visualization_hot_objs,
         &work_dir_step,
@@ -391,7 +390,6 @@ int main(int argc, char **argv) {
     AvenBuildStep visualization_exe_step = libavengl_build_step_ld(
         &opts,
         &libavengl_opts,
-        libaven_include_path,
         libavengl_path,
         visualization_objs,
         &work_dir_step,
