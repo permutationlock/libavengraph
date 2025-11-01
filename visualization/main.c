@@ -10,10 +10,7 @@
 #include <aven/gl/window.h>
 #include <aven/path.h>
 
-#include <stdio.h>
 #include <stdlib.h>
-
-#include <GLFW/glfw3.h>
 
 #include "game.h"
 
@@ -24,6 +21,7 @@
     #ifndef HOT_WATCH_PATH
         #error "must define HOT_WATCH_PATH for hot watch build"
     #endif
+    #include <aven/io.h>
 #endif
 
 #if defined(HOT_RELOAD)
@@ -66,13 +64,13 @@
     static void vinfo_error_print(VInfoError error) {
         switch (error) {
             case GAME_INFO_LOAD_ERROR_OPEN:
-                fprintf(stderr, "error opening dll\n");
+                aven_io_perr("error opening dll\n");
                 break;
             case GAME_INFO_LOAD_ERROR_SYM:
-                fprintf(stderr, "error finding symbol in dll\n");
+                aven_io_perr("error finding symbol in dll\n");
                 break;
             default:
-                fprintf(stderr, "unknown error\n");
+                aven_io_perr("unknown error\n");
                 break;
         }
     }
@@ -85,28 +83,9 @@
 #endif // !defined(HOT_RELOAD)
 
 // App data (made global for Emscripten and GLFW callbacks on Windows)
-static AvenGlWindow win;
 static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
-
-#ifdef __ANDROID__
-    #ifdef HOT_RELOAD
-        #error "hot reloading dll incompatible with android"
-    #endif
-    bool minimized;
-
-    void on_android_pause_resume(GLFWwindow *window, int iconified) {
-        if (iconified) {
-            vinfo.vtable.unload(&ctx, &win.gl);
-            minimized = true;
-        } else {
-            win.gl = aven_gl_load(glfwGetProcAddress, win.gl.es);
-            vinfo.vtable.load(&ctx, &win.gl);
-            minimized = false;
-        }
-    }
-#endif
 
 #ifdef HOT_RELOAD
     static AvenWatchHandle game_watch_handle;
@@ -115,23 +94,19 @@ static AvenArena arena;
     static bool game_valid;
 #endif
 
-void main_loop_update(void) {
-    int width;
-    int height;
-    glfwGetFramebufferSize(win.window, &width, &height);
-
-    if (vinfo.vtable.update(&ctx, &win.gl, width, height, arena)) {
-        glfwSwapBuffers(win.window);
-    } else {
-        aven_time_sleep_ms(AVEN_TIME_MSEC_PER_SEC / 60);
-    }
+void init(AvenGlWindow *win) {
+    ctx = vinfo.vtable.init(&win->gl, &arena);
 }
 
-void main_loop(void) {
+void deinit(AvenGlWindow *win) {
+    vinfo.vtable.deinit(&ctx, &win->gl);
+}
+
+AvenGlWindowAction update(AvenGlWindow *win) {
 #if defined(HOT_RELOAD)
     AvenWatchResult watch_result = aven_watch_check(game_watch_handle, 0);
     if (watch_result.error != 0) {
-        fprintf(stderr, "FAILED TO WATCH: %s\n", watch_dir_path.ptr);
+        aven_io_perrf("FAILED TO WATCH: {}\n", aven_fmt_str(watch_dir_path));
         aven_panic("aven_watch_check failed");
     }
     if (watch_result.payload != 0) {
@@ -144,93 +119,49 @@ void main_loop(void) {
             vinfo_error_print(info_result.error);
             game_valid = false;
         } else {
-            printf("reloading\n");
+            aven_io_print("reloading\n");
             vinfo = info_result.payload;
-            vinfo.vtable.unload(&ctx, &win.gl);
-            vinfo.vtable.load(&ctx, &win.gl);
+            vinfo.vtable.unload(&ctx, &win->gl);
+            vinfo.vtable.load(&ctx, &win->gl);
             game_valid = true;
         }
     }
     if (!game_valid) {
-        return;
+        return AVEN_GL_WINDOW_ACTION_NONE;
     }
 #endif // defined(HOT_RELOAD)
-    main_loop_update();
-    glfwPollEvents();
-#ifdef __ANDROID__
-    while (minimized) {
-        glfwWaitEvents();
+    int64_t elapsed = aven_time_since(win->now, win->last);
+    if (
+        vinfo.vtable.update(
+            &ctx,
+            &win->gl,
+            win->width,
+            win->height,
+            elapsed,
+            arena
+        )
+    ) {
+        return AVEN_GL_WINDOW_ACTION_SWAP;
+    } else {
+        return AVEN_GL_WINDOW_ACTION_NONE;
     }
-#endif
 }
 
-#ifdef _WIN32
-    void *glfwGetWin32Window(void *window);
-    typedef void (*TimerCallbackFn)(
-        void *,
-        unsigned int,
-        unsigned int,
-        uint32_t
-    );
-    AVEN_WIN32_FN(int) SetTimer(
-        void *hWnd,
-        unsigned int id,
-        unsigned int tstep,
-        TimerCallbackFn callback
-    );
-
-    static void on_win_timestep(
-        void *p1,
-        unsigned int p2,
-        unsigned int p3,
-        uint32_t p4
-    ) {
-        (void)p1;
-        (void)p2;
-        (void)p3;
-        (void)p4;
-        main_loop_update();
-    }
-#endif
-
-static void on_damage(GLFWwindow *w) {
+static void damage(AvenGlWindow *w) {
     (void)w;
     vinfo.vtable.damage(&ctx);
-#ifdef _WIN32
-    main_loop_update();
-#endif
 }
 
-static void on_move(GLFWwindow *w, int x, int y) {
-    (void)x;
-    (void)y;
-#ifdef _WIN32
-    on_damage(w);
-#else
-    (void)w;
-#endif
-}
-
-static void key_callback(
-    GLFWwindow *w,
-    int key,
-    int scancode,
+static void mouse_click(
+    AvenGlWindow *w,
+    Vec2 pos,
+    int button,
     int action,
     int mods
 ) {
-    (void)scancode;
+    (void)w;
     (void)mods;
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(w, GLFW_TRUE);
-    }
-}
-
-static void click_callback(GLFWwindow *w, int button, int action, int mods) {
-    (void)mods;
-    double xpos;
-    double ypos;
-    glfwGetCursorPos(w, &xpos, &ypos);
-    vinfo.vtable.mouse_move(&ctx, (Vec2){ (float)xpos, (float)ypos });
+    vinfo.vtable.mouse_move(&ctx, pos);
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             vinfo.vtable.mouse_click(&ctx, AVEN_GL_UI_MOUSE_EVENT_DOWN);
@@ -241,57 +172,20 @@ static void click_callback(GLFWwindow *w, int button, int action, int mods) {
     }
 }
 
-static void cursor_callback(GLFWwindow *w, double xpos, double ypos) {
+static void mouse_move(AvenGlWindow *w, Vec2 pos) {
     (void)w;
-    vinfo.vtable.mouse_move(&ctx, (Vec2){ (float)xpos, (float)ypos });
+    vinfo.vtable.mouse_move(&ctx, pos);
 }
-
-#if defined(__EMSCRIPTEN__)
-    #include <emscripten.h>
-
-    #ifdef HOT_RELOAD
-        #error "hot reloading dll incompatible with emcc"
-    #endif
-
-    void on_resize(int width, int height) {
-        glfwSetWindowSize(win.window, width, height);
-        on_damage(win.window);
-    }
-#endif // defined(__EMSCRIPTEN__)
 
 #define ARENA_SIZE (GAME_LEVEL_ARENA_SIZE + GAME_GL_ARENA_SIZE + 4096 * 4)
 
 int run(void) {
-    aven_fs_utf8_mode();
-
     // should probably switch to raw page allocation, but malloc is cross
     // platform and we are dynamically linking the system libc anyway
     void *mem = malloc(ARENA_SIZE);
     assert(mem != NULL);
 
     arena = aven_arena_init(mem, ARENA_SIZE);
-
-    int width = GAME_INIT_WIDTH;
-    int height = GAME_INIT_HEIGHT;
-
-    win = aven_gl_window(width, height, "Path Coloring Plane Triangulations");
-
-    glfwSetWindowRefreshCallback(win.window, on_damage);
-    glfwSetWindowPosCallback(win.window, on_move);
-
-#ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(main_loop, 0, 0);
-#endif // __EMSCRIPTEN__
-
-#ifdef __ANDROID__
-    glfwSetWindowIconifyCallback(win.window, on_android_pause_resume);
-#endif
-
-    glfwSetKeyCallback(win.window, key_callback);
-    glfwSetCursorPosCallback(win.window, cursor_callback);
-    glfwSetMouseButtonCallback(win.window, click_callback);
-    glfwMakeContextCurrent(win.window);
-    glfwSwapInterval(1);
 
 #if defined(HOT_RELOAD)
     AvenStr exe_path = aven_str(".");
@@ -315,11 +209,7 @@ int run(void) {
     watch_dir_path = aven_path(&arena, exe_dir_path, aven_str(HOT_WATCH_PATH));
     game_watch_handle = aven_watch_init(watch_dir_path, arena);
     if (game_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
-        fprintf(
-            stderr,
-            "FAILED TO WATCH: %s\n",
-            aven_str_to_cstr(watch_dir_path, &arena)
-        );
+        aven_io_perrf("FAILED TO WATCH: {}\n", aven_fmt_str(watch_dir_path));
         return 1;
     }
     game_valid = true;
@@ -327,34 +217,21 @@ int run(void) {
     vinfo.vtable = game_table;
 #endif // !defined(HOT_RELOAD)
 
-    ctx = vinfo.vtable.init(&win.gl, &arena);
-
-#ifdef _WIN32
-    int success = SetTimer(
-        glfwGetWin32Window(win.window),
-        1,
-        AVEN_TIME_MSEC_PER_SEC / 60,
-        on_win_timestep
+    AvenGlWindowCode rcode = aven_gl_window(
+        GAME_INIT_WIDTH,
+        GAME_INIT_HEIGHT,
+        "Path Coloring Plane Triangulations",
+        (AvenGlWindowVtable){
+            .init = init,
+            .deinit = deinit,
+            .update = update,
+            .damage = { .value = damage },
+            .mouse_click = { .value = mouse_click },
+            .mouse_move = { .value = mouse_move },
+        }
     );
-    if (!success) {
-        aven_panic("failed to set window timer");
-    }
-#endif // defined(_WIN32)
 
-#if !defined(__EMSCRIPTEN__) // !defined(__EMSCRIPTEN__)
-    while (!glfwWindowShouldClose(win.window)) {
-        main_loop();
-    }
-
-    vinfo.vtable.deinit(&ctx, &win.gl);
-
-    glfwDestroyWindow(win.window);
-    glfwTerminate();
-#endif // !defined(__EMSCRIPTEN__)
-
-    // we let the OS free arena memory (or leave it in the case of Emscripten)
-
-    return 0;
+    return (int)rcode;
 }
 
 #if defined(_MSC_VER)

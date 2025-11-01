@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
         libavengl_path,
         &arena
     );
-    list_push(graphics_include_list) = libavengl_build_include_gles2(
+    list_push(graphics_include_list) = libavengl_build_include_gles3(
         libavengl_path,
         &arena
     );
@@ -341,7 +341,6 @@ int main(int argc, char **argv) {
     AvenBuildStep visualization_hot_exe_step = libavengl_build_step_ld(
         &opts,
         &libavengl_opts,
-        libaven_include_path,
         libavengl_path,
         visualization_hot_objs,
         &work_dir_step,
@@ -391,7 +390,6 @@ int main(int argc, char **argv) {
     AvenBuildStep visualization_exe_step = libavengl_build_step_ld(
         &opts,
         &libavengl_opts,
-        libaven_include_path,
         libavengl_path,
         visualization_objs,
         &work_dir_step,
