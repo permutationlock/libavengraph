@@ -178,6 +178,7 @@
         AvenGl *gl,
         int width,
         int height,
+        int64_t ns_since_update,
         AvenArena arena
     );
     void game_damage(GameCtx *ctx);
@@ -192,6 +193,7 @@
         AvenGl *gl,
         int width,
         int height,
+        int64_t ns_since_update,
         AvenArena arena
     );
     typedef void (*GameDamageFn)(GameCtx *ctx);

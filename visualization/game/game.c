@@ -588,8 +588,6 @@ GameCtx game_init(AvenGl *gl, AvenArena *arena) {
 
     ctx.info = game_info_init(GAME_LEVEL_ARENA_SIZE, arena);
 
-    ctx.last_update = aven_time_now();
-
     AvenTimeInst now = aven_time_now();
     ctx.pcg = aven_rng_pcg_seed((uint64_t)now.tv_nsec, (uint64_t)now.tv_sec);
 
@@ -633,6 +631,7 @@ bool game_update(
     AvenGl *gl,
     int width,
     int height,
+    int64_t ns_since_update,
     AvenArena arena
 ) {
     (void)arena;
@@ -640,10 +639,7 @@ bool game_update(
     ctx->width = width;
     ctx->height = height;
 
-    AvenTimeInst now = aven_time_now();
-    int64_t ns_since_update = aven_time_since(now, ctx->last_update);
     ctx->elapsed += ns_since_update;
-    ctx->last_update = now;
 
     float screen_ratio = (float)width / (float)height;
 
@@ -1818,7 +1814,7 @@ bool game_update(
         Aff2 ident;
         aff2_identity(ident);
 #ifdef TEXTURE_OPTIMIZATION
-        aven_gl_texture_geometry_draw(
+        aven_gl_texture_draw(
             gl,
             &ctx->graph_texture.ctx,
             &ctx->graph_texture.buffer,
