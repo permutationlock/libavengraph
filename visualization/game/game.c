@@ -1814,7 +1814,7 @@ bool game_update(
         Aff2 ident;
         aff2_identity(ident);
 #ifdef TEXTURE_OPTIMIZATION
-        aven_gl_texture_geometry_draw(
+        aven_gl_texture_draw(
             gl,
             &ctx->graph_texture.ctx,
             &ctx->graph_texture.buffer,
