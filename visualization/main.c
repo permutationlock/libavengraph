@@ -15,6 +15,9 @@
 #include "game.h"
 
 #if defined(HOT_RELOAD)
+    #if defined(__ANDROID__) or defined(__EMSCRIPTEN__)
+        #error "hot reloading not supported for this platform"
+    #endif
     #ifndef HOT_DLL_PATH
         #error "must define HOT_DLL_PATH for hot watch build"
     #endif
@@ -96,6 +99,14 @@ static AvenArena arena;
 
 void init(AvenGlWindow *win) {
     ctx = vinfo.vtable.init(&win->gl, &arena);
+}
+
+void show(AvenGlWindow *win) {
+    vinfo.vtable.load(&ctx, &win->gl);
+}
+
+void hide(AvenGlWindow *win) {
+    vinfo.vtable.unload(&ctx, &win->gl);
 }
 
 void deinit(AvenGlWindow *win) {
@@ -223,6 +234,8 @@ int run(void) {
         "Path Coloring Plane Triangulations",
         (AvenGlWindowVtable){
             .init = init,
+            .hide = hide,
+            .show = show,
             .deinit = deinit,
             .update = update,
             .damage = { .value = damage },
