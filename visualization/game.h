@@ -7,6 +7,7 @@
     #include <aven/gl/shape.h>
     #include <aven/gl/texture.h>
     #include <aven/gl/ui.h>
+    #include <aven/gl/window.h>
     #include <aven/rng.h>
     #include <aven/rng/pcg.h>
     #include <aven/time.h>
@@ -166,51 +167,61 @@
         int height;
         bool ui_up_to_date;
         bool graph_up_to_date;
+        bool initialized;
     } GameCtx;
 
-    GameCtx game_init(AvenGl *gl, AvenArena *arena);
-    void game_deinit(GameCtx *ctx, AvenGl *gl);
-
-    void game_load(GameCtx *ctx, AvenGl *gl);
-    void game_unload(GameCtx *ctx, AvenGl *gl);
-    bool game_update(
-        GameCtx *ctx,
-        AvenGl *gl,
-        int width,
-        int height,
-        int64_t ns_since_update,
-        AvenArena arena
+    void game_init(AvenGlWindow *win);
+    void game_deinit(AvenGlWindow *win);
+    AvenGlWindowAction game_update(AvenGlWindow *win);
+    void game_damage(AvenGlWindow *win);
+    void game_mouse_move(AvenGlWindow *win, Vec2 pos);
+    void game_mouse_click(
+        AvenGlWindow *win,
+        Vec2 pos,
+        int button,
+        int action,
+        int mods
     );
-    void game_damage(GameCtx *ctx);
-    void game_mouse_move(GameCtx *ctx, Vec2 pos);
-    void game_mouse_click(GameCtx *ctx, AvenGlUiMouseEvent event);
 
-    typedef GameCtx (*GameInitFn)(AvenGl *gl, AvenArena *arena);
-    typedef void (*GameLoadFn)(GameCtx *ctx, AvenGl *gl);
-    typedef void (*GameUnloadFn)(GameCtx *ctx, AvenGl *gl);
-    typedef bool (*GameUpdateFn)(
-        GameCtx *ctx,
-        AvenGl *gl,
-        int width,
-        int height,
-        int64_t ns_since_update,
-        AvenArena arena
-    );
-    typedef void (*GameDamageFn)(GameCtx *ctx);
-    typedef void (*GameDeinitFn)(GameCtx *ctx, AvenGl *gl);
-    typedef void (*GameMouseMoveFn)(GameCtx *ctx, Vec2 pos);
-    typedef void (*GameMouseClickFn)(GameCtx *ctx, AvenGlUiMouseEvent event);
+    static inline GameCtx game_ctx(AvenArena *arena) {
+        GameCtx ctx = {
+            .width = GAME_INIT_WIDTH,
+            .height = GAME_INIT_HEIGHT,
+            .session_opts = {
+                .alg_type = GAME_DATA_ALG_TYPE_P3COLOR_BFS,
+                .graph_type = GAME_INFO_GRAPH_TYPE_RAND,
+                .nthreads = 1,
+                .radius = 0,
+            },
+            .alg_opts = { .time_step = GAME_TIME_STEP },
+        };
 
-    typedef struct {
-        GameInitFn init;
-        GameUnloadFn unload;
-        GameLoadFn load;
-        GameUpdateFn update;
-        GameDamageFn damage;
-        GameDeinitFn deinit;
-        GameMouseMoveFn mouse_move;
-        GameMouseClickFn mouse_click;
-    } GameTable;
+        ctx.init_arena = aven_arena_init(
+            aven_arena_alloc(
+                arena,
+                GAME_GL_ARENA_SIZE,
+                AVEN_ARENA_BIGGEST_ALIGNMENT,
+                1
+            ),
+            GAME_GL_ARENA_SIZE
+        );
 
+        ctx.info = (GameInfo){
+            .init_arena = aven_arena_init(
+                aven_arena_alloc(
+                    arena,
+                    GAME_LEVEL_ARENA_SIZE,
+                    AVEN_ARENA_BIGGEST_ALIGNMENT,
+                    1
+                ),
+                GAME_LEVEL_ARENA_SIZE
+            ),
+        };
+
+        AvenTimeInst now = aven_time_now();
+        ctx.pcg = aven_rng_pcg_seed((uint64_t)now.tv_nsec, (uint64_t)now.tv_sec);
+
+        return ctx;
+    }
 #endif // GAME_H
 

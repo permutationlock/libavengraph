@@ -8,6 +8,7 @@
 #include <aven/fs.h>
 #include <aven/gl.h>
 #include <aven/gl/window.h>
+#include <aven/gl/window/impl.h>
 #include <aven/path.h>
 
 #include <stdlib.h>
@@ -33,7 +34,7 @@
 
     typedef struct {
         void *handle;
-        GameTable vtable;
+        AvenGlWindowVtable vtable;
     } VInfo;
     typedef enum {
         GAME_INFO_LOAD_ERROR_NONE = 0,
@@ -50,7 +51,7 @@
             return (VInfoResult){ .error = GAME_INFO_LOAD_ERROR_OPEN };
         }
 
-        GameTable *table = aven_dl_sym(
+        AvenGlWindowVtable *table = aven_dl_sym(
             game_dll.handle,
             aven_str("game_table"),
             temp_arena
@@ -81,7 +82,7 @@
     #include "game/game.c"
 
     typedef struct {
-        GameTable vtable;
+        AvenGlWindowVtable vtable;
     } VInfo;
 #endif // !defined(HOT_RELOAD)
 
@@ -98,19 +99,21 @@ static AvenArena arena;
 #endif
 
 void init(AvenGlWindow *win) {
-    ctx = vinfo.vtable.init(&win->gl, &arena);
-}
-
-void show(AvenGlWindow *win) {
-    vinfo.vtable.load(&ctx, &win->gl);
-}
-
-void hide(AvenGlWindow *win) {
-    vinfo.vtable.unload(&ctx, &win->gl);
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    vinfo.vtable.init(win);
 }
 
 void deinit(AvenGlWindow *win) {
-    vinfo.vtable.deinit(&ctx, &win->gl);
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    vinfo.vtable.deinit(win);
 }
 
 AvenGlWindowAction update(AvenGlWindow *win) {
@@ -132,8 +135,8 @@ AvenGlWindowAction update(AvenGlWindow *win) {
         } else {
             aven_io_print("reloading\n");
             vinfo = info_result.payload;
-            vinfo.vtable.unload(&ctx, &win->gl);
-            vinfo.vtable.load(&ctx, &win->gl);
+            vinfo.vtable.deinit(win);
+            vinfo.vtable.init(win);
             game_valid = true;
         }
     }
@@ -141,26 +144,18 @@ AvenGlWindowAction update(AvenGlWindow *win) {
         return AVEN_GL_WINDOW_ACTION_NONE;
     }
 #endif // defined(HOT_RELOAD)
-    int64_t elapsed = aven_time_since(win->now, win->last);
-    if (
-        vinfo.vtable.update(
-            &ctx,
-            &win->gl,
-            win->width,
-            win->height,
-            elapsed,
-            arena
-        )
-    ) {
-        return AVEN_GL_WINDOW_ACTION_SWAP;
-    } else {
-        return AVEN_GL_WINDOW_ACTION_NONE;
-    }
+    return vinfo.vtable.update(win);
 }
 
 static void damage(AvenGlWindow *w) {
-    (void)w;
-    vinfo.vtable.damage(&ctx);
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    if (vinfo.vtable.damage.valid) {
+        vinfo.vtable.damage.value(w);
+    }
 }
 
 static void mouse_click(
@@ -170,22 +165,47 @@ static void mouse_click(
     int action,
     int mods
 ) {
-    (void)w;
-    (void)mods;
-    vinfo.vtable.mouse_move(&ctx, pos);
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        if (action == GLFW_PRESS) {
-            vinfo.vtable.mouse_click(&ctx, AVEN_GL_UI_MOUSE_EVENT_DOWN);
-        }
-        if (action == GLFW_RELEASE) {
-            vinfo.vtable.mouse_click(&ctx, AVEN_GL_UI_MOUSE_EVENT_UP);
-        }
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    if (vinfo.vtable.mouse_click.valid) {
+        vinfo.vtable.mouse_click.value(w, pos, button, action, mods);
     }
 }
 
 static void mouse_move(AvenGlWindow *w, Vec2 pos) {
-    (void)w;
-    vinfo.vtable.mouse_move(&ctx, pos);
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    if (vinfo.vtable.mouse_move.valid) {
+        vinfo.vtable.mouse_move.value(w, pos);
+    }
+}
+
+static void mouse_enter(AvenGlWindow *w, bool entered) {
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    if (vinfo.vtable.mouse_enter.valid) {
+        vinfo.vtable.mouse_enter.value(w, entered);
+    }
+}
+
+static void key(AvenGlWindow *w, int key, int scancode, int action, int modes) {
+#ifdef HOT_RELOAD
+    if (!game_valid) {
+        return;
+    }
+#endif
+    if (vinfo.vtable.key.valid) {
+        vinfo.vtable.key.value(w, key, scancode, action, modes);
+    }
 }
 
 #define ARENA_SIZE (GAME_LEVEL_ARENA_SIZE + GAME_GL_ARENA_SIZE + 4096 * 4)
@@ -197,6 +217,8 @@ int run(void) {
     assert(mem != NULL);
 
     arena = aven_arena_init(mem, ARENA_SIZE);
+
+    ctx = game_ctx(&arena);
 
 #if defined(HOT_RELOAD)
     AvenStr exe_path = aven_str(".");
@@ -228,20 +250,21 @@ int run(void) {
     vinfo.vtable = game_table;
 #endif // !defined(HOT_RELOAD)
 
-    AvenGlWindowCode rcode = aven_gl_window(
+    AvenGlWindowCode rcode = aven_gl_window_impl(
         GAME_INIT_WIDTH,
         GAME_INIT_HEIGHT,
         "Path Coloring Plane Triangulations",
         (AvenGlWindowVtable){
             .init = init,
-            .hide = hide,
-            .show = show,
             .deinit = deinit,
             .update = update,
             .damage = { .value = damage },
             .mouse_click = { .value = mouse_click },
             .mouse_move = { .value = mouse_move },
-        }
+            .mouse_enter = { .value = mouse_enter },
+            .key = { .value = key },
+        },
+        &ctx
     );
 
     return (int)rcode;

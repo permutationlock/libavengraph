@@ -22,7 +22,7 @@ cd ..
         -s MAX_WEBGL_VERSION=2 \
         -s MIN_WEBGL_VERSION=2 \
         -s EXPORTED_RUNTIME_METHODS=cwrap \
-        -s EXPORTED_FUNCTIONS=_main,_on_resize \
+        -s EXPORTED_FUNCTIONS=_main,_aven_gl_window_impl_emscripten_resize \
         --shell-file web/shell.html" \
     --arflags "-rcs" \
     --exext ".html .js .wasm" \

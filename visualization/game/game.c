@@ -8,6 +8,7 @@
 #include <aven.h>
 #include <aven/arena.h>
 #include <aven/gl/shape.h>
+#include <aven/gl/window.h>
 #include <aven/math.h>
 #include <aven/str.h>
 #include <aven/time.h>
@@ -253,21 +254,6 @@ static void game_info_alg_step(GameInfoAlg *info_alg) {
     }
 }
 
-static GameInfo game_info_init(size_t info_arena_size, AvenArena *arena) {
-    GameInfo info = { 0 };
-    info.init_arena = aven_arena_init(
-        aven_arena_alloc(
-            arena,
-            info_arena_size,
-            AVEN_ARENA_BIGGEST_ALIGNMENT,
-            1
-        ),
-        info_arena_size
-    );
-
-    return info;
-}
-
 static GameInfoSession game_info_session_init(
     GameInfoSessionOpts *session_opts,
     AvenRng rng,
@@ -439,19 +425,35 @@ static void game_info_setup(
 #elif defined(_MSC_VER)
     __declspec(dllexport)
 #endif
-const GameTable game_table = {
+const AvenGlWindowVtable game_table = {
     .init = game_init,
-    .load = game_load,
-    .unload = game_unload,
-    .update = game_update,
-    .damage = game_damage,
     .deinit = game_deinit,
-    .mouse_click = game_mouse_click,
-    .mouse_move = game_mouse_move,
+    .update = game_update,
+    .damage = { .value = game_damage },
+    .mouse_click = { .value = game_mouse_click },
+    .mouse_move = { .value = game_mouse_move },
 };
 
-void game_load(GameCtx *ctx, AvenGl *gl) {
+void game_init(AvenGlWindow *win) {
+    GameCtx *ctx = win->ctx;
+    AvenGl *gl = &win->gl;
+
     ctx->arena = ctx->init_arena;
+
+    if (!ctx->initialized) {
+        game_info_setup(
+            &ctx->info,
+            &ctx->session_opts,
+            GAME_ALG_ARENA_SIZE,
+            ctx->pcg
+        );
+        game_info_alg_setup(
+            &ctx->info.session,
+            &ctx->info.alg,
+            &ctx->session_opts
+        );
+        ctx->initialized = true;
+    }
 
     ctx->shapes.ctx = aven_gl_shape_ctx_init(gl);
     ctx->shapes.geometry = aven_gl_shape_geometry_init(
@@ -543,7 +545,10 @@ void game_load(GameCtx *ctx, AvenGl *gl) {
     ctx->screen_updates = 0;
 }
 
-void game_unload(GameCtx *ctx, AvenGl *gl) {
+void game_deinit(AvenGlWindow *win) {
+    GameCtx *ctx = win->ctx;
+    AvenGl *gl = &win->gl;
+
     aven_gl_ui_deinit(gl, &ctx->ui);
 
 #ifdef TEXTURE_OPTIMIZATION
@@ -561,48 +566,8 @@ void game_unload(GameCtx *ctx, AvenGl *gl) {
     ctx->shapes = (GameShapes){ 0 };
 }
 
-GameCtx game_init(AvenGl *gl, AvenArena *arena) {
-    GameCtx ctx = {
-        .width = GAME_INIT_WIDTH,
-        .height = GAME_INIT_HEIGHT,
-        .session_opts = {
-            .alg_type = GAME_DATA_ALG_TYPE_P3COLOR_BFS,
-            .graph_type = GAME_INFO_GRAPH_TYPE_RAND,
-            .nthreads = 1,
-            .radius = 0,
-        },
-        .alg_opts = { .time_step = GAME_TIME_STEP },
-    };
-
-    ctx.init_arena = aven_arena_init(
-        aven_arena_alloc(
-            arena,
-            GAME_GL_ARENA_SIZE,
-            AVEN_ARENA_BIGGEST_ALIGNMENT,
-            1
-        ),
-        GAME_GL_ARENA_SIZE
-    );
-
-    game_load(&ctx, gl);
-
-    ctx.info = game_info_init(GAME_LEVEL_ARENA_SIZE, arena);
-
-    AvenTimeInst now = aven_time_now();
-    ctx.pcg = aven_rng_pcg_seed((uint64_t)now.tv_nsec, (uint64_t)now.tv_sec);
-
-    game_info_setup(&ctx.info, &ctx.session_opts, GAME_ALG_ARENA_SIZE, ctx.pcg);
-    game_info_alg_setup(&ctx.info.session, &ctx.info.alg, &ctx.session_opts);
-
-    return ctx;
-}
-
-void game_deinit(GameCtx *ctx, AvenGl *gl) {
-    game_unload(ctx, gl);
-    *ctx = (GameCtx){ 0 };
-}
-
-void game_mouse_move(GameCtx *ctx, Vec2 pos) {
+void game_mouse_move(AvenGlWindow *win, Vec2 pos) {
+    GameCtx *ctx = win->ctx;
     ctx->screen_updates = 0;
 
     float side = (float)ctx->height;
@@ -621,20 +586,35 @@ void game_mouse_move(GameCtx *ctx, Vec2 pos) {
     aven_gl_ui_mouse_move(&ctx->ui, pos);
 }
 
-void game_mouse_click(GameCtx *ctx, AvenGlUiMouseEvent event) {
-    ctx->screen_updates = 0;
-    aven_gl_ui_mouse_click(&ctx->ui, event);
+void game_mouse_click(
+    AvenGlWindow *win,
+    Vec2 pos,
+    int button,
+    int action,
+    int mods
+) {
+    (void)mods;
+    GameCtx *ctx = win->ctx;
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+            ctx->screen_updates = 0;
+            game_mouse_move(win, pos);
+            aven_gl_ui_mouse_click(&ctx->ui, AVEN_GL_UI_MOUSE_EVENT_DOWN);
+        }
+        if (action == GLFW_RELEASE) {
+            ctx->screen_updates = 0;
+            game_mouse_move(win, pos);
+            aven_gl_ui_mouse_click(&ctx->ui, AVEN_GL_UI_MOUSE_EVENT_UP);
+        }
+    }
 }
 
-bool game_update(
-    GameCtx *ctx,
-    AvenGl *gl,
-    int width,
-    int height,
-    int64_t ns_since_update,
-    AvenArena arena
-) {
-    (void)arena;
+AvenGlWindowAction game_update(AvenGlWindow *win) {
+    GameCtx *ctx = win->ctx;
+    AvenGl *gl = &win->gl;
+    int width = win->width;
+    int height = win->height;
+    int64_t ns_since_update = aven_time_since(win->now, win->last);
 
     ctx->width = width;
     ctx->height = height;
@@ -687,7 +667,7 @@ bool game_update(
 
     if (ctx->screen_updates >= GAME_SCREEN_UPDATES) {
         ctx->ui_up_to_date = true;
-        return false;
+        return AVEN_GL_WINDOW_ACTION_NONE;
     }
 
     ctx->screen_updates += 1;
@@ -1797,7 +1777,7 @@ bool game_update(
 
     if (ctx->graph_up_to_date and ctx->ui_up_to_date) {
         aven_gl_ui_clear(&ctx->ui);
-        return false;
+        return AVEN_GL_WINDOW_ACTION_NONE;
     }
 
     // Generate graph geometry
@@ -2020,10 +2000,11 @@ bool game_update(
 
     aven_gl_ui_clear(&ctx->ui);
 
-    return true;
+    return AVEN_GL_WINDOW_ACTION_SWAP;
 }
 
-void game_damage(GameCtx *ctx) {
+void game_damage(AvenGlWindow *win) {
+    GameCtx *ctx = win->ctx;
     ctx->ui_up_to_date = false;
     ctx->screen_updates = 0;
     ctx->graph_up_to_date = false;
