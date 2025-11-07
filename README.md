@@ -30,8 +30,8 @@ Mac/OSX is currently not supported as I don't have an Apple device to test with.
 
 To clone the `libaven` and `libavengl` dependencies run:
 ```Shell
-git submodule init
-git submodule update
+git submodule init --recursive
+git submodule update --recursive
 ```
 To build the build system:
 ```Shell
