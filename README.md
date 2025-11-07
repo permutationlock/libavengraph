@@ -118,5 +118,5 @@ Run `./build -h` for a full rundown of what needs to be configured,
 and see `cproc_make.sh`, `emcc_make.sh`, `zig_make.sh`, and `zig_make.bat`
 for examples.
 
-[1]: https://musing.permutationlock.com/static/triangulate/visualization.html
+[1]: https://permutationlock.com/p3color/visualization.html
 [2]: https://github.com/permutationlock/implpathcol_paper
