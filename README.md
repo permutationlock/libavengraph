@@ -13,18 +13,18 @@ the simple `libaven` header-only library, which is a submodule in the
 The `*/geometry.h` files define functions to construct vector geometry
 for graph visualization and depend on the headers from
 `libavengl`. The `libavengl` library draws 2D vector
-graphics using a common subset of the OpenGL 2.1 and OpenGL ES 2.0 APIs.
+graphics using a common subset of the OpenGL 4 and GLES 3 APIs.
 The`libavengl` library is a submodule in the `deps` directory.
 The provided visualization uses GLFW for window creation.
 The `libavengl` submodule provides a vendored GLFW, and headers
-for GLES2, X11, xkbcommon, and Wayland.
+for GLES3, X11, xkbcommon, and Wayland.
 
 ## Building the project
 
 The project should build with no system dependencies other
 than a C compiler on most modern Windows or Linux systems. To run the
 visualization binary you will need graphics drivers that support either
-OpenGL 2.1 or OpenGL ES 2.0.
+OpenGL 4.3 or OpenGL ES 3.2.
 On Linux/BSD you will also need an X11 or Wayland display server running.
 Mac/OSX is currently not supported as I don't have an Apple device to test with.
 
