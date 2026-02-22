@@ -86,7 +86,7 @@
     } VInfo;
 #endif // !defined(HOT_RELOAD)
 
-// App data (made global for Emscripten and GLFW callbacks on Windows)
+// App data (made global for Emscripten and window callbacks on Windows)
 static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
@@ -161,9 +161,9 @@ static void damage(AvenGlWindow *w) {
 static void mouse_click(
     AvenGlWindow *w,
     Vec2 pos,
-    int button,
-    int action,
-    int mods
+    AvenGlWindowMouse button,
+    AvenGlWindowPress action,
+    uint32_t mods
 ) {
 #ifdef HOT_RELOAD
     if (!game_valid) {
@@ -197,7 +197,13 @@ static void mouse_enter(AvenGlWindow *w, bool entered) {
     }
 }
 
-static void key(AvenGlWindow *w, int key, int scancode, int action, int modes) {
+static void key(
+    AvenGlWindow *w,
+    AvenGlWindowKey key,
+    uint32_t scancode,
+    AvenGlWindowPress action,
+    uint32_t modes
+) {
 #ifdef HOT_RELOAD
     if (!game_valid) {
         return;
