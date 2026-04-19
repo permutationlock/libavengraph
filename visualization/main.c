@@ -86,7 +86,7 @@
     } VInfo;
 #endif // !defined(HOT_RELOAD)
 
-// App data (made global for Emscripten and GLFW callbacks on Windows)
+// App data (made global for Emscripten and window callbacks on Windows)
 static GameCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
