@@ -179,9 +179,9 @@
     void game_mouse_click(
         AvenGlWindow *win,
         Vec2 pos,
-        int button,
-        int action,
-        int mods
+        AvenGlWindowMouse button,
+        AvenGlWindowPress action,
+        uint32_t mods
     );
 
     static inline GameCtx game_ctx(AvenArena *arena) {
