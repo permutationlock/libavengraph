@@ -22,7 +22,6 @@ tar -czvf build_release/x86_64-linux-musl.tar.gz build_release/x86_64-linux-musl
     --ccflags "cc -target x86_64-windows-gnu -std=c11 -g0 -O3 -ffast-math -DNDEBUG" \
     --glfw-ccflags "cc -target x86_64-windows-gnu -std=c11 -g0 -O3 -ffast-math -DNDEBUG" \
     --ldflags "cc -g0 -O3 -target x86_64-windows-gnu" \
-    --windres "zig" --windresflags "rc" --windresoutflag "/fo" \
     --exext ".exe" --obext ".o" --soext ".dll" --arext ".a" --wrext ".o" \
     --ldwinflag "-Wl,--subsystem,windows" --winutf8 --winpthreads \
     --syslibs "kernel32 user32 gdi32 shell32"
@@ -32,4 +31,4 @@ zip build_release/x86_64-windows-gnu.zip build_release/x86_64-windows-gnu/*
 tar -czvf build_release/x86_64-windows-gnu.tar.gz build_release/x86_64-windows-gnu
 ./build clean \
     --exext ".exe" --obext ".o" --soext ".dll" --arext ".a" --wrext ".o" \
-    --winutf8 --winpthreads
+    --windres "zig" --winutf8 --winpthreads

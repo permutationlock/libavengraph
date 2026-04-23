@@ -214,7 +214,7 @@ static void key(
     }
 }
 
-#define ARENA_SIZE (GAME_LEVEL_ARENA_SIZE + GAME_GL_ARENA_SIZE + 4096 * 4)
+#define ARENA_SIZE (GAME_ARENA_SIZE + 4096 * 4)
 
 int run(void) {
     // should probably switch to raw page allocation, but malloc is cross

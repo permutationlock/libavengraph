@@ -595,17 +595,31 @@ void game_mouse_click(
 ) {
     (void)mods;
     GameCtx *ctx = win->ctx;
-    if (button == AVEN_GL_WINDOW_MOUSE_LEFT) {
-        if (action == AVEN_GL_WINDOW_PRESS_DOWN) {
-            ctx->screen_updates = 0;
-            game_mouse_move(win, pos);
-            aven_gl_ui_mouse_click(&ctx->ui, AVEN_GL_UI_MOUSE_EVENT_DOWN);
+    switch (button) {
+        case AVEN_GL_WINDOW_MOUSE_LEFT: {
+            switch (action) {
+                case AVEN_GL_WINDOW_PRESS_DOWN: {
+                    ctx->screen_updates = 0;
+                    game_mouse_move(win, pos);
+                    aven_gl_ui_mouse_click(
+                        &ctx->ui,
+                        AVEN_GL_UI_MOUSE_EVENT_DOWN
+                    );
+                    break;
+                }
+                case AVEN_GL_WINDOW_PRESS_UP: {
+                    ctx->screen_updates = 0;
+                    game_mouse_move(win, pos);
+                    aven_gl_ui_mouse_click(&ctx->ui, AVEN_GL_UI_MOUSE_EVENT_UP);
+                    break;
+                }
+                default:
+                    break;
+            }
+            break;
         }
-        if (action == AVEN_GL_WINDOW_PRESS_UP) {
-            ctx->screen_updates = 0;
-            game_mouse_move(win, pos);
-            aven_gl_ui_mouse_click(&ctx->ui, AVEN_GL_UI_MOUSE_EVENT_UP);
-        }
+        default:
+            break;
     }
 }
 
