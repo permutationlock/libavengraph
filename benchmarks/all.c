@@ -39,9 +39,9 @@
 #define NTHREADS 4
 
 #ifdef BENCHMARK_THREADED
-    #define NBENCHES 11
+    #define NBENCHES 12
 #else
-    #define NBENCHES 5
+    #define NBENCHES 6
 #endif
 
 #ifdef __GNUC__
@@ -59,6 +59,7 @@ int main(void) {
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
     const char *bench_names[NBENCHES] = {
+        "Gen",
         "BFS",
         "Augment Adjacency Lists",
         "Path 3-Color w/ BFS",
@@ -151,18 +152,47 @@ int main(void) {
                 cases.len
             );
 
-            for (uint32_t i = 0; i < cases.len; i += 1) {
-                Graph graph = graph_gen_triangulation(
-                    n,
-                    rng,
-                    (Vec2){ 0.0833f, 0.1666f },
-                    &loop_arena
-                );
-                get(cases, i).graph = graph;
-                if (graph.adj.len != n) {
-                    aven_panic("graph generation failed");
+            {
+                BENCHMARK_COMPILER_BARRIER;
+                AvenTimeInst start_inst = aven_time_now();
+                BENCHMARK_COMPILER_BARRIER;
+
+                for (uint32_t i = 0; i < cases.len; i += 1) {
+                    Graph graph = graph_gen_triangulation(
+                        n,
+                        rng,
+                        (Vec2){ 0.0833f, 0.1666f },
+                        &loop_arena
+                    );
+                    get(cases, i).graph = graph;
+                    if (graph.adj.len != n) {
+                        aven_panic("graph generation failed");
+                    }
                 }
 
+                BENCHMARK_COMPILER_BARRIER;
+                AvenTimeInst end_inst = aven_time_now();
+                BENCHMARK_COMPILER_BARRIER;
+
+                int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
+                double ns_per_graph = (double)elapsed_ns /
+                    (double)(cases.len * nruns);
+
+                printf(
+                    "generate %lu graph(s) with %lu vertices:\n"
+                    "\ttime per graph: %fns\n"
+                    "\ttime per half-edge: %fns\n",
+                    (unsigned long)cases.len,
+                    (unsigned long)n,
+                    ns_per_graph,
+                    ns_per_graph / (double)(6 * n - 12)
+                );
+
+                get(get(bench_times, bench_index), n_count) += ns_per_graph;
+                bench_index += 1;
+            }
+
+            for (uint32_t i = 0; i < cases.len; i += 1) {
                 get(cases, i).root = aven_rng_rand_bounded(rng, n);
 
                 GraphPlaneP3ChooseListProp *color_lists = &get(cases, i)
