@@ -13,12 +13,12 @@
 
 #include <stdlib.h>
 
-#include "test/bfs.h"
-#include "test/dfs.h"
-#include "test/io.h"
-#include "test/plane.h"
-#include "test/p3color.h"
-#include "test/p3choose.h"
+#include "bfs.h"
+#include "dfs.h"
+#include "io.h"
+#include "plane.h"
+#include "p3color.h"
+#include "p3choose.h"
 
 #define ARENA_SIZE (4096 * 2000)
 

@@ -16,7 +16,7 @@
                     "-std=c11 -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
                     "-Wstrict-prototypes -Wold-style-definition -Winit-self " \
                     "-Wno-unused-parameter -Wno-sign-compare -Wno-overflow " \
-                    "-Wno-missing-field-initializers " \
+                    "-Wno-missing-field-initializers -Wno-implicit-fallthrough " \
                     "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"
     #endif
     #ifndef LIBAVENGL_DEFAULT_STB_CCFLAGS
@@ -24,7 +24,7 @@
                     "-std=c11 -pedantic -fstrict-aliasing -O0 -g3 -Werror -Wall -Wextra " \
                     "-Wstrict-prototypes -Wold-style-definition -Winit-self " \
                     "-Wno-unused-parameter -Wno-unused-function -Wno-sign-compare " \
-                    "-Wno-missing-field-initializers " \
+                    "-Wno-missing-field-initializers -Wno-implicit-fallthrough " \
                     "-fsanitize-trap -fsanitize=unreachable -fsanitize=undefined"
     #endif
     #ifndef AVEN_BUILD_COMMON_DEFAULT_LDFLAGS

@@ -196,8 +196,11 @@ int main(int argc, char **argv) {
         visualization_hot_macro_list
     );
 
-    AvenBuildStep visualization_hot_game_dir_step =
-        aven_build_common_step_subdir(&out_dir_step, aven_str("game"), &arena);
+    AvenBuildStep visualization_hot_lib_dir_step = aven_build_common_step_subdir(
+        &out_dir_step,
+        aven_str("lib"),
+        &arena
+    );
     AvenBuildStep visualization_hot_watch_dir_step =
         aven_build_common_step_subdir(&out_dir_step, aven_str("watch"), &arena);
 
@@ -212,10 +215,10 @@ int main(int argc, char **argv) {
                 &arena,
                 root_path,
                 aven_str("visualization"),
-                aven_str("game"),
-                aven_str("game.c")
+                aven_str("lib"),
+                aven_str("lib.c")
             ),
-            &visualization_hot_game_dir_step,
+            &visualization_hot_lib_dir_step,
             &arena
         );
 
@@ -316,7 +319,7 @@ int main(int argc, char **argv) {
             &arena,
             root_path,
             aven_str("visualization"),
-            aven_str("main.c")
+            aven_str("visualization.c")
         ),
         &work_dir_step,
         libavengl_opts.android.enabled,
@@ -365,7 +368,7 @@ int main(int argc, char **argv) {
             &arena,
             root_path,
             aven_str("visualization"),
-            aven_str("main.c")
+            aven_str("visualization.c")
         ),
         &work_dir_step,
         libavengl_opts.android.enabled,
@@ -501,7 +504,7 @@ int main(int argc, char **argv) {
         macros,
         libavengl_opts.syslibs,
         test_objs,
-        aven_path(&arena, root_path, aven_str("test.c")),
+        aven_path(&arena, root_path, aven_str("test"), aven_str("test.c")),
         &test_dir_step,
         false,
         test_args,
@@ -626,16 +629,16 @@ int main(int argc, char **argv) {
                 aven_path(&arena, root_path, aven_str("visualization")),
                 arena
             );
-            AvenWatchHandle game_handle = aven_watch_init(
+            AvenWatchHandle lib_handle = aven_watch_init(
                 aven_path(
                     &arena,
                     root_path,
                     aven_str("visualization"),
-                    aven_str("game")
+                    aven_str("lib")
                 ),
                 arena
             );
-            AvenWatchHandle handle_data[] = { src_handle, game_handle };
+            AvenWatchHandle handle_data[] = { src_handle, lib_handle };
             AvenWatchHandleSlice handles = slice_array(handle_data);
 
             Optional(AvenProcId) exe_pid = { .valid = false };
@@ -736,7 +739,7 @@ int main(int argc, char **argv) {
                         rebuild_state = REBUILD_STATE_EXE;
                         break;
                     }
-                    if (get(handles, i) == game_handle) {
+                    if (get(handles, i) == lib_handle) {
                         rebuild_state = REBUILD_STATE_GAME;
                     }
                 }
