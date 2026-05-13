@@ -13,7 +13,7 @@
 #include <aven/str.h>
 #include <aven/time.h>
 
-#include "../game.h"
+#include "../lib.h"
 
 #include <graph/plane/gen.h>
 #include <graph/plane/p3color_bfs/geometry.h>
@@ -36,8 +36,8 @@ static const float vertex_radii[] = {
     0.01f,
 };
 
-static GameInfoAlg game_info_alg_init(size_t alg_arena_size, AvenArena *arena) {
-    GameInfoAlg alg = { 0 };
+static LibInfoAlg lib_info_alg_init(size_t alg_arena_size, AvenArena *arena) {
+    LibInfoAlg alg = { 0 };
     alg.init_arena = aven_arena_init(
         aven_arena_alloc(arena, alg_arena_size, AVEN_ARENA_BIGGEST_ALIGNMENT, 1),
         alg_arena_size
@@ -46,10 +46,10 @@ static GameInfoAlg game_info_alg_init(size_t alg_arena_size, AvenArena *arena) {
     return alg;
 }
 
-static void game_info_alg_setup(
-    GameInfoSession *info_session,
-    GameInfoAlg *info_alg,
-    GameInfoSessionOpts *session_opts
+static void lib_info_alg_setup(
+    LibInfoSession *info_session,
+    LibInfoAlg *info_alg,
+    LibInfoSessionOpts *session_opts
 ) {
     info_alg->arena = info_alg->init_arena;
     info_alg->type = session_opts->alg_type;
@@ -57,10 +57,10 @@ static void game_info_alg_setup(
     info_alg->done = false;
 
     switch (info_alg->type) {
-        case GAME_DATA_ALG_TYPE_P3COLOR: {
-            GameInfoAlgP3Color *alg = &info_alg->data.p3color;
+        case LIB_DATA_ALG_TYPE_P3COLOR: {
+            LibInfoAlgP3Color *alg = &info_alg->data.p3color;
 
-            *alg = (GameInfoAlgP3Color){
+            *alg = (LibInfoAlgP3Color){
                 .frames = { .len = session_opts->nthreads },
             };
             alg->frames.ptr = aven_arena_create_array(
@@ -83,10 +83,10 @@ static void game_info_alg_setup(
             while (!graph_plane_p3color_frame_step(&alg->ctx, &frame)) {}
             break;
         }
-        case GAME_DATA_ALG_TYPE_P3COLOR_BFS: {
-            GameInfoAlgP3ColorBfs *alg = &info_alg->data.p3color_bfs;
+        case LIB_DATA_ALG_TYPE_P3COLOR_BFS: {
+            LibInfoAlgP3ColorBfs *alg = &info_alg->data.p3color_bfs;
 
-            *alg = (GameInfoAlgP3ColorBfs){
+            *alg = (LibInfoAlgP3ColorBfs){
                 .queues = { .len = session_opts->nthreads },
                 .frames = { .len = session_opts->nthreads },
             };
@@ -118,10 +118,10 @@ static void game_info_alg_setup(
             );
             break;
         }
-        case GAME_DATA_ALG_TYPE_P3CHOOSE: {
-            GameInfoAlgP3Choose *alg = &info_alg->data.p3choose;
+        case LIB_DATA_ALG_TYPE_P3CHOOSE: {
+            LibInfoAlgP3Choose *alg = &info_alg->data.p3choose;
 
-            *alg = (GameInfoAlgP3Choose){
+            *alg = (LibInfoAlgP3Choose){
                 .frames = { .len = session_opts->nthreads },
             };
             alg->frames.ptr = aven_arena_create_array(
@@ -143,7 +143,7 @@ static void game_info_alg_setup(
     }
 }
 
-static void game_info_alg_step(GameInfoAlg *info_alg) {
+static void lib_info_alg_step(LibInfoAlg *info_alg) {
     if (info_alg->done) {
         return;
     }
@@ -151,8 +151,8 @@ static void game_info_alg_step(GameInfoAlg *info_alg) {
     info_alg->steps += 1;
 
     switch (info_alg->type) {
-        case GAME_DATA_ALG_TYPE_P3COLOR: {
-            GameInfoAlgP3Color *alg = &info_alg->data.p3color;
+        case LIB_DATA_ALG_TYPE_P3COLOR: {
+            LibInfoAlgP3Color *alg = &info_alg->data.p3color;
             GraphPlaneP3ColorCtx *ctx = &alg->ctx;
 
             bool finished = true;
@@ -180,8 +180,8 @@ static void game_info_alg_step(GameInfoAlg *info_alg) {
             }
             break;
         }
-        case GAME_DATA_ALG_TYPE_P3COLOR_BFS: {
-            GameInfoAlgP3ColorBfs *alg = &info_alg->data.p3color_bfs;
+        case LIB_DATA_ALG_TYPE_P3COLOR_BFS: {
+            LibInfoAlgP3ColorBfs *alg = &info_alg->data.p3color_bfs;
             GraphPlaneP3ColorBfsCtx *ctx = &alg->ctx;
 
             bool finished = true;
@@ -210,8 +210,8 @@ static void game_info_alg_step(GameInfoAlg *info_alg) {
             }
             break;
         }
-        case GAME_DATA_ALG_TYPE_P3CHOOSE: {
-            GameInfoAlgP3Choose *alg = &info_alg->data.p3choose;
+        case LIB_DATA_ALG_TYPE_P3CHOOSE: {
+            LibInfoAlgP3Choose *alg = &info_alg->data.p3choose;
             GraphPlaneP3ChooseCtx *ctx = &alg->ctx;
 
             bool finished = true;
@@ -254,12 +254,12 @@ static void game_info_alg_step(GameInfoAlg *info_alg) {
     }
 }
 
-static GameInfoSession game_info_session_init(
-    GameInfoSessionOpts *session_opts,
+static LibInfoSession lib_info_session_init(
+    LibInfoSessionOpts *session_opts,
     AvenRng rng,
     AvenArena *arena
 ) {
-    GameInfoSession session = { 0 };
+    LibInfoSession session = { 0 };
 
     float radius = vertex_radii[
         min(session_opts->radius, countof(vertex_radii))
@@ -267,7 +267,7 @@ static GameInfoSession game_info_session_init(
     (void)radius;
 
     switch (session_opts->graph_type) {
-        case GAME_INFO_GRAPH_TYPE_PYRAMID: {
+        case LIB_INFO_GRAPH_TYPE_PYRAMID: {
             Aff2 identity;
             aff2_identity(identity);
             GraphPlaneGenData gen_data = graph_plane_gen_pyramid(
@@ -297,14 +297,14 @@ static GameInfoSession game_info_session_init(
             session.outer_cycle = outer_face;
             break;
         }
-        case GAME_INFO_GRAPH_TYPE_RAND: {
+        case LIB_INFO_GRAPH_TYPE_RAND: {
             Aff2 identity;
             aff2_identity(identity);
             GraphPlaneGenData gen_data = graph_plane_gen_triangulation(
-                GAME_MAX_VERTICES,
+                LIB_MAX_VERTICES,
                 identity,
                 1.8f * (radius * radius),
-                GAME_MIN_COEFF,
+                LIB_MIN_COEFF,
                 true,
                 rng,
                 arena
@@ -340,7 +340,7 @@ static GameInfoSession game_info_session_init(
         }
     }
 
-    uint32_t color_divisions = GAME_COLOR_DIVISIONS;
+    uint32_t color_divisions = LIB_COLOR_DIVISIONS;
     uint32_t max_color = ((color_divisions + 2) * (color_divisions + 1)) / 2U;
     assert(max_color < 256);
 
@@ -402,18 +402,18 @@ static GameInfoSession game_info_session_init(
     return session;
 }
 
-static void game_info_setup(
-    GameInfo *info,
-    GameInfoSessionOpts *session_opts,
+static void lib_info_setup(
+    LibInfo *info,
+    LibInfoSessionOpts *session_opts,
     size_t alg_arena_size,
     AvenRngPcg pcg
 ) {
     info->arena = info->init_arena;
     info->pcg = pcg;
 
-    info->alg = game_info_alg_init(alg_arena_size, &info->arena);
+    info->alg = lib_info_alg_init(alg_arena_size, &info->arena);
 
-    info->session = game_info_session_init(
+    info->session = lib_info_session_init(
         session_opts,
         aven_rng_pcg(&info->pcg),
         &info->arena
@@ -425,29 +425,29 @@ static void game_info_setup(
 #elif defined(_MSC_VER)
     __declspec(dllexport)
 #endif
-const AvenGlWindowVtable game_table = {
-    .init = game_init,
-    .deinit = game_deinit,
-    .update = game_update,
-    .damage = { .value = game_damage },
-    .mouse_click = { .value = game_mouse_click },
-    .mouse_move = { .value = game_mouse_move },
+const AvenGlWindowVtable lib_table = {
+    .init = lib_init,
+    .deinit = lib_deinit,
+    .update = lib_update,
+    .damage = { .value = lib_damage },
+    .mouse_click = { .value = lib_mouse_click },
+    .mouse_move = { .value = lib_mouse_move },
 };
 
-void game_init(AvenGlWindow *win) {
-    GameCtx *ctx = win->ctx;
+void lib_init(AvenGlWindow *win) {
+    LibCtx *ctx = win->ctx;
     AvenGl *gl = &win->gl;
 
     ctx->arena = ctx->init_arena;
 
     if (!ctx->initialized) {
-        game_info_setup(
+        lib_info_setup(
             &ctx->info,
             &ctx->session_opts,
-            GAME_ALG_ARENA_SIZE,
+            LIB_ALG_ARENA_SIZE,
             ctx->pcg
         );
-        game_info_alg_setup(
+        lib_info_alg_setup(
             &ctx->info.session,
             &ctx->info.alg,
             &ctx->session_opts
@@ -457,8 +457,8 @@ void game_init(AvenGlWindow *win) {
 
     ctx->shapes.ctx = aven_gl_shape_ctx_init(gl);
     ctx->shapes.geometry = aven_gl_shape_geometry_init(
-        GAME_GEOMETRY_VERTICES,
-        (GAME_GEOMETRY_VERTICES * 6) / 4,
+        LIB_GEOMETRY_VERTICES,
+        (LIB_GEOMETRY_VERTICES * 6) / 4,
         &ctx->arena
     );
     ctx->shapes.buffer = aven_gl_shape_buffer_init(
@@ -470,8 +470,8 @@ void game_init(AvenGlWindow *win) {
 
     ctx->rounded_shapes.ctx = aven_gl_shape_rounded_ctx_init(gl);
     ctx->rounded_shapes.geometry = aven_gl_shape_rounded_geometry_init(
-        GAME_ROUNDED_GEOMETRY_VERTICES,
-        (GAME_ROUNDED_GEOMETRY_VERTICES * 6) / 4,
+        LIB_ROUNDED_GEOMETRY_VERTICES,
+        (LIB_ROUNDED_GEOMETRY_VERTICES * 6) / 4,
         &ctx->arena
     );
     ctx->rounded_shapes.buffer = aven_gl_shape_rounded_buffer_init(
@@ -545,8 +545,8 @@ void game_init(AvenGlWindow *win) {
     ctx->screen_updates = 0;
 }
 
-void game_deinit(AvenGlWindow *win) {
-    GameCtx *ctx = win->ctx;
+void lib_deinit(AvenGlWindow *win) {
+    LibCtx *ctx = win->ctx;
     AvenGl *gl = &win->gl;
 
     aven_gl_ui_deinit(gl, &ctx->ui);
@@ -554,20 +554,20 @@ void game_deinit(AvenGlWindow *win) {
 #ifdef TEXTURE_OPTIMIZATION
     aven_gl_texture_buffer_deinit(gl, &ctx->graph_texture.buffer);
     aven_gl_texture_ctx_deinit(gl, &ctx->graph_texture.ctx);
-    ctx->graph_texture = (GameGraphTexture){ 0 };
+    ctx->graph_texture = (LibGraphTexture){ 0 };
 #endif // TEXTURE_OPTIMIZATION
 
     aven_gl_shape_rounded_buffer_deinit(gl, &ctx->rounded_shapes.buffer);
     aven_gl_shape_rounded_ctx_deinit(gl, &ctx->rounded_shapes.ctx);
-    ctx->rounded_shapes = (GameRoundedShapes){ 0 };
+    ctx->rounded_shapes = (LibRoundedShapes){ 0 };
 
     aven_gl_shape_buffer_deinit(gl, &ctx->shapes.buffer);
     aven_gl_shape_ctx_deinit(gl, &ctx->shapes.ctx);
-    ctx->shapes = (GameShapes){ 0 };
+    ctx->shapes = (LibShapes){ 0 };
 }
 
-void game_mouse_move(AvenGlWindow *win, Vec2 pos) {
-    GameCtx *ctx = win->ctx;
+void lib_mouse_move(AvenGlWindow *win, Vec2 pos) {
+    LibCtx *ctx = win->ctx;
     ctx->screen_updates = 0;
 
     float side = (float)ctx->height;
@@ -586,7 +586,7 @@ void game_mouse_move(AvenGlWindow *win, Vec2 pos) {
     aven_gl_ui_mouse_move(&ctx->ui, pos);
 }
 
-void game_mouse_click(
+void lib_mouse_click(
     AvenGlWindow *win,
     Vec2 pos,
     AvenGlWindowMouse button,
@@ -594,13 +594,13 @@ void game_mouse_click(
     uint32_t mods
 ) {
     (void)mods;
-    GameCtx *ctx = win->ctx;
+    LibCtx *ctx = win->ctx;
     switch (button) {
         case AVEN_GL_WINDOW_MOUSE_LEFT: {
             switch (action) {
                 case AVEN_GL_WINDOW_PRESS_DOWN: {
                     ctx->screen_updates = 0;
-                    game_mouse_move(win, pos);
+                    lib_mouse_move(win, pos);
                     aven_gl_ui_mouse_click(
                         &ctx->ui,
                         AVEN_GL_UI_MOUSE_EVENT_DOWN
@@ -609,7 +609,7 @@ void game_mouse_click(
                 }
                 case AVEN_GL_WINDOW_PRESS_UP: {
                     ctx->screen_updates = 0;
-                    game_mouse_move(win, pos);
+                    lib_mouse_move(win, pos);
                     aven_gl_ui_mouse_click(&ctx->ui, AVEN_GL_UI_MOUSE_EVENT_UP);
                     break;
                 }
@@ -623,8 +623,8 @@ void game_mouse_click(
     }
 }
 
-AvenGlWindowAction game_update(AvenGlWindow *win) {
-    GameCtx *ctx = win->ctx;
+AvenGlWindowAction lib_update(AvenGlWindow *win) {
+    LibCtx *ctx = win->ctx;
     AvenGl *gl = &win->gl;
     int width = win->width;
     int height = win->height;
@@ -654,17 +654,17 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         while (ctx->elapsed >= ctx->alg_opts.time_step) {
             ctx->elapsed -= ctx->alg_opts.time_step;
             ctx->preview.edge_index += 1;
-            if (ctx->preview.edge_index == GAME_PREVIEW_EDGES) {
+            if (ctx->preview.edge_index == LIB_PREVIEW_EDGES) {
                 ctx->preview.edge_index = 0;
             }
 
-            if (ctx->active_window == GAME_UI_WINDOW_PREVIEW) {
+            if (ctx->active_window == LIB_UI_WINDOW_PREVIEW) {
                 ctx->screen_updates = 0;
                 ctx->ui_up_to_date = false;
             }
         }
     } else {
-        ctx->active_window = GAME_UI_WINDOW_NONE;
+        ctx->active_window = LIB_UI_WINDOW_NONE;
         ctx->preview.edge_index = 0;
 
         while (ctx->elapsed >= ctx->alg_opts.time_step) {
@@ -672,14 +672,14 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
             ctx->screen_updates = 0;
             ctx->graph_up_to_date = false;
 
-            game_info_alg_step(&ctx->info.alg);
+            lib_info_alg_step(&ctx->info.alg);
             if (ctx->info.alg.done) {
                 ctx->alg_opts.playing = false;
             }
         }
     }
 
-    if (ctx->screen_updates >= GAME_SCREEN_UPDATES) {
+    if (ctx->screen_updates >= LIB_SCREEN_UPDATES) {
         ctx->ui_up_to_date = true;
         return AVEN_GL_WINDOW_ACTION_NONE;
     }
@@ -706,7 +706,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
 
     AvenGlUiId last_hot = ctx->ui.hot_id;
     AvenGlUiId last_active = ctx->ui.active_id;
-    GameUiWindow last_window = ctx->active_window;
+    LibUiWindow last_window = ctx->active_window;
 
     float draw_angle = 0.0f;
     if (norm_width < norm_height) {
@@ -726,14 +726,14 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         );
         aff2_compose(backdrop_trans, ui_trans, backdrop_trans);
         if (aven_gl_ui_window(&ctx->ui, backdrop_trans, AVEN_GL_UI_BORDER_ALL)) {
-            ctx->active_window = GAME_UI_WINDOW_NONE;
+            ctx->active_window = LIB_UI_WINDOW_NONE;
         }
     }
 
     float top_y = 1.0f - padding - ui_width / 2.0f;
 
     float button_count = 0;
-    if (ctx->active_window == GAME_UI_WINDOW_ALG) {
+    if (ctx->active_window == LIB_UI_WINDOW_ALG) {
         float window_left_x = 1.5f * padding + ui_width / 2.0f;
         float window_y = top_y - (button_count * ui_width);
         float window_buttons = 3.0f;
@@ -772,16 +772,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_CIRCLE_TREE
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->session_opts.alg_type = GAME_DATA_ALG_TYPE_P3COLOR_BFS;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                ctx->session_opts.alg_type = LIB_DATA_ALG_TYPE_P3COLOR_BFS;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -811,16 +811,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_CIRCLE_PATHS
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->session_opts.alg_type = GAME_DATA_ALG_TYPE_P3COLOR;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                ctx->session_opts.alg_type = LIB_DATA_ALG_TYPE_P3COLOR;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -850,16 +850,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_PIE
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->session_opts.alg_type = GAME_DATA_ALG_TYPE_P3CHOOSE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                ctx->session_opts.alg_type = LIB_DATA_ALG_TYPE_P3CHOOSE;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -879,9 +879,9 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         );
         aff2_compose(button_trans, ui_trans, button_trans);
         bool enabled = !ctx->alg_opts.playing and
-            ctx->active_window != GAME_UI_WINDOW_ALG;
+            ctx->active_window != LIB_UI_WINDOW_ALG;
         switch (ctx->session_opts.alg_type) {
-            case GAME_DATA_ALG_TYPE_P3COLOR: {
+            case LIB_DATA_ALG_TYPE_P3COLOR: {
                 if (
                     aven_gl_ui_button_maybe(
                         &ctx->ui,
@@ -890,11 +890,11 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_ALG;
+                    ctx->active_window = LIB_UI_WINDOW_ALG;
                 }
                 break;
             }
-            case GAME_DATA_ALG_TYPE_P3COLOR_BFS: {
+            case LIB_DATA_ALG_TYPE_P3COLOR_BFS: {
                 if (
                     aven_gl_ui_button_maybe(
                         &ctx->ui,
@@ -903,11 +903,11 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_ALG;
+                    ctx->active_window = LIB_UI_WINDOW_ALG;
                 }
                 break;
             }
-            case GAME_DATA_ALG_TYPE_P3CHOOSE: {
+            case LIB_DATA_ALG_TYPE_P3CHOOSE: {
                 if (
                     aven_gl_ui_button_maybe(
                         &ctx->ui,
@@ -916,7 +916,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_ALG;
+                    ctx->active_window = LIB_UI_WINDOW_ALG;
                 }
                 break;
             }
@@ -924,7 +924,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         button_count += 1;
     }
 
-    if (ctx->active_window == GAME_UI_WINDOW_THREAD) {
+    if (ctx->active_window == LIB_UI_WINDOW_THREAD) {
         float window_left_x = 1.5f * padding + ui_width / 2.0f;
         float window_y = top_y - (button_count * ui_width);
         float window_buttons = 4.0f;
@@ -963,16 +963,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_THREAD
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 1;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -1002,16 +1002,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_DOUBLE_THREAD
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 2;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -1041,16 +1041,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_TRIPLE_THREAD
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 3;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -1080,16 +1080,16 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_QUADRA_THREAD
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 ctx->session_opts.nthreads = 4;
                 size_t steps = ctx->info.alg.steps;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                     if (ctx->info.alg.done) {
                         break;
                     }
@@ -1109,7 +1109,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         );
         aff2_compose(button_trans, ui_trans, button_trans);
         bool enabled = !ctx->alg_opts.playing and
-            ctx->active_window != GAME_UI_WINDOW_THREAD;
+            ctx->active_window != LIB_UI_WINDOW_THREAD;
         switch (ctx->session_opts.nthreads) {
             case 1: {
                 if (
@@ -1120,7 +1120,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                    ctx->active_window = LIB_UI_WINDOW_THREAD;
                 }
                 break;
             }
@@ -1133,7 +1133,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                    ctx->active_window = LIB_UI_WINDOW_THREAD;
                 }
                 break;
             }
@@ -1146,7 +1146,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                    ctx->active_window = LIB_UI_WINDOW_THREAD;
                 }
                 break;
             }
@@ -1159,7 +1159,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         enabled
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_THREAD;
+                    ctx->active_window = LIB_UI_WINDOW_THREAD;
                 }
                 break;
             }
@@ -1170,7 +1170,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         button_count += 1;
     }
 
-    if (ctx->active_window == GAME_UI_WINDOW_RADIUS) {
+    if (ctx->active_window == LIB_UI_WINDOW_RADIUS) {
         float window_left_x = 1.5f * padding + ui_width / 2.0f;
         float window_y = top_y - (button_count * ui_width);
         float window_buttons = (float)countof(vertex_radii);
@@ -1215,15 +1215,15 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                         radius_count
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_NONE;
+                    ctx->active_window = LIB_UI_WINDOW_NONE;
                     ctx->session_opts.radius = radius_count;
-                    game_info_setup(
+                    lib_info_setup(
                         &ctx->info,
                         &ctx->session_opts,
-                        GAME_ALG_ARENA_SIZE,
+                        LIB_ALG_ARENA_SIZE,
                         ctx->pcg
                     );
-                    game_info_alg_setup(
+                    lib_info_alg_setup(
                         &ctx->info.session,
                         &ctx->info.alg,
                         &ctx->session_opts
@@ -1259,7 +1259,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         );
         aff2_compose(button_trans, ui_trans, button_trans);
         bool enabled = !ctx->alg_opts.playing and
-            ctx->active_window != GAME_UI_WINDOW_RADIUS;
+            ctx->active_window != LIB_UI_WINDOW_RADIUS;
         if (
             aven_gl_ui_button_maybe(
                 &ctx->ui,
@@ -1268,7 +1268,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 enabled
             )
         ) {
-            ctx->active_window = GAME_UI_WINDOW_RADIUS;
+            ctx->active_window = LIB_UI_WINDOW_RADIUS;
         }
 
         size_t nradii = countof(vertex_radii);
@@ -1294,7 +1294,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         button_count += 1;
     }
 
-    if (ctx->active_window == GAME_UI_WINDOW_GRAPH) {
+    if (ctx->active_window == LIB_UI_WINDOW_GRAPH) {
         float window_left_x = 1.5f * padding + ui_width / 2.0f;
         float window_y = top_y - (button_count * ui_width);
         float window_buttons = 2.0f;
@@ -1334,15 +1334,15 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 )
             ) {
                 ctx->pcg = ctx->info.pcg;
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->session_opts.graph_type = GAME_INFO_GRAPH_TYPE_RAND;
-                game_info_setup(
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                ctx->session_opts.graph_type = LIB_INFO_GRAPH_TYPE_RAND;
+                lib_info_setup(
                     &ctx->info,
                     &ctx->session_opts,
-                    GAME_ALG_ARENA_SIZE,
+                    LIB_ALG_ARENA_SIZE,
                     ctx->pcg
                 );
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
@@ -1373,15 +1373,15 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 )
             ) {
                 ctx->pcg = ctx->info.pcg;
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                ctx->session_opts.graph_type = GAME_INFO_GRAPH_TYPE_PYRAMID;
-                game_info_setup(
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                ctx->session_opts.graph_type = LIB_INFO_GRAPH_TYPE_PYRAMID;
+                lib_info_setup(
                     &ctx->info,
                     &ctx->session_opts,
-                    GAME_ALG_ARENA_SIZE,
+                    LIB_ALG_ARENA_SIZE,
                     ctx->pcg
                 );
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
@@ -1401,31 +1401,31 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         );
         aff2_compose(button_trans, ui_trans, button_trans);
         switch (ctx->session_opts.graph_type) {
-            case GAME_INFO_GRAPH_TYPE_RAND: {
+            case LIB_INFO_GRAPH_TYPE_RAND: {
                 if (
                     aven_gl_ui_button_maybe(
                         &ctx->ui,
                         button_trans,
                         AVEN_GL_UI_BUTTON_TYPE_DICE,
                         !ctx->alg_opts.playing and
-                        ctx->active_window != GAME_UI_WINDOW_GRAPH
+                        ctx->active_window != LIB_UI_WINDOW_GRAPH
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_GRAPH;
+                    ctx->active_window = LIB_UI_WINDOW_GRAPH;
                 }
                 break;
             }
-            case GAME_INFO_GRAPH_TYPE_PYRAMID: {
+            case LIB_INFO_GRAPH_TYPE_PYRAMID: {
                 if (
                     aven_gl_ui_button_maybe(
                         &ctx->ui,
                         button_trans,
                         AVEN_GL_UI_BUTTON_TYPE_TRIANGLE,
                         !ctx->alg_opts.playing and
-                        ctx->active_window != GAME_UI_WINDOW_GRAPH
+                        ctx->active_window != LIB_UI_WINDOW_GRAPH
                     )
                 ) {
-                    ctx->active_window = GAME_UI_WINDOW_GRAPH;
+                    ctx->active_window = LIB_UI_WINDOW_GRAPH;
                 }
                 break;
             }
@@ -1459,8 +1459,8 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     !ctx->alg_opts.playing and ctx->info.alg.steps > 0
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                game_info_alg_setup(
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
@@ -1484,9 +1484,9 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     !ctx->alg_opts.playing and !ctx->info.alg.done
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 while (!ctx->info.alg.done) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                 }
                 ctx->graph_up_to_date = false;
             }
@@ -1520,15 +1520,15 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     !ctx->alg_opts.playing and ctx->info.alg.steps > 0
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 size_t steps = ctx->info.alg.steps - 1;
-                game_info_alg_setup(
+                lib_info_alg_setup(
                     &ctx->info.session,
                     &ctx->info.alg,
                     &ctx->session_opts
                 );
                 for (size_t i = 0; i < steps; i += 1) {
-                    game_info_alg_step(&ctx->info.alg);
+                    lib_info_alg_step(&ctx->info.alg);
                 }
                 ctx->graph_up_to_date = false;
             }
@@ -1549,8 +1549,8 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     !ctx->alg_opts.playing and !ctx->info.alg.done
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
-                game_info_alg_step(&ctx->info.alg);
+                ctx->active_window = LIB_UI_WINDOW_NONE;
+                lib_info_alg_step(&ctx->info.alg);
                 ctx->graph_up_to_date = false;
             }
         }
@@ -1580,15 +1580,15 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     &ctx->ui,
                     left_trans,
                     AVEN_GL_UI_BUTTON_TYPE_REWIND,
-                    ctx->alg_opts.time_step < GAME_MAX_TIME_STEP
+                    ctx->alg_opts.time_step < LIB_MAX_TIME_STEP
                 )
             ) {
                 ctx->alg_opts.time_step = min(
-                    GAME_MAX_TIME_STEP,
+                    LIB_MAX_TIME_STEP,
                     ctx->alg_opts.time_step * 2L
                 );
                 if (!ctx->alg_opts.playing) {
-                    ctx->active_window = GAME_UI_WINDOW_PREVIEW;
+                    ctx->active_window = LIB_UI_WINDOW_PREVIEW;
                 }
             }
         }
@@ -1605,20 +1605,20 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     &ctx->ui,
                     right_trans,
                     AVEN_GL_UI_BUTTON_TYPE_FASTFORWARD,
-                    ctx->alg_opts.time_step > GAME_MIN_TIME_STEP
+                    ctx->alg_opts.time_step > LIB_MIN_TIME_STEP
                 )
             ) {
                 ctx->alg_opts.time_step = max(
-                    GAME_MIN_TIME_STEP,
+                    LIB_MIN_TIME_STEP,
                     ctx->alg_opts.time_step / 2L
                 );
                 if (!ctx->alg_opts.playing) {
-                    ctx->active_window = GAME_UI_WINDOW_PREVIEW;
+                    ctx->active_window = LIB_UI_WINDOW_PREVIEW;
                 }
             }
         }
 
-        if (ctx->active_window == GAME_UI_WINDOW_PREVIEW) {
+        if (ctx->active_window == LIB_UI_WINDOW_PREVIEW) {
             Aff2 pv_trans;
             aff2_position(
                 pv_trans,
@@ -1632,8 +1632,8 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
             aven_gl_ui_window(&ctx->ui, pv_trans, popup_border);
 
             float radius = 0.7f;
-            float angle = 2.0f * AVEN_MATH_PI_F / (float)GAME_PREVIEW_EDGES;
-            for (size_t i = 0; i < GAME_PREVIEW_EDGES; i += 1) {
+            float angle = 2.0f * AVEN_MATH_PI_F / (float)LIB_PREVIEW_EDGES;
+            for (size_t i = 0; i < LIB_PREVIEW_EDGES; i += 1) {
                 Vec2 p1 = {
                     radius * cosf((float)i * angle),
                     radius * sinf((float)i * angle),
@@ -1716,7 +1716,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 1.0f,
                 ctx->ui.base_colors.primary
             );
-            for (size_t i = 0; i < GAME_PREVIEW_EDGES; i += 1) {
+            for (size_t i = 0; i < LIB_PREVIEW_EDGES; i += 1) {
                 aff2_position(
                     vertex_trans,
                     (Vec2){
@@ -1755,7 +1755,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     AVEN_GL_UI_BUTTON_TYPE_PAUSE
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 ctx->alg_opts.playing = false;
             }
         } else {
@@ -1767,7 +1767,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     !ctx->info.alg.done
                 )
             ) {
-                ctx->active_window = GAME_UI_WINDOW_NONE;
+                ctx->active_window = LIB_UI_WINDOW_NONE;
                 ctx->alg_opts.playing = true;
             }
         }
@@ -1776,7 +1776,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
     }
 
     if (ctx->ui.empty_click) {
-        ctx->active_window = GAME_UI_WINDOW_NONE;
+        ctx->active_window = LIB_UI_WINDOW_NONE;
     }
 
     if (
@@ -1845,7 +1845,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
         aff2_rotate(graph_trans, graph_trans, draw_angle);
 
         switch (ctx->info.alg.type) {
-            case GAME_DATA_ALG_TYPE_P3COLOR: {
+            case LIB_DATA_ALG_TYPE_P3COLOR: {
                 GraphPlaneP3ColorGeometryInfo geometry_info = {
                     .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
                     .done_color = { 0.6f, 0.6f, 0.6f, 1.0f },
@@ -1864,7 +1864,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 for (size_t i = 0; i < 3; i += 1) {
                     vec4_copy(geometry_info.colors[i + 1], vertex_colors[i]);
                 }
-                GameInfoAlgP3Color *alg = &ctx->info.alg.data.p3color;
+                LibInfoAlgP3Color *alg = &ctx->info.alg.data.p3color;
                 graph_plane_p3color_geometry_push_ctx(
                     &ctx->shapes.geometry,
                     &ctx->rounded_shapes.geometry,
@@ -1877,7 +1877,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 );
                 break;
             }
-            case GAME_DATA_ALG_TYPE_P3COLOR_BFS: {
+            case LIB_DATA_ALG_TYPE_P3COLOR_BFS: {
                 GraphPlaneP3ColorBfsGeometryInfo geometry_info = {
                     .outline_color = { 0.1f, 0.1f, 0.1f, 1.0f },
                     .done_color = { 0.6f, 0.6f, 0.6f, 1.0f },
@@ -1896,7 +1896,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 for (size_t i = 0; i < 3; i += 1) {
                     vec4_copy(geometry_info.colors[i + 1], vertex_colors[i]);
                 }
-                GameInfoAlgP3ColorBfs *alg = &ctx->info.alg.data.p3color_bfs;
+                LibInfoAlgP3ColorBfs *alg = &ctx->info.alg.data.p3color_bfs;
                 graph_plane_p3color_bfs_geometry_push_ctx(
                     &ctx->shapes.geometry,
                     &ctx->rounded_shapes.geometry,
@@ -1909,7 +1909,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                 );
                 break;
             }
-            case GAME_DATA_ALG_TYPE_P3CHOOSE: {
+            case LIB_DATA_ALG_TYPE_P3CHOOSE: {
                 GraphPlaneP3ChooseGeometryInfo geometry_info = {
                     .colors = {
                         .ptr = ctx->info.session.colors.ptr,
@@ -1934,7 +1934,7 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
                     .border_thickness = radius * 0.25f,
                     .radius = radius,
                 };
-                GameInfoAlgP3Choose *alg = &ctx->info.alg.data.p3choose;
+                LibInfoAlgP3Choose *alg = &ctx->info.alg.data.p3choose;
                 graph_plane_p3choose_geometry_push_ctx(
                     &ctx->shapes.geometry,
                     &ctx->rounded_shapes.geometry,
@@ -2017,8 +2017,8 @@ AvenGlWindowAction game_update(AvenGlWindow *win) {
     return AVEN_GL_WINDOW_ACTION_SWAP;
 }
 
-void game_damage(AvenGlWindow *win) {
-    GameCtx *ctx = win->ctx;
+void lib_damage(AvenGlWindow *win) {
+    LibCtx *ctx = win->ctx;
     ctx->ui_up_to_date = false;
     ctx->screen_updates = 0;
     ctx->graph_up_to_date = false;

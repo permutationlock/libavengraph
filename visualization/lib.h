@@ -1,5 +1,5 @@
-#ifndef GAME_H
-    #define GAME_H
+#ifndef LIB_H
+    #define LIB_H
 
     #include <aven.h>
     #include <aven/arena.h>
@@ -18,84 +18,84 @@
     #include <graph/plane/p3color_bfs.h>
     #include <graph/plane/p3choose.h>
 
-    #define GAME_INIT_WIDTH (480)
-    #define GAME_INIT_HEIGHT (480)
+    #define LIB_INIT_WIDTH (480)
+    #define LIB_INIT_HEIGHT (480)
 
-    #define GAME_GL_ARENA_SIZE (4096 * 1000)
-    #define GAME_ALG_ARENA_SIZE (4096 * 500)
-    #define GAME_LEVEL_ARENA_SIZE (GAME_ALG_ARENA_SIZE + (4096 * 1000))
-    #define GAME_ARENA_SIZE (GAME_LEVEL_ARENA_SIZE + GAME_GL_ARENA_SIZE)
+    #define LIB_GL_ARENA_SIZE (4096 * 1000)
+    #define LIB_ALG_ARENA_SIZE (4096 * 500)
+    #define LIB_LEVEL_ARENA_SIZE (LIB_ALG_ARENA_SIZE + (4096 * 1000))
+    #define LIB_ARENA_SIZE (LIB_LEVEL_ARENA_SIZE + LIB_GL_ARENA_SIZE)
 
-    #define GAME_MAX_VERTICES (1100)
-    #define GAME_MAX_EDGES (3 * GAME_MAX_VERTICES - 6)
-    #define GAME_COLOR_DIVISIONS (2)
+    #define LIB_MAX_VERTICES (1100)
+    #define LIB_MAX_EDGES (3 * LIB_MAX_VERTICES - 6)
+    #define LIB_COLOR_DIVISIONS (2)
 
-    #define GAME_ROUNDED_GEOMETRY_VERTICES ((GAME_MAX_VERTICES + 3) * 4 * 5)
-    #define GAME_GEOMETRY_VERTICES (GAME_MAX_EDGES * 4 * 3)
+    #define LIB_ROUNDED_GEOMETRY_VERTICES ((LIB_MAX_VERTICES + 3) * 4 * 5)
+    #define LIB_GEOMETRY_VERTICES (LIB_MAX_EDGES * 4 * 3)
 
-    #define GAME_VERTEX_RADIUS (0.12f)
-    #define GAME_MIN_COEFF (0.01f)
-    #define GAME_MIN_AREA (GAME_VERTEX_RADIUS * GAME_VERTEX_RADIUS * 2.0f)
+    #define LIB_VERTEX_RADIUS (0.12f)
+    #define LIB_MIN_COEFF (0.01f)
+    #define LIB_MIN_AREA (LIB_VERTEX_RADIUS * LIB_VERTEX_RADIUS * 2.0f)
 
-    #define GAME_MIN_TIME_STEP (8 * (AVEN_TIME_NSEC_PER_SEC / 1000))
-    #define GAME_MAX_TIME_STEP (256 * GAME_MIN_TIME_STEP)
-    #define GAME_TIME_STEP (64 * GAME_MIN_TIME_STEP)
+    #define LIB_MIN_TIME_STEP (8 * (AVEN_TIME_NSEC_PER_SEC / 1000))
+    #define LIB_MAX_TIME_STEP (256 * LIB_MIN_TIME_STEP)
+    #define LIB_TIME_STEP (64 * LIB_MIN_TIME_STEP)
 
-    #define GAME_SCREEN_UPDATES (2)
+    #define LIB_SCREEN_UPDATES (2)
 
-    #define GAME_PREVIEW_EDGES (8)
+    #define LIB_PREVIEW_EDGES (8)
 
     typedef enum {
-        GAME_DATA_ALG_TYPE_P3COLOR,
-        GAME_DATA_ALG_TYPE_P3COLOR_BFS,
-        GAME_DATA_ALG_TYPE_P3CHOOSE,
-    } GameInfoAlgType;
+        LIB_DATA_ALG_TYPE_P3COLOR,
+        LIB_DATA_ALG_TYPE_P3COLOR_BFS,
+        LIB_DATA_ALG_TYPE_P3CHOOSE,
+    } LibInfoAlgType;
 
     typedef struct {
         bool playing;
         int64_t time_step;
-    } GameInfoAlgOpts;
+    } LibInfoAlgOpts;
 
     typedef struct {
         GraphPlaneP3ColorCtx ctx;
         GraphPlaneP3ColorFrameOptionalSlice frames;
-    } GameInfoAlgP3Color;
+    } LibInfoAlgP3Color;
 
     typedef struct {
         GraphPlaneP3ColorBfsCtx ctx;
         Slice(GraphPlaneP3ColorBfsQueue) queues;
         GraphPlaneP3ColorBfsFrameOptionalSlice frames;
-    } GameInfoAlgP3ColorBfs;
+    } LibInfoAlgP3ColorBfs;
 
     typedef struct {
         GraphPlaneP3ChooseCtx ctx;
         GraphPlaneP3ChooseFrameOptionalSlice frames;
-    } GameInfoAlgP3Choose;
+    } LibInfoAlgP3Choose;
 
     typedef struct {
-        GameInfoAlgType type;
+        LibInfoAlgType type;
         union {
-            GameInfoAlgP3Color p3color;
-            GameInfoAlgP3ColorBfs p3color_bfs;
-            GameInfoAlgP3Choose p3choose;
+            LibInfoAlgP3Color p3color;
+            LibInfoAlgP3ColorBfs p3color_bfs;
+            LibInfoAlgP3Choose p3choose;
         } data;
         AvenArena init_arena;
         AvenArena arena;
         size_t steps;
         bool done;
-    } GameInfoAlg;
+    } LibInfoAlg;
 
     typedef enum {
-        GAME_INFO_GRAPH_TYPE_RAND = 0,
-        GAME_INFO_GRAPH_TYPE_PYRAMID,
-    } GameInfoGraphType;
+        LIB_INFO_GRAPH_TYPE_RAND = 0,
+        LIB_INFO_GRAPH_TYPE_PYRAMID,
+    } LibInfoGraphType;
 
     typedef struct {
         size_t nthreads;
         size_t radius;
-        GameInfoGraphType graph_type;
-        GameInfoAlgType alg_type;
-    } GameInfoSessionOpts;
+        LibInfoGraphType graph_type;
+        LibInfoAlgType alg_type;
+    } LibInfoSessionOpts;
 
     typedef struct {
         Graph graph;
@@ -106,62 +106,62 @@
         GraphSubset outer_cycle;
         Slice(Vec4) colors;
         GraphPlaneP3ChooseListProp color_lists;
-    } GameInfoSession;
+    } LibInfoSession;
 
     typedef struct {
-        GameInfoSession session;
-        GameInfoAlg alg;
+        LibInfoSession session;
+        LibInfoAlg alg;
         AvenRngPcg pcg;
         AvenArena init_arena;
         AvenArena arena;
-    } GameInfo;
+    } LibInfo;
 
     typedef struct {
         AvenGlShapeCtx ctx;
         AvenGlShapeGeometry geometry;
         AvenGlShapeBuffer buffer;
-    } GameShapes;
+    } LibShapes;
 
     typedef struct {
         AvenGlShapeRoundedCtx ctx;
         AvenGlShapeRoundedGeometry geometry;
         AvenGlShapeRoundedBuffer buffer;
-    } GameRoundedShapes;
+    } LibRoundedShapes;
 
     typedef struct {
         AvenGlTextureCtx ctx;
         AvenGlTextureBuffer buffer;
         GLuint framebuffer_id;
         GLuint depthbuffer_id;
-    } GameGraphTexture;
+    } LibGraphTexture;
 
     typedef enum {
-        GAME_UI_WINDOW_NONE = 0,
-        GAME_UI_WINDOW_THREAD,
-        GAME_UI_WINDOW_RADIUS,
-        GAME_UI_WINDOW_ALG,
-        GAME_UI_WINDOW_GRAPH,
-        GAME_UI_WINDOW_PREVIEW,
-    } GameUiWindow;
+        LIB_UI_WINDOW_NONE = 0,
+        LIB_UI_WINDOW_THREAD,
+        LIB_UI_WINDOW_RADIUS,
+        LIB_UI_WINDOW_ALG,
+        LIB_UI_WINDOW_GRAPH,
+        LIB_UI_WINDOW_PREVIEW,
+    } LibUiWindow;
 
     typedef struct {
         uint32_t edge_index;
-    } GamePreview;
+    } LibPreview;
 
     typedef struct {
-        GameShapes shapes;
-        GameRoundedShapes rounded_shapes;
-        GameGraphTexture graph_texture;
+        LibShapes shapes;
+        LibRoundedShapes rounded_shapes;
+        LibGraphTexture graph_texture;
         AvenGlUi ui;
         AvenArena init_arena;
         AvenArena arena;
         AvenTimeInst last_update;
-        GameInfo info;
+        LibInfo info;
         AvenRngPcg pcg;
-        GameInfoSessionOpts session_opts;
-        GameInfoAlgOpts alg_opts;
-        GameUiWindow active_window;
-        GamePreview preview;
+        LibInfoSessionOpts session_opts;
+        LibInfoAlgOpts alg_opts;
+        LibUiWindow active_window;
+        LibPreview preview;
         int64_t elapsed;
         int screen_updates;
         int width;
@@ -169,14 +169,14 @@
         bool ui_up_to_date;
         bool graph_up_to_date;
         bool initialized;
-    } GameCtx;
+    } LibCtx;
 
-    void game_init(AvenGlWindow *win);
-    void game_deinit(AvenGlWindow *win);
-    AvenGlWindowAction game_update(AvenGlWindow *win);
-    void game_damage(AvenGlWindow *win);
-    void game_mouse_move(AvenGlWindow *win, Vec2 pos);
-    void game_mouse_click(
+    void lib_init(AvenGlWindow *win);
+    void lib_deinit(AvenGlWindow *win);
+    AvenGlWindowAction lib_update(AvenGlWindow *win);
+    void lib_damage(AvenGlWindow *win);
+    void lib_mouse_move(AvenGlWindow *win, Vec2 pos);
+    void lib_mouse_click(
         AvenGlWindow *win,
         Vec2 pos,
         AvenGlWindowMouse button,
@@ -184,38 +184,38 @@
         uint32_t mods
     );
 
-    static inline GameCtx game_ctx(AvenArena *arena) {
-        GameCtx ctx = {
-            .width = GAME_INIT_WIDTH,
-            .height = GAME_INIT_HEIGHT,
+    static inline LibCtx lib_ctx(AvenArena *arena) {
+        LibCtx ctx = {
+            .width = LIB_INIT_WIDTH,
+            .height = LIB_INIT_HEIGHT,
             .session_opts = {
-                .alg_type = GAME_DATA_ALG_TYPE_P3COLOR_BFS,
-                .graph_type = GAME_INFO_GRAPH_TYPE_RAND,
+                .alg_type = LIB_DATA_ALG_TYPE_P3COLOR_BFS,
+                .graph_type = LIB_INFO_GRAPH_TYPE_RAND,
                 .nthreads = 1,
                 .radius = 0,
             },
-            .alg_opts = { .time_step = GAME_TIME_STEP },
+            .alg_opts = { .time_step = LIB_TIME_STEP },
         };
 
         ctx.init_arena = aven_arena_init(
             aven_arena_alloc(
                 arena,
-                GAME_GL_ARENA_SIZE,
+                LIB_GL_ARENA_SIZE,
                 AVEN_ARENA_BIGGEST_ALIGNMENT,
                 1
             ),
-            GAME_GL_ARENA_SIZE
+            LIB_GL_ARENA_SIZE
         );
 
-        ctx.info = (GameInfo){
+        ctx.info = (LibInfo){
             .init_arena = aven_arena_init(
                 aven_arena_alloc(
                     arena,
-                    GAME_LEVEL_ARENA_SIZE,
+                    LIB_LEVEL_ARENA_SIZE,
                     AVEN_ARENA_BIGGEST_ALIGNMENT,
                     1
                 ),
-                GAME_LEVEL_ARENA_SIZE
+                LIB_LEVEL_ARENA_SIZE
             ),
         };
 
@@ -224,5 +224,5 @@
 
         return ctx;
     }
-#endif // GAME_H
+#endif // LIB_H
 

@@ -13,7 +13,7 @@
 
 #include <stdlib.h>
 
-#include "game.h"
+#include "lib.h"
 
 #if defined(HOT_RELOAD)
     #if defined(__ANDROID__) or defined(__EMSCRIPTEN__)
@@ -37,40 +37,40 @@
         AvenGlWindowVtable vtable;
     } VInfo;
     typedef enum {
-        GAME_INFO_LOAD_ERROR_NONE = 0,
-        GAME_INFO_LOAD_ERROR_OPEN,
-        GAME_INFO_LOAD_ERROR_SYM,
+        LIB_INFO_LOAD_ERROR_NONE = 0,
+        LIB_INFO_LOAD_ERROR_OPEN,
+        LIB_INFO_LOAD_ERROR_SYM,
     } VInfoError;
     typedef Result(VInfo, VInfoError) VInfoResult;
 
     static VInfoResult vinfo_load(AvenStr path, AvenArena temp_arena) {
-        VInfo game_dll = { 0 };
+        VInfo lib = { 0 };
 
-        game_dll.handle = aven_dl_open(path, temp_arena);
-        if (game_dll.handle == NULL) {
-            return (VInfoResult){ .error = GAME_INFO_LOAD_ERROR_OPEN };
+        lib.handle = aven_dl_open(path, temp_arena);
+        if (lib.handle == NULL) {
+            return (VInfoResult){ .error = LIB_INFO_LOAD_ERROR_OPEN };
         }
 
         AvenGlWindowVtable *table = aven_dl_sym(
-            game_dll.handle,
-            aven_str("game_table"),
+            lib.handle,
+            aven_str("lib_table"),
             temp_arena
         );
         if (table == NULL) {
-            return (VInfoResult){ .error = GAME_INFO_LOAD_ERROR_SYM };
+            return (VInfoResult){ .error = LIB_INFO_LOAD_ERROR_SYM };
         }
 
-        game_dll.vtable = *table;
+        lib.vtable = *table;
 
-        return (VInfoResult){ .payload = game_dll };
+        return (VInfoResult){ .payload = lib };
     }
 
     static void vinfo_error_print(VInfoError error) {
         switch (error) {
-            case GAME_INFO_LOAD_ERROR_OPEN:
+            case LIB_INFO_LOAD_ERROR_OPEN:
                 aven_io_perr("error opening dll\n");
                 break;
-            case GAME_INFO_LOAD_ERROR_SYM:
+            case LIB_INFO_LOAD_ERROR_SYM:
                 aven_io_perr("error finding symbol in dll\n");
                 break;
             default:
@@ -79,7 +79,7 @@
         }
     }
 #else // !defined(HOT_RELOAD)
-    #include "game/game.c"
+    #include "lib/lib.c"
 
     typedef struct {
         AvenGlWindowVtable vtable;
@@ -87,20 +87,20 @@
 #endif // !defined(HOT_RELOAD)
 
 // App data (made global for Emscripten and window callbacks on Windows)
-static GameCtx ctx;
+static LibCtx ctx;
 static VInfo vinfo;
 static AvenArena arena;
 
 #ifdef HOT_RELOAD
-    static AvenWatchHandle game_watch_handle;
-    static AvenStr game_dll_path;
+    static AvenWatchHandle lib_watch_handle;
+    static AvenStr lib_path;
     static AvenStr watch_dir_path;
-    static bool game_valid;
+    static bool lib_valid;
 #endif
 
 void init(AvenGlWindow *win) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -109,7 +109,7 @@ void init(AvenGlWindow *win) {
 
 void deinit(AvenGlWindow *win) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -118,7 +118,7 @@ void deinit(AvenGlWindow *win) {
 
 AvenGlWindowAction update(AvenGlWindow *win) {
 #if defined(HOT_RELOAD)
-    AvenWatchResult watch_result = aven_watch_check(game_watch_handle, 0);
+    AvenWatchResult watch_result = aven_watch_check(lib_watch_handle, 0);
     if (watch_result.error != 0) {
         aven_io_perrf("FAILED TO WATCH: {}\n", aven_fmt_str(watch_dir_path));
         aven_panic("aven_watch_check failed");
@@ -128,19 +128,19 @@ AvenGlWindowAction update(AvenGlWindow *win) {
             aven_dl_close(vinfo.handle);
             vinfo.handle = NULL;
         }
-        VInfoResult info_result = vinfo_load(game_dll_path, arena);
+        VInfoResult info_result = vinfo_load(lib_path, arena);
         if (info_result.error != 0) {
             vinfo_error_print(info_result.error);
-            game_valid = false;
+            lib_valid = false;
         } else {
             aven_io_print("reloading\n");
             vinfo = info_result.payload;
             vinfo.vtable.deinit(win);
             vinfo.vtable.init(win);
-            game_valid = true;
+            lib_valid = true;
         }
     }
-    if (!game_valid) {
+    if (!lib_valid) {
         return AVEN_GL_WINDOW_ACTION_NONE;
     }
 #endif // defined(HOT_RELOAD)
@@ -149,7 +149,7 @@ AvenGlWindowAction update(AvenGlWindow *win) {
 
 static void damage(AvenGlWindow *w) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -166,7 +166,7 @@ static void mouse_click(
     uint32_t mods
 ) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -177,7 +177,7 @@ static void mouse_click(
 
 static void mouse_move(AvenGlWindow *w, Vec2 pos) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -188,7 +188,7 @@ static void mouse_move(AvenGlWindow *w, Vec2 pos) {
 
 static void mouse_enter(AvenGlWindow *w, bool entered) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -205,7 +205,7 @@ static void key(
     uint32_t modes
 ) {
 #ifdef HOT_RELOAD
-    if (!game_valid) {
+    if (!lib_valid) {
         return;
     }
 #endif
@@ -214,7 +214,7 @@ static void key(
     }
 }
 
-#define ARENA_SIZE (GAME_ARENA_SIZE + 4096 * 4)
+#define ARENA_SIZE (LIB_ARENA_SIZE + 4096 * 4)
 
 int run(void) {
     // should probably switch to raw page allocation, but malloc is cross
@@ -224,7 +224,7 @@ int run(void) {
 
     arena = aven_arena_init(mem, ARENA_SIZE);
 
-    ctx = game_ctx(&arena);
+    ctx = lib_ctx(&arena);
 
 #if defined(HOT_RELOAD)
     AvenStr exe_path = aven_str(".");
@@ -235,9 +235,9 @@ int run(void) {
         }
     }
     AvenStr exe_dir_path = aven_path_containing_dir(exe_path);
-    game_dll_path = aven_path(&arena, exe_dir_path, aven_str(HOT_DLL_PATH));
+    lib_path = aven_path(&arena, exe_dir_path, aven_str(HOT_DLL_PATH));
     {
-        VInfoResult result = vinfo_load(game_dll_path, arena);
+        VInfoResult result = vinfo_load(lib_path, arena);
         if (result.error != 0) {
             vinfo_error_print(result.error);
             return 1;
@@ -246,19 +246,19 @@ int run(void) {
     }
 
     watch_dir_path = aven_path(&arena, exe_dir_path, aven_str(HOT_WATCH_PATH));
-    game_watch_handle = aven_watch_init(watch_dir_path, arena);
-    if (game_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
+    lib_watch_handle = aven_watch_init(watch_dir_path, arena);
+    if (lib_watch_handle == AVEN_WATCH_HANDLE_INVALID) {
         aven_io_perrf("FAILED TO WATCH: {}\n", aven_fmt_str(watch_dir_path));
         return 1;
     }
-    game_valid = true;
+    lib_valid = true;
 #else // !defined(HOT_RELOAD)
-    vinfo.vtable = game_table;
+    vinfo.vtable = lib_table;
 #endif // !defined(HOT_RELOAD)
 
     AvenGlWindowCode rcode = aven_gl_window_impl(
-        GAME_INIT_WIDTH,
-        GAME_INIT_HEIGHT,
+        LIB_INIT_WIDTH,
+        LIB_INIT_HEIGHT,
         "Path Coloring Plane Triangulations",
         (AvenGlWindowVtable){
             .init = init,
