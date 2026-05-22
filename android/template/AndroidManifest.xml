@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.$ORG_NAME.$APP_NAME">
-  <uses-sdk android:minSdkVersion="22"
+  <uses-sdk android:minSdkVersion="24"
       android:targetSdkVersion="$ANDROID_VERSION" />
   <uses-permission android:name="android.permission.SET_RELEASE_APP"/>
   <application android:debuggable="true"
       android:hasCode="false"
       android:label="$APP_NAME"
+      android:resizableActivity="false"
       android:icon="@mipmap/icon">
     <activity android:configChanges="orientation"
         android:name="android.app.NativeActivity"
