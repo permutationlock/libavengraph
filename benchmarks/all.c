@@ -792,5 +792,7 @@ int main(void) {
         printf("\n");
     }
 
+    free(mem);
+
     return 0;
 }

@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE ((size_t)4096UL * (size_t)3000000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)800000UL)
 
 #define NGRAPHS 1
 #define FULL_RUNS 1
@@ -84,9 +84,6 @@ int main(void) {
             }
         }
     }
-
-    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x3241ef25, 0xe837910f);
-    AvenRng rng = aven_rng_pcg(&pcg_ctx);
 
     uint32_t p_data[] = { 0 };
     uint32_t q_data[] = { 2, 1 };
@@ -469,5 +466,6 @@ int main(void) {
         printf("\n");
     }
 
+    free(mem);
     return 0;
 }

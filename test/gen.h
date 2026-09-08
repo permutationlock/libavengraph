@@ -19,6 +19,7 @@
         TEST_GEN_GRAPH_TYPE_GRID,
         TEST_GEN_GRAPH_TYPE_PYRAMID,
         TEST_GEN_GRAPH_TYPE_TRIANGULATION,
+        TEST_GEN_GRAPH_TYPE_TRIANGULATION2,
     } TestGenGraphType;
 
     static Graph test_gen_graph(
@@ -47,6 +48,9 @@
                     (Vec2){ 0.33f, 0.33f },
                     arena
                 );
+                break;
+            case TEST_GEN_GRAPH_TYPE_TRIANGULATION2:
+                graph = graph_gen_triangulation2(size, rng, arena);
                 break;
             default:
                 assert(false);

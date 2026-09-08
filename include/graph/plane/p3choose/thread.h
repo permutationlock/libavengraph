@@ -21,27 +21,27 @@
         GraphAdj adj;
         GraphPlaneP3ChooseVertexLoc loc;
         GraphPlaneP3ChooseList colors;
-        uint32_t entry_index;
+        Idx entry_index;
     } GraphPlaneP3ChooseThreadVertex;
 
     typedef List(GraphPlaneP3ChooseFrame) GraphPlaneP3ChooseThreadFrameList;
 
     typedef struct {
         GraphPlaneP3ChooseFrame frame;
-        uint32_t parent;
+        Idx parent;
     } GraphPlaneP3ChooseThreadEntry;
 
     typedef struct {
-        uint32_t *ptr;
+        Idx *ptr;
         atomic_size_t len;
         size_t cap;
-    } GraphPlaneP3ChooseThreadUint32List;
+    } GraphPlaneP3ChooseThreadIdxList;
 
     typedef struct {
         GraphAugNbSlice nb;
         Slice(GraphPlaneP3ChooseThreadVertex) vertex_info;
         Slice(uint32_t) marks;
-        GraphPlaneP3ChooseThreadUint32List valid_entries;
+        GraphPlaneP3ChooseThreadIdxList valid_entries;
         Pool(GraphPlaneP3ChooseThreadEntry) entry_pool;
         size_t nthreads;
         atomic_int threads_active;
@@ -85,7 +85,7 @@
             ctx.entry_pool.cap
         );
         ctx.valid_entries.ptr = aven_arena_create_array(
-            uint32_t,
+            Idx,
             arena,
             ctx.valid_entries.cap
         );
@@ -134,7 +134,7 @@
         assert(xyv_colors->len > 0);
         xyv_colors->len = 1;
 
-        uint32_t entry_index = (uint32_t)pool_create(ctx.entry_pool);
+        Idx entry_index = pool_create(ctx.entry_pool);
         pool_get(ctx.entry_pool, entry_index) = (GraphPlaneP3ChooseThreadEntry){
             .frame = { .z = xyv, .x = xyv, .y = xyv, .x_loc = *xyv_loc },
         };
@@ -177,7 +177,7 @@
                         ) -
                         frames_moved;
                     for (size_t i = 0; i < frames_moved; i += 1) {
-                        uint32_t entry_index = ctx->valid_entries.ptr[
+                        Idx entry_index = ctx->valid_entries.ptr[
                             valid_index + i
                         ];
                         list_push(*local_frames) = pool_get(
@@ -227,9 +227,10 @@
     ) {
         GraphPlaneP3ChooseThreadVertex *v_info = &get(ctx->vertex_info, v);
         GraphPlaneP3ChooseThreadVertex *u_info = &get(ctx->vertex_info, u);
-        bool v_push = (v_info->entry_index != 0) and (v_info->colors.len == 1);
+        bool v_push = idx_valid(v_info->entry_index) and
+            (v_info->colors.len == 1);
         bool u_push = (v != u) and
-            (u_info->entry_index != 0) and
+            idx_valid(u_info->entry_index) and
             (u_info->colors.len == 1);
         bool frame_wait = (maybe_frame->valid) and (v_info->colors.len != 1);
 
@@ -249,9 +250,7 @@
                 );
                 assert((len + frames_over) <= ctx->valid_entries.cap);
                 for (size_t i = 0; i < frames_over; i += 1) {
-                    uint32_t entry_index = (uint32_t)pool_create(
-                        ctx->entry_pool
-                    );
+                    Idx entry_index = pool_create(ctx->entry_pool);
                     pool_get(ctx->entry_pool, entry_index) = (
                         GraphPlaneP3ChooseThreadEntry
                     ){ .frame = list_pop(*local_frames) };
@@ -266,12 +265,12 @@
                         1,
                         memory_order_relaxed
                     );
-                    ctx->valid_entries.ptr[back_index] = v_info->entry_index - 1;
+                    ctx->valid_entries.ptr[back_index] = v_info->entry_index;
                     v_info->entry_index = pool_get(
                         ctx->entry_pool,
-                        v_info->entry_index - 1
+                        v_info->entry_index
                     ).parent;
-                } while (v_info->entry_index != 0);
+                } while (idx_valid(v_info->entry_index));
             }
             if (u_push) {
                 do {
@@ -281,19 +280,19 @@
                         1,
                         memory_order_relaxed
                     );
-                    ctx->valid_entries.ptr[back_index] = u_info->entry_index - 1;
+                    ctx->valid_entries.ptr[back_index] = u_info->entry_index;
                     u_info->entry_index = pool_get(
                         ctx->entry_pool,
-                        u_info->entry_index - 1
+                        u_info->entry_index
                     ).parent;
-                } while (u_info->entry_index != 0);
+                } while (idx_valid(u_info->entry_index));
             }
             if (frame_wait) {
-                uint32_t entry_index = (uint32_t)pool_create(ctx->entry_pool);
+                Idx entry_index = pool_create(ctx->entry_pool);
                 pool_get(ctx->entry_pool, entry_index) = (
                     GraphPlaneP3ChooseThreadEntry
                 ){ .frame = maybe_frame->value, .parent = v_info->entry_index };
-                v_info->entry_index = entry_index + 1;
+                v_info->entry_index = entry_index;
             }
             aven_thread_spinlock_unlock(&ctx->lock);
         }

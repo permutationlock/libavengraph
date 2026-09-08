@@ -100,7 +100,6 @@
         GraphBfsCtx ctx = graph_bfs_init(graph, root_vertex, &temp_arena);
 
         while (!graph_bfs_step(&ctx)) {}
-        ;
 
         for (uint32_t v = 0; v < tree.len; v += 1) {
             get(tree, v) = get(ctx.vertex_info, v).node;

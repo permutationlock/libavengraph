@@ -513,5 +513,397 @@
 
         return graph;
     }
+
+    typedef struct {
+        GraphDyn dgraph;
+        Idx last_closure;
+        Idx v;
+        Idx nb;
+        uint32_t root_idx;
+        Idx root;
+        Idx root_leaf;
+    } AvenGraphGenTriangulation2PartialCtx;
+
+    static AvenGraphGenTriangulation2PartialCtx graph_gen_triangulation2_init(
+        uint32_t size,
+        AvenRng rng,
+        AvenArena *arena
+    ) {
+        assert(size >= 5);
+
+        uint32_t n = size - 2;
+        assert((uint64_t)n * 4 - 2 < UINT32_MAX);
+
+        GraphDyn dgraph = graph_dyn_init(size, 3 * size - 6, arena);
+        for (uint32_t v = 0; v < size; v += 1) {
+            graph_dyn_insert_vertex(&dgraph);
+        }
+
+        AvenArena temp_arena = *arena;
+        GraphPropUint8 leaf_count = aven_arena_create_slice(
+            uint8_t,
+            &temp_arena,
+            size
+        );
+        for (uint32_t v = 0; v < size; v += 1) {
+            get(leaf_count, v) = 0;
+        }
+
+        // generate random word of length 4n-2 of weight n-1
+        uint32_t bit_len = 4U * n - 2U;
+        uint32_t bit_final_len = (size_t)(bit_len % 32);
+        uint32_t u32_len = (bit_len >> 5) + 1;
+        Slice(uint32_t) word = aven_arena_create_slice(
+            uint32_t,
+            &temp_arena,
+            u32_len
+        );
+
+        size_t set_bit_len = (n - 1) % 32;
+        size_t set_u32_len = ((n - 1) >> 5);
+        for (size_t i = 0; i < set_u32_len; i += 1) {
+            get(word, i) = 0xffffffff;
+        }
+        get(word, set_u32_len) = (((uint32_t)0xffffffff) >> (32 - set_bit_len));
+        for (size_t i = set_u32_len + 1; i < u32_len; i += 1) {
+            get(word, i) = 0;
+        }
+
+        for (uint32_t tpos = 0; tpos < bit_len - 1; tpos += 1) {
+            uint32_t tpos_i = tpos >> 5;
+            uint32_t tpos_j = tpos % 32;
+
+            uint32_t rnd_offset = aven_rng_rand_bounded(
+                rng,
+                (bit_len - 1) - tpos
+            );
+            uint32_t spos = tpos + rnd_offset;
+            uint32_t spos_i = spos >> 5;
+            uint32_t spos_j = spos % 32;
+
+            uint32_t ttmp = get(word, tpos_i);
+            uint32_t stmp = get(word, spos_i);
+            uint32_t tmask = ((uint32_t)1 << tpos_j);
+            uint32_t smask = ((uint32_t)1 << spos_j);
+            get(word, tpos_i) &= ~tmask;
+            get(word, tpos_i) |= (uint32_t)((stmp & smask) > 0) << tpos_j;
+            get(word, spos_i) &= ~smask;
+            get(word, spos_i) |= (uint32_t)((ttmp & tmask) > 0) << spos_j;
+        }
+
+        // find min pos on bit step graph: 1 -> +3, 0 -> -1
+        size_t min_i = 0;
+        size_t min_j = 0;
+        int64_t min_sum = 0;
+        int64_t sum = 0;
+        for (size_t i = 0; i < u32_len; i += 1) {
+            for (size_t j = 0; j < 32; j += 1) {
+                if (i == u32_len - 1 && j == bit_final_len) {
+                    break;
+                }
+                uint32_t pos = get(word, i) & (((uint32_t)1) << j);
+                if (pos) {
+                    if (sum < min_sum) {
+                        min_i = i;
+                        min_j = j;
+                        min_sum = sum;
+                    }
+                    sum += 3;
+                } else {
+                    sum -= 1;
+                }
+            }
+        }
+
+        // rotate string to start at min
+
+        // rotate 32bit words
+        for (size_t i = 0; i < u32_len; i += 1) {
+            uint32_t tmp = get(word, i);
+            get(word, i) = get(word, u32_len - i - 1);
+            get(word, u32_len - i - 1) = tmp;
+        }
+        for (size_t i = 0; i < min_i; i += 1) {
+            uint32_t tmp = get(word, i);
+            get(word, i) = get(word, u32_len - i - 1);
+            get(word, u32_len - i - 1) = tmp;
+        }
+        for (size_t i = min_i; i < u32_len; i += 1) {
+            uint32_t tmp = get(word, i);
+            get(word, i) = get(word, u32_len - i - 1);
+            get(word, u32_len - i - 1) = tmp;
+        }
+
+        // rotate bits within 32bit words
+        uint32_t low_mask = (uint32_t)0xffffffff >> (32 - min_j);
+        uint32_t high_mask = (uint32_t)0xffffffff << min_j;
+        uint32_t old_start = get(word, 0);
+        for (uint32_t i = 0; i < u32_len; i += 1) {
+            uint32_t cur = get(word, i);
+            uint32_t nex_i = (i < u32_len - 1) ? i + 1 : 0;
+            uint32_t nex = (i < u32_len - 1) ? get(word, i + 1) : old_start;
+            uint32_t low = (cur & high_mask) >> min_j;
+            uint32_t top_nex_bit = (nex_i == u32_len - 1) ? bit_final_len : 32;
+            uint32_t high = (nex & low_mask) << (top_nex_bit - min_j);
+            get(word, i) = low | high;
+        }
+
+        // construct tree from bit string
+        uint32_t v = 0;
+        uint32_t next_v = 3;
+        for (uint32_t i = 0; i < u32_len; i += 1) {
+            for (uint32_t j = 0; j < 32; j += 1) {
+                if (i == u32_len - 1 && j == bit_final_len) {
+                    break;
+                }
+                Idx dv = idx_wrap(v);
+                uint32_t pos = get(word, i) & (((uint32_t)1) << j);
+                if (pos == 0) {
+                    if (get(leaf_count, v) < 2) {
+                        graph_dyn_insert_half_edge(
+                            &dgraph,
+                            dv,
+                            graph_dyn_nb_last(dgraph, dv),
+                            (Idx){ 0 }
+                        );
+                        get(leaf_count, v) += 1;
+                    } else {
+                        dv = graph_dyn_nb_vertex(
+                            dgraph,
+                            graph_dyn_nb(dgraph, dv)
+                        );
+                        v = idx_unwrap(dv);
+                    }
+                } else {
+                    graph_dyn_insert_edge(
+                        &dgraph,
+                        dv,
+                        graph_dyn_nb_last(dgraph, dv),
+                        idx_wrap(next_v),
+                        (Idx){ 0 }
+                    );
+                    v = next_v;
+                    next_v += 1;
+                }
+            }
+        }
+
+        return (AvenGraphGenTriangulation2PartialCtx){
+            .dgraph = dgraph,
+            .v = idx_wrap(0),
+            .nb = graph_dyn_nb(dgraph, idx_wrap(0)),
+        };
+    }
+
+    static bool graph_gen_triangulation2_partial_step(
+        AvenGraphGenTriangulation2PartialCtx *ctx
+    ) {
+        Idx v1 = ctx->v;
+        Idx nb1 = ctx->nb;
+        Idx v2 = graph_dyn_nb_vertex(ctx->dgraph, nb1);
+
+        // If nb1 (v1 -> v2) is pendant, i.e. v2 is a leaf, then
+        // skip past nb1, as well as the next leaf, if any. If the
+        // next edge was marked as 'last_closure', then we have made
+        // a full walk of the outer face without finding a pattern
+        // and are done.
+        if (!idx_valid(v2)) {
+            ctx->nb = graph_dyn_nb_next(ctx->dgraph, ctx->nb);
+            if (!idx_valid(graph_dyn_nb_vertex(ctx->dgraph, ctx->nb))) {
+                ctx->root = ctx->v;
+                ctx->root_leaf = ctx->nb;
+                ctx->nb = graph_dyn_nb_next(ctx->dgraph, ctx->nb);
+            }
+            return idx_valid(ctx->last_closure) &&
+                (idx_unwrap(ctx->nb) == idx_unwrap(ctx->last_closure));
+        }
+
+        Idx nb2 = graph_dyn_nb_next(
+            ctx->dgraph,
+            graph_dyn_nb_back(ctx->dgraph, nb1)
+        );
+        Idx v3 = graph_dyn_nb_vertex(ctx->dgraph, nb2);
+
+        // If nb2 (v2 -> v3) is pendant, i.e. v3 is a leaf, then we
+        // there is no pattern from v1 and we move to v2, skipping
+        // leaves and checking for the end condition as above.
+        if (!idx_valid(v3)) {
+            ctx->v = v2;
+            ctx->nb = graph_dyn_nb_next(ctx->dgraph, nb2);
+            if (!idx_valid(graph_dyn_nb_vertex(ctx->dgraph, ctx->nb))) {
+                ctx->root = ctx->v;
+                ctx->root_leaf = ctx->nb;
+                ctx->nb = graph_dyn_nb_next(ctx->dgraph, ctx->nb);
+            }
+            return idx_valid(ctx->last_closure) &&
+                (idx_unwrap(ctx->nb) == idx_unwrap(ctx->last_closure));
+        }
+
+        Idx nb3 = graph_dyn_nb_next(
+            ctx->dgraph,
+            graph_dyn_nb_back(ctx->dgraph, nb2)
+        );
+        Idx v4 = graph_dyn_nb_vertex(ctx->dgraph, nb3);
+
+        // Walk until we hit a leaf to match the closure pattern:
+        //     inner -> inner -> inner -> leaf
+        while (idx_valid(v4)) {
+            v1 = v2;
+            nb1 = nb2;
+            v2 = v3;
+            nb2 = nb3;
+            v3 = v4;
+            nb3 = graph_dyn_nb_next(
+                ctx->dgraph,
+                graph_dyn_nb_back(ctx->dgraph, nb2)
+            );
+            v4 = graph_dyn_nb_vertex(ctx->dgraph, nb3);
+        }
+
+        // Perform a partial closure:
+        //     v1 - nb1 > v2 - nb2 > v3 - nb3 > leaf
+        // 
+        //          into
+        // 
+        //       v1 - nb1 > v2
+        //        \        /
+        //     nb1_new   nb2
+        //          v    v
+        //            v3
+        Idx nb1_prev = graph_dyn_nb_prev(ctx->dgraph, nb1);
+        Idx nb3_prev = graph_dyn_delete_half_edge(&ctx->dgraph, v3, nb3);
+        GraphDynEdge new_edge = graph_dyn_insert_edge(
+            &ctx->dgraph,
+            v1,
+            nb1_prev,
+            v3,
+            nb3_prev
+        );
+        Idx nb1_new = new_edge.nb1;
+
+        // If the edge nb0 (v0 -> v1) before nb1 (v1 -> v3) on the new
+        // outer face is an inner edge, i.e. v0 is not a leaf, we backtrack
+        // to v0, nb0 (v0 -> v1) to check for newly revealed patterns.
+        // Otherwise, we continue from v1, nb1_new (v1 -> v3).
+        Idx v0 = graph_dyn_nb_vertex(ctx->dgraph, nb1_prev);
+        if (idx_valid(v0)) {
+            ctx->v = v0;
+            ctx->nb = graph_dyn_nb_back(ctx->dgraph, nb1_prev);
+        } else {
+            ctx->nb = nb1_new;
+        }
+        ctx->last_closure = ctx->nb;
+
+        return false;
+    }
+
+    typedef struct {
+        GraphDyn dgraph;
+        Idx root;
+        Idx v;
+        Idx vnb;
+        Idx u;
+        Idx unb;
+    } AvenGraphGenTriangulation2FullCtx;
+
+    static AvenGraphGenTriangulation2FullCtx graph_gen_triangulation2_full_init(
+        AvenGraphGenTriangulation2PartialCtx *ctx
+    ) {
+        assert(idx_unwrap(ctx->nb) == idx_unwrap(ctx->last_closure));
+        assert(idx_valid(ctx->root));
+        assert(idx_valid(ctx->root_leaf));
+
+        // We have a graph of the form:
+        //             l1    l2
+        //               \  /
+        //                v0
+        //             \ /  \ /
+        //              o    o
+        //             /      \ /
+        //            o        o
+        //           / \      /
+        //              o    o
+        //             / \  / \ 
+        //                v0'
+        //               /  \ 
+        //             l2'  l1'
+        // We will create a new vertex v1 and walk from l1 to l2',
+        // replacing leaves with edges to v1. Then we'll create a
+        // vertex v2 and walk from l1' to l2, replacing leaves with
+        // edges to v2. finally we'll add the final edge v1 to v2
+        // to complete the outer triangle.
+        return (AvenGraphGenTriangulation2FullCtx){
+            .dgraph = ctx->dgraph,
+            .v = ctx->root,
+            .vnb = ctx->root_leaf,
+            .u = idx_wrap(1),
+        };
+    }
+
+    static bool graph_gen_triangulation2_full_step(
+        AvenGraphGenTriangulation2FullCtx *ctx
+    ) {
+        assert(!idx_valid(graph_dyn_nb_vertex(ctx->dgraph, ctx->vnb)));
+        ctx->vnb = graph_dyn_delete_half_edge(&ctx->dgraph, ctx->v, ctx->vnb);
+        GraphDynEdge next_nbs = graph_dyn_insert_edge(
+            &ctx->dgraph,
+            ctx->v,
+            ctx->vnb,
+            ctx->u,
+            ctx->unb
+        );
+        ctx->vnb = graph_dyn_nb_next(ctx->dgraph, next_nbs.nb1);
+        ctx->unb = graph_dyn_nb_prev(ctx->dgraph, next_nbs.nb2);
+
+        if (!idx_valid(ctx->root)) {
+            // Set the root stopping point after first vertex
+            ctx->root = ctx->v;
+        } else if (idx_unwrap(ctx->v) == idx_unwrap(ctx->root)) {
+            // We're back at the root, insert the final edge 1 -> 2
+            graph_dyn_insert_edge(
+                &ctx->dgraph,
+                idx_wrap(1),
+                graph_dyn_nb(ctx->dgraph, idx_wrap(1)),
+                idx_wrap(2),
+                graph_dyn_nb(ctx->dgraph, idx_wrap(2))
+            );
+            return true;
+        }
+
+        Idx next_v = graph_dyn_nb_vertex(ctx->dgraph, ctx->vnb);
+        if (!idx_valid(next_v)) {
+            // If the next edge is pendant, we finished one pass,
+            // swap to inserting edges to 2 and continue
+            ctx->u = idx_wrap(2);
+            ctx->unb = (Idx){ 0 };
+            return false;
+        }
+
+        // Otherwise the edge is interior, move to the next face vertex
+        ctx->v = next_v;
+        ctx->vnb = graph_dyn_nb_next(
+            ctx->dgraph,
+            graph_dyn_nb_back(ctx->dgraph, ctx->vnb)
+        );
+        return false;
+    }
+
+    static inline Graph graph_gen_triangulation2(
+        uint32_t size,
+        AvenRng rng,
+        AvenArena *arena
+    ) {
+        Graph graph = graph_from_dyn_init(size, 3 * size - 6, arena);
+        AvenArena temp_arena = *arena;
+        AvenGraphGenTriangulation2PartialCtx part_ctx =
+            graph_gen_triangulation2_init(size, rng, &temp_arena);
+        while (!graph_gen_triangulation2_partial_step(&part_ctx)) {}
+        AvenGraphGenTriangulation2FullCtx full_ctx =
+            graph_gen_triangulation2_full_init(&part_ctx);
+        while (!graph_gen_triangulation2_full_step(&full_ctx)) {}
+        graph_from_dyn(graph, full_ctx.dgraph, temp_arena);
+        return graph;
+    }
+
 #endif // GRAPH_GEN_H
 

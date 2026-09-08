@@ -147,6 +147,24 @@
                 },
                 .fn = test_graph_plane,
             },
+            {
+                .desc = aven_str("verify embedding order 9 triangulation2"),
+                .args = &(TestGraphPlaneArgs){
+                    .size = 9,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION2,
+                    .planar = true,
+                },
+                .fn = test_graph_plane,
+            },
+            {
+                .desc = aven_str("verify embedding order 21 triangulation2"),
+                .args = &(TestGraphPlaneArgs){
+                    .size = 21,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION2,
+                    .planar = true,
+                },
+                .fn = test_graph_plane,
+            },
         };
         AvenTestCaseSlice tcases = slice_array(tcase_data);
 

@@ -16,6 +16,7 @@
 #include "bfs.h"
 #include "dfs.h"
 #include "io.h"
+#include "graph_dyn.h"
 #include "plane.h"
 #include "p3color.h"
 #include "p3choose.h"
@@ -33,6 +34,7 @@ int main(void) {
     test_bfs(test_arena);
     test_dfs(test_arena);
     test_io(test_arena);
+    test_graph_dyn(test_arena);
     test_plane(test_arena);
     test_p3color(test_arena);
     test_p3choose(test_arena);

@@ -191,19 +191,21 @@
     }
 
     typedef struct {
-        uint32_t vertex;
-        uint32_t back_nb;
-        uint32_t next;
-        uint32_t prev;
+        Idx vertex;
+        Idx back_nb;
+        Idx next;
+        Idx prev;
     } GraphDynNb;
 
     typedef PoolEntry(GraphDynNb) GraphDynNbEntry;
     typedef PoolExplicit(GraphDynNbEntry) GraphDynNbPool;
 
     typedef struct {
-        uint32_t nb;
+        Idx nb;
         uint32_t deg;
     } GraphDynAdj;
+
+    typedef Slice(Idx) GraphDynSubset;
 
     typedef PoolEntry(GraphDynAdj) GraphDynAdjEntry;
     typedef PoolExplicit(GraphDynAdjEntry) GraphDynAdjPool;
@@ -212,6 +214,11 @@
         GraphDynNbPool nb;
         GraphDynAdjPool adj;
     } GraphDyn;
+
+    typedef struct {
+        Idx nb1;
+        Idx nb2;
+    } GraphDynEdge;
 
     static inline GraphDyn graph_dyn_init(
         uint32_t max_vertices,
@@ -235,120 +242,243 @@
         return graph;
     }
 
-    static inline uint32_t graph_dyn_nb(GraphDyn graph, uint32_t v) {
+    static inline uint32_t graph_dyn_deg(GraphDyn graph, Idx v) {
+        return pool_get(graph.adj, v).deg;
+    }
+
+    static inline Idx graph_dyn_nb(GraphDyn graph, Idx v) {
         return pool_get(graph.adj, v).nb;
     }
 
-    static inline uint32_t graph_dyn_nb_next(GraphDyn graph, uint32_t nb) {
-        assert(nb != 0);
+    static inline Idx graph_dyn_nb_next(GraphDyn graph, Idx nb) {
         return pool_get(graph.nb, nb).next;
     }
 
-    static inline uint32_t graph_dyn_nb_prev(GraphDyn graph, uint32_t nb) {
-        assert(nb != 0);
-        return pool_get(graph.nb, nb - 1).prev;
+    static inline Idx graph_dyn_nb_prev(GraphDyn graph, Idx nb) {
+        return pool_get(graph.nb, nb).prev;
     }
 
-    static inline uint32_t graph_dyn_nb_vertex(GraphDyn graph, uint32_t nb) {
-        assert(nb != 0);
-        return pool_get(graph.nb, nb - 1).vertex;
+    static inline Idx graph_dyn_nb_back(GraphDyn graph, Idx nb) {
+        return pool_get(graph.nb, nb).back_nb;
     }
 
-    static inline uint32_t graph_dyn_nb_back_nb(GraphDyn graph, uint32_t nb) {
-        assert(nb != 0);
-        return pool_get(graph.nb, nb - 1).back_nb;
+    static inline Idx graph_dyn_nb_vertex(GraphDyn graph, Idx nb) {
+        return pool_get(graph.nb, nb).vertex;
     }
 
-    static inline void graph_dyn_insert_edge(
+    static inline Idx graph_dyn_nb_last(GraphDyn graph, Idx v) {
+        Idx nb = graph_dyn_nb(graph, v);
+        if (idx_valid(nb)) {
+            return graph_dyn_nb_prev(graph, nb);
+        }
+        return nb;
+    }
+
+    static inline Idx graph_dyn_insert_half_edge(
         GraphDyn *graph,
-        uint32_t v1,
-        uint32_t nb1,
-        uint32_t v2,
-        uint32_t nb2
+        Idx v1,
+        Idx nb1,
+        Idx v2
     ) {
-        uint32_t next_nb1 = (uint32_t)pool_create(graph->nb);
-        uint32_t next_nb2 = (uint32_t)pool_create(graph->nb);
+        Idx next_nb1 = pool_create(graph->nb);
         if (pool_get(graph->adj, v1).deg == 0) {
-            assert(nb1 == 0);
+            assert(!idx_valid(nb1));
             pool_get(graph->nb, next_nb1) = (GraphDynNb){
                 .vertex = v2,
                 .next = next_nb1,
                 .prev = next_nb1,
-                .back_nb = next_nb2,
             };
-            pool_get(graph->adj, v1).nb = next_nb1 + 1;
+            pool_get(graph->adj, v1).nb = next_nb1;
         } else {
-            assert(nb1 != 0);
-            nb1 -= 1;
+            if (!idx_valid(nb1)) {
+                nb1 = graph_dyn_nb_last(*graph, v1);
+            }
             pool_get(graph->nb, next_nb1) = (GraphDynNb){
                 .vertex = v2,
                 .next = pool_get(graph->nb, nb1).next,
-                .prev = nb1 + 1,
-                .back_nb = next_nb2 + 1,
+                .prev = nb1,
             };
-            pool_get(graph->nb, pool_get(graph->nb, nb1).next).prev = next_nb1 +
-                1;
-            pool_get(graph->nb, nb1).next = next_nb1 + 1;
-        }
-        if (pool_get(graph->adj, v2).deg == 0) {
-            assert(nb2 == 0);
-            pool_get(graph->nb, next_nb2) = (GraphDynNb){
-                .vertex = v1,
-                .next = next_nb2 + 1,
-                .prev = next_nb2 + 1,
-                .back_nb = next_nb1 + 1,
-            };
-            pool_get(graph->adj, v2).nb = next_nb2 + 1;
-        } else {
-            assert(nb2 != 0);
-            nb2 -= 1;
-            pool_get(graph->nb, next_nb2) = (GraphDynNb){
-                .vertex = v1,
-                .next = pool_get(graph->nb, nb2).next,
-                .prev = nb2 + 1,
-                .back_nb = next_nb1 + 1,
-            };
-            pool_get(graph->nb, pool_get(graph->nb, nb2).next).prev = next_nb2 +
-                1;
-            pool_get(graph->nb, nb2).next = next_nb2 + 1;
+            pool_get(graph->nb, pool_get(graph->nb, nb1).next).prev = next_nb1;
+            pool_get(graph->nb, nb1).next = next_nb1;
         }
         pool_get(graph->adj, v1).deg += 1;
-        pool_get(graph->adj, v2).deg += 1;
+        return next_nb1;
     }
 
-    static inline uint32_t graph_dyn_delete_edge(GraphDyn *graph, uint32_t nb1) {
-        assert(nb1 != 0);
-        GraphDynNb nb1_entry = pool_get(graph->nb, nb1 - 1);
-        uint32_t v2 = nb1_entry.vertex;
-        uint32_t nb2 = nb1_entry.back_nb;
-        GraphDynNb nb2_entry = pool_get(graph->nb, nb2 - 1);
-        uint32_t v1 = nb2_entry.vertex;
-        if (pool_get(graph->adj, v1).deg == 1) {
-            pool_delete(graph->nb, nb1 - 1);
-            pool_get(graph->adj, v1).nb = 0;
-        } else {
-            pool_get(graph->nb, nb1_entry.next - 1).prev = nb1_entry.prev;
-            pool_get(graph->nb, nb1_entry.prev - 1).next = nb1_entry.next;
-            pool_get(graph->nb, nb2_entry.next - 1).prev = nb2_entry.prev;
-            pool_get(graph->nb, nb2_entry.prev - 1).next = nb2_entry.next;
-            pool_delete(graph->nb, nb1 - 1);
-            pool_delete(graph->nb, nb2 - 1);
+    static inline GraphDynEdge graph_dyn_insert_edge(
+        GraphDyn *graph,
+        Idx v1,
+        Idx nb1,
+        Idx v2,
+        Idx nb2
+    ) {
+        if (!idx_valid(v1)) {
+            v1 = graph_dyn_nb_vertex(*graph, nb2);
         }
+        if (!idx_valid(v2)) {
+            v2 = graph_dyn_nb_vertex(*graph, nb1);
+        }
+        Idx next_nb1 = graph_dyn_insert_half_edge(graph, v1, nb1, v2);
+        Idx next_nb2 = graph_dyn_insert_half_edge(graph, v2, nb2, v1);
+        pool_get(graph->nb, next_nb1).back_nb = next_nb2;
+        pool_get(graph->nb, next_nb2).back_nb = next_nb1;
+        return (GraphDynEdge){ .nb1 = next_nb1, .nb2 = next_nb2 };
+    }
+
+    static inline Idx graph_dyn_delete_half_edge(
+        GraphDyn *graph,
+        Idx v1,
+        Idx nb1
+    ) {
+        GraphDynNb nb1_entry = pool_get(graph->nb, nb1);
+        Idx back_nb = graph_dyn_nb_back(*graph, nb1);
+
+        pool_get(graph->nb, nb1_entry.next).prev = nb1_entry.prev;
+        pool_get(graph->nb, nb1_entry.prev).next = nb1_entry.next;
+        pool_delete(graph->nb, nb1);
         pool_get(graph->adj, v1).deg -= 1;
-        pool_get(graph->adj, v2).deg -= 1;
-        if (pool_get(graph->adj, v1).deg > 0) {
-            return nb1_entry.next;
+        if (pool_get(graph->adj, v1).deg == 0) {
+            pool_get(graph->adj, v1).nb = (Idx){ 0 };
+        } else if (idx_unwrap(pool_get(graph->adj, v1).nb) == idx_unwrap(nb1)) {
+            pool_get(graph->adj, v1).nb = nb1_entry.next;
         }
-        return 0;
+
+        if (idx_valid(back_nb)) {
+            pool_get(graph->nb, back_nb).back_nb = (Idx){ 0 };
+        }
+
+        if (pool_get(graph->adj, v1).deg != 0) {
+            return nb1_entry.prev;
+        }
+        return (Idx){ 0 };
     }
 
-    static inline void graph_dyn_delete_vertex(GraphDyn *graph, uint32_t v) {
-        uint32_t nb = graph_dyn_nb(*graph, v);
-        while (nb != 0) {
-            nb = graph_dyn_delete_edge(graph, nb);
+    static inline GraphDynEdge graph_dyn_delete_edge(GraphDyn *graph, Idx nb) {
+        Idx nb2 = graph_dyn_nb_back(*graph, nb);
+        Idx v1 = graph_dyn_nb_vertex(*graph, nb2);
+        Idx v2 = graph_dyn_nb_vertex(*graph, nb);
+        Idx prev_nb1 = graph_dyn_delete_half_edge(graph, v1, nb);
+        Idx prev_nb2 = graph_dyn_delete_half_edge(graph, v2, nb2);
+        return (GraphDynEdge){ .nb1 = prev_nb1, .nb2 = prev_nb2 };
+    }
+
+    static inline Idx graph_dyn_insert_vertex(GraphDyn *graph) {
+        Idx v = pool_create(graph->adj);
+        pool_get(graph->adj, v) = (GraphDynAdj){ 0 };
+        return v;
+    }
+
+    static inline void graph_dyn_delete_vertex(GraphDyn *graph, Idx v) {
+        Idx nb = graph_dyn_nb(*graph, v);
+        while (idx_valid(nb)) {
+            nb = graph_dyn_delete_edge(graph, nb).nb1;
         }
         pool_delete(graph->adj, v);
     }
+
+    static inline Graph graph_from_dyn_init(
+        uint32_t size,
+        uint32_t edges,
+        AvenArena *arena
+    ) {
+        return (Graph){
+            .adj = aven_arena_create_slice(GraphAdj, arena, size),
+            .nb = aven_arena_create_slice(uint32_t, arena, 2 * edges),
+        };
+    }
+
+    static inline void graph_from_dyn(
+        Graph graph,
+        GraphDyn dgraph,
+        AvenArena temp_arena
+    ) {
+        Slice(Idx) indices = aven_arena_create_slice(
+            Idx,
+            &temp_arena,
+            dgraph.adj.len
+        );
+        for (size_t i = 0; i < indices.len; i += 1) {
+            get(indices, i) = idx_wrap(1);
+        }
+
+        {
+            Idx free_idx = pool_next_free(dgraph.adj, (Idx){ 0 });
+            while (idx_valid(free_idx)) {
+                get(indices, idx_unwrap(free_idx)) = (Idx){ 0 };
+                free_idx = pool_next_free(dgraph.adj, free_idx);
+            }
+        }
+
+        {
+            uint32_t v = 0;
+            for (uint32_t i = 0; i < indices.len; i += 1) {
+                if (idx_valid(get(indices, i))) {
+                    get(indices, i) = idx_wrap(v);
+                    v += 1;
+                }
+            }
+        }
+
+        uint32_t end_nb = 0;
+        for (uint32_t i = 0; i < indices.len; i += 1) {
+            Idx v_idx = get(indices, i);
+            if (!idx_valid(v_idx)) {
+                continue;
+            }
+
+            uint32_t v = idx_unwrap(v_idx);
+            GraphDynAdj dadj = pool_get(dgraph.adj, idx_wrap(i));
+            get(graph.adj, v) = (GraphAdj){ .len = dadj.deg, .index = end_nb };
+
+            Idx nb = dadj.nb;
+            for (uint32_t j = 0; j < dadj.deg; j += 1) {
+                get(graph.nb, end_nb + j) = idx_unwrap(
+                    get(indices, idx_unwrap(graph_dyn_nb_vertex(dgraph, nb)))
+                );
+                nb = graph_dyn_nb_next(dgraph, nb);
+            }
+            end_nb += dadj.deg;
+        }
+    }
+
+    static inline GraphDynSubset graph_from_dyn_labels(
+        GraphDyn dgraph,
+        AvenArena *arena
+    ) {
+        GraphDynSubset labels = aven_arena_create_slice(
+            Idx,
+            arena,
+            dgraph.adj.used
+        );
+
+        AvenArena temp_arena = *arena;
+        Slice(Idx) indices = aven_arena_create_slice(
+            Idx,
+            &temp_arena,
+            dgraph.adj.len
+        );
+        for (size_t i = 0; i < indices.len; i += 1) {
+            get(indices, i) = idx_wrap(1);
+        }
+
+        Idx free_idx = pool_next_free(dgraph.adj, (Idx){ 0 });
+        while (idx_valid(free_idx)) {
+            get(indices, idx_unwrap(free_idx)) = (Idx){ 0 };
+            free_idx = pool_next_free(dgraph.adj, free_idx);
+        }
+
+        uint32_t v = 0;
+        for (uint32_t i = 0; i < indices.len; i += 1) {
+            if (idx_valid(get(indices, i))) {
+                get(labels, v) = idx_wrap(i);
+                v += 1;
+            }
+        }
+        assert(v == labels.len);
+
+        return labels;
+    }
+
     // static inline Graph graph_dyn_as_graph(GraphDyn graph, AvenArena *arena) {
     //     Graph fixed_graph = {
     //         .adj = aven_arena_create_slice(
