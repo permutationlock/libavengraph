@@ -60,7 +60,7 @@
         float area;
         do {
             temp_arena = *arena;
-            graph = graph_gen_pyramid(k, &temp_arena);
+            graph = graph_gen_pyramid(k, &temp_arena).graph;
             embedding = (GraphPlaneEmbedding)aven_arena_create_slice(
                 Vec2,
                 &temp_arena,

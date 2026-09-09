@@ -116,14 +116,6 @@ int main(void) {
     aven_thread_pool_run(&thread_pool);
 #endif
 
-    uint32_t p_data[] = { 1, 2 };
-    uint32_t q_data[] = { 0 };
-    GraphSubset p = slice_array(p_data);
-    GraphSubset q = slice_array(q_data);
-
-    uint32_t face_data[3] = { 0, 1, 2 };
-    GraphSubset face = slice_array(face_data);
-
     Aff2 ident;
     aff2_identity(ident);
 
@@ -136,6 +128,7 @@ int main(void) {
 
             typedef struct {
                 Graph graph;
+                GraphSubset outer_face;
                 GraphAug aug_graph;
                 GraphPlaneP3ChooseListProp color_lists;
                 GraphPropUint8 coloring;
@@ -158,14 +151,18 @@ int main(void) {
                 BENCHMARK_COMPILER_BARRIER;
 
                 for (uint32_t i = 0; i < cases.len; i += 1) {
-                    Graph graph = graph_gen_triangulation(
+                    GraphGenTriangulation tri = graph_gen_triangulation(
                         n,
                         rng,
-                        (Vec2){ 0.0833f, 0.1666f },
                         &loop_arena
                     );
-                    get(cases, i).graph = graph;
-                    if (graph.adj.len != n) {
+                    {
+                        AvenArena temp_arena = loop_arena;
+                        graph_gen_triangulation_shuffle(tri, rng, &temp_arena);
+                    }
+                    get(cases, i).graph = tri.graph;
+                    get(cases, i).outer_face = tri.outer_face;
+                    if (tri.graph.adj.len != n) {
                         aven_panic("graph generation failed");
                     }
                 }
@@ -421,6 +418,8 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
                         get(cases, i).coloring = graph_plane_p3color_bfs(
                             get(cases, i).graph,
                             p,
@@ -479,6 +478,8 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
                         get(cases, i).coloring = graph_plane_p3color(
                             get(cases, i).graph,
                             p,
@@ -538,6 +539,8 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
                         get(cases, i).coloring = graph_plane_p3color_thread(
                             get(cases, i).graph,
                             p,
@@ -604,7 +607,7 @@ int main(void) {
                         get(cases, i).coloring = graph_plane_p3choose(
                             get(cases, i).aug_graph,
                             get(cases, i).color_lists,
-                            face,
+                            get(cases, i).outer_face,
                             &temp_arena
                         );
                     }
@@ -693,7 +696,7 @@ int main(void) {
                         get(cases, i).coloring = graph_plane_p3choose_thread(
                             get(cases, i).aug_graph,
                             get(cases, i).color_lists,
-                            face,
+                            get(cases, i).outer_face,
                             &thread_pool,
                             nthreads,
                             &temp_arena

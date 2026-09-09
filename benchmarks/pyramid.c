@@ -85,16 +85,6 @@ int main(void) {
         }
     }
 
-    uint32_t p_data[] = { 0 };
-    uint32_t q_data[] = { 2, 1 };
-    GraphSubset p = slice_array(p_data);
-    GraphSubset q = slice_array(q_data);
-
-    uint32_t p_data_flipped[] = { 1, 2 };
-    uint32_t q_data_flipped[] = { 0 };
-    GraphSubset p_flipped = slice_array(p_data_flipped);
-    GraphSubset q_flipped = slice_array(q_data_flipped);
-
     Aff2 ident;
     aff2_identity(ident);
 
@@ -110,6 +100,7 @@ int main(void) {
 
             typedef struct {
                 Graph graph;
+                GraphSubset outer_face;
                 GraphPropUint8 coloring;
                 GraphBfsTree tree;
                 uint32_t root;
@@ -127,15 +118,14 @@ int main(void) {
             );
 
             for (uint32_t i = 0; i < cases.len; i += 1) {
-                Graph graph = graph_gen_pyramid(ka, &loop_arena);
-                get(cases, i).graph = graph;
-                if (graph.adj.len != n) {
+                GraphGenTriangulation tri = graph_gen_pyramid(ka, &loop_arena);
+                get(cases, i).graph = tri.graph;
+                get(cases, i).outer_face = tri.outer_face;
+                if (tri.graph.adj.len != n) {
                     aven_panic("graph generation failed");
                 }
 
-                for (uint32_t j = 0; j < graph.adj.len; j += 1) {
-                    get(cases, i).root = 3;
-                }
+                get(cases, i).root = 3;
             }
             {
                 AvenArena temp_arena = loop_arena;
@@ -226,6 +216,8 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < ncases; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
                         get(cases, i).coloring = graph_plane_p3color_bfs(
                             get(cases, i).graph,
                             p,
@@ -284,6 +276,8 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
                         get(cases, i).coloring = graph_plane_p3color(
                             get(cases, i).graph,
                             p,
@@ -344,6 +338,12 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < ncases; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
+                        uint32_t p_flipped_arr[] = { get(q, 0) };
+                        uint32_t q_flipped_arr[] = { get(p, 1), get(p, 0) };
+                        GraphSubset p_flipped = slice_array(p_flipped_arr);
+                        GraphSubset q_flipped = slice_array(q_flipped_arr);
                         get(cases, i).coloring = graph_plane_p3color_bfs(
                             get(cases, i).graph,
                             p_flipped,
@@ -403,6 +403,12 @@ int main(void) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < cases.len; i += 1) {
+                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
+                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
+                        uint32_t p_flipped_arr[] = { get(q, 0) };
+                        uint32_t q_flipped_arr[] = { get(p, 1), get(p, 0) };
+                        GraphSubset p_flipped = slice_array(p_flipped_arr);
+                        GraphSubset q_flipped = slice_array(q_flipped_arr);
                         get(cases, i).coloring = graph_plane_p3color(
                             get(cases, i).graph,
                             p_flipped,

@@ -5,7 +5,11 @@
     #include <aven/arena.h>
     #include <aven/math.h>
     #include <aven/rng.h>
+
+    #include <limits.h>
+
     #include "../graph.h"
+    #include "bitstring.h"
 
     static inline Graph graph_gen_path(uint32_t size, AvenArena *arena) {
         assert(size > 0);
@@ -139,13 +143,25 @@
         return k * y - ((y * (y - 1)) / 2) + x + 3;
     }
 
-    static inline Graph graph_gen_pyramid(uint32_t k, AvenArena *arena) {
+    typedef struct {
+        Graph graph;
+        GraphSubset outer_face;
+    } GraphGenTriangulation;
+
+    static inline GraphGenTriangulation graph_gen_pyramid(
+        uint32_t k,
+        AvenArena *arena
+    ) {
         assert(k > 0);
 
         size_t size = ((k * (k + 1)) / 2) + 3;
         Graph graph = { .nb = { .len = 6 * size - 12 }, .adj = { .len = size } };
         graph.nb.ptr = aven_arena_create_array(uint32_t, arena, graph.nb.len);
         graph.adj.ptr = aven_arena_create_array(GraphAdj, arena, graph.adj.len);
+        GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 3);
+        get(outer_face, 0) = 0;
+        get(outer_face, 1) = 1;
+        get(outer_face, 2) = 2;
 
         uint32_t nb_index = 0;
         {
@@ -271,7 +287,10 @@
             }
         }
 
-        return graph;
+        return (GraphGenTriangulation){
+            .graph = graph,
+            .outer_face = outer_face,
+        };
     }
 
     typedef struct {
@@ -279,7 +298,7 @@
         uint32_t neighbors[3];
     } GraphGenTriangle;
 
-    static inline Graph graph_gen_triangulation(
+    static inline GraphGenTriangulation graph_gen_triangulation_old(
         uint32_t size,
         AvenRng rng,
         Vec2 flip_prob,
@@ -291,6 +310,8 @@
 
         graph.nb.ptr = aven_arena_create_array(uint32_t, arena, graph.nb.len);
         graph.adj.ptr = aven_arena_create_array(GraphAdj, arena, graph.adj.len);
+
+        GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 3);
 
         for (uint32_t v = 0; v < graph.adj.len; v += 1) {
             get(graph.adj, v) = (GraphAdj){ 0 };
@@ -511,7 +532,14 @@
 
         assert((size_t)nb_index == graph.nb.len);
 
-        return graph;
+        for (uint32_t v = 0; v < 3; v += 1) {
+            get(outer_face, v) = v;
+        }
+
+        return (GraphGenTriangulation){
+            .graph = graph,
+            .outer_face = outer_face,
+        };
     }
 
     typedef struct {
@@ -522,9 +550,9 @@
         uint32_t root_idx;
         Idx root;
         Idx root_leaf;
-    } AvenGraphGenTriangulation2PartialCtx;
+    } AvenGraphGenTriangulationPartialCtx;
 
-    static AvenGraphGenTriangulation2PartialCtx graph_gen_triangulation2_init(
+    static AvenGraphGenTriangulationPartialCtx graph_gen_triangulation_init(
         uint32_t size,
         AvenRng rng,
         AvenArena *arena
@@ -550,153 +578,70 @@
         }
 
         // generate random word of length 4n-2 of weight n-1
-        uint32_t bit_len = 4U * n - 2U;
-        uint32_t bit_final_len = (size_t)(bit_len % 32);
-        uint32_t u32_len = (bit_len >> 5) + 1;
-        Slice(uint32_t) word = aven_arena_create_slice(
-            uint32_t,
-            &temp_arena,
-            u32_len
+        GraphBitstring bstring = graph_bitstring_random(
+            n * 4 - 2,
+            n - 1,
+            rng,
+            &temp_arena
         );
 
-        size_t set_bit_len = (n - 1) % 32;
-        size_t set_u32_len = ((n - 1) >> 5);
-        for (size_t i = 0; i < set_u32_len; i += 1) {
-            get(word, i) = 0xffffffff;
-        }
-        get(word, set_u32_len) = (((uint32_t)0xffffffff) >> (32 - set_bit_len));
-        for (size_t i = set_u32_len + 1; i < u32_len; i += 1) {
-            get(word, i) = 0;
-        }
-
-        for (uint32_t tpos = 0; tpos < bit_len - 1; tpos += 1) {
-            uint32_t tpos_i = tpos >> 5;
-            uint32_t tpos_j = tpos % 32;
-
-            uint32_t rnd_offset = aven_rng_rand_bounded(
-                rng,
-                (bit_len - 1) - tpos
-            );
-            uint32_t spos = tpos + rnd_offset;
-            uint32_t spos_i = spos >> 5;
-            uint32_t spos_j = spos % 32;
-
-            uint32_t ttmp = get(word, tpos_i);
-            uint32_t stmp = get(word, spos_i);
-            uint32_t tmask = ((uint32_t)1 << tpos_j);
-            uint32_t smask = ((uint32_t)1 << spos_j);
-            get(word, tpos_i) &= ~tmask;
-            get(word, tpos_i) |= (uint32_t)((stmp & smask) > 0) << tpos_j;
-            get(word, spos_i) &= ~smask;
-            get(word, spos_i) |= (uint32_t)((ttmp & tmask) > 0) << spos_j;
-        }
-
         // find min pos on bit step graph: 1 -> +3, 0 -> -1
-        size_t min_i = 0;
-        size_t min_j = 0;
+        size_t min_pos = 0;
         int64_t min_sum = 0;
         int64_t sum = 0;
-        for (size_t i = 0; i < u32_len; i += 1) {
-            for (size_t j = 0; j < 32; j += 1) {
-                if (i == u32_len - 1 && j == bit_final_len) {
-                    break;
+        for (size_t pos = 0; pos < bstring.nbits; pos += 1) {
+            if (graph_bitstring_get_bit(bstring, pos)) {
+                if (sum < min_sum) {
+                    min_pos = pos;
+                    min_sum = sum;
                 }
-                uint32_t pos = get(word, i) & (((uint32_t)1) << j);
-                if (pos) {
-                    if (sum < min_sum) {
-                        min_i = i;
-                        min_j = j;
-                        min_sum = sum;
-                    }
-                    sum += 3;
-                } else {
-                    sum -= 1;
-                }
+                sum += 3;
+            } else {
+                sum -= 1;
             }
         }
 
         // rotate string to start at min
-
-        // rotate 32bit words
-        for (size_t i = 0; i < u32_len; i += 1) {
-            uint32_t tmp = get(word, i);
-            get(word, i) = get(word, u32_len - i - 1);
-            get(word, u32_len - i - 1) = tmp;
-        }
-        for (size_t i = 0; i < min_i; i += 1) {
-            uint32_t tmp = get(word, i);
-            get(word, i) = get(word, u32_len - i - 1);
-            get(word, u32_len - i - 1) = tmp;
-        }
-        for (size_t i = min_i; i < u32_len; i += 1) {
-            uint32_t tmp = get(word, i);
-            get(word, i) = get(word, u32_len - i - 1);
-            get(word, u32_len - i - 1) = tmp;
-        }
-
-        // rotate bits within 32bit words
-        uint32_t low_mask = (uint32_t)0xffffffff >> (32 - min_j);
-        uint32_t high_mask = (uint32_t)0xffffffff << min_j;
-        uint32_t old_start = get(word, 0);
-        for (uint32_t i = 0; i < u32_len; i += 1) {
-            uint32_t cur = get(word, i);
-            uint32_t nex_i = (i < u32_len - 1) ? i + 1 : 0;
-            uint32_t nex = (i < u32_len - 1) ? get(word, i + 1) : old_start;
-            uint32_t low = (cur & high_mask) >> min_j;
-            uint32_t top_nex_bit = (nex_i == u32_len - 1) ? bit_final_len : 32;
-            uint32_t high = (nex & low_mask) << (top_nex_bit - min_j);
-            get(word, i) = low | high;
-        }
+        graph_bitstring_rotate_left(bstring, min_pos);
 
         // construct tree from bit string
         uint32_t v = 0;
         uint32_t next_v = 3;
-        for (uint32_t i = 0; i < u32_len; i += 1) {
-            for (uint32_t j = 0; j < 32; j += 1) {
-                if (i == u32_len - 1 && j == bit_final_len) {
-                    break;
-                }
-                Idx dv = idx_wrap(v);
-                uint32_t pos = get(word, i) & (((uint32_t)1) << j);
-                if (pos == 0) {
-                    if (get(leaf_count, v) < 2) {
-                        graph_dyn_insert_half_edge(
-                            &dgraph,
-                            dv,
-                            graph_dyn_nb_last(dgraph, dv),
-                            (Idx){ 0 }
-                        );
-                        get(leaf_count, v) += 1;
-                    } else {
-                        dv = graph_dyn_nb_vertex(
-                            dgraph,
-                            graph_dyn_nb(dgraph, dv)
-                        );
-                        v = idx_unwrap(dv);
-                    }
-                } else {
-                    graph_dyn_insert_edge(
-                        &dgraph,
-                        dv,
-                        graph_dyn_nb_last(dgraph, dv),
-                        idx_wrap(next_v),
-                        (Idx){ 0 }
-                    );
-                    v = next_v;
-                    next_v += 1;
-                }
+        for (uint32_t pos = 0; pos < bstring.nbits; pos += 1) {
+            Idx dv = idx_wrap(v);
+            if (graph_bitstring_get_bit(bstring, pos)) {
+                graph_dyn_insert_edge(
+                    &dgraph,
+                    dv,
+                    graph_dyn_nb_last(dgraph, dv),
+                    idx_wrap(next_v),
+                    (Idx){ 0 }
+                );
+                v = next_v;
+                next_v += 1;
+            } else if (get(leaf_count, v) < 2) {
+                graph_dyn_insert_half_edge(
+                    &dgraph,
+                    dv,
+                    graph_dyn_nb_last(dgraph, dv),
+                    (Idx){ 0 }
+                );
+                get(leaf_count, v) += 1;
+            } else {
+                dv = graph_dyn_nb_vertex(dgraph, graph_dyn_nb(dgraph, dv));
+                v = idx_unwrap(dv);
             }
         }
 
-        return (AvenGraphGenTriangulation2PartialCtx){
+        return (AvenGraphGenTriangulationPartialCtx){
             .dgraph = dgraph,
             .v = idx_wrap(0),
             .nb = graph_dyn_nb(dgraph, idx_wrap(0)),
         };
     }
 
-    static bool graph_gen_triangulation2_partial_step(
-        AvenGraphGenTriangulation2PartialCtx *ctx
+    static bool graph_gen_triangulation_partial_step(
+        AvenGraphGenTriangulationPartialCtx *ctx
     ) {
         Idx v1 = ctx->v;
         Idx nb1 = ctx->nb;
@@ -804,10 +749,10 @@
         Idx vnb;
         Idx u;
         Idx unb;
-    } AvenGraphGenTriangulation2FullCtx;
+    } AvenGraphGenTriangulationFullCtx;
 
-    static AvenGraphGenTriangulation2FullCtx graph_gen_triangulation2_full_init(
-        AvenGraphGenTriangulation2PartialCtx *ctx
+    static AvenGraphGenTriangulationFullCtx graph_gen_triangulation_full_init(
+        AvenGraphGenTriangulationPartialCtx *ctx
     ) {
         assert(idx_unwrap(ctx->nb) == idx_unwrap(ctx->last_closure));
         assert(idx_valid(ctx->root));
@@ -832,7 +777,7 @@
         // vertex v2 and walk from l1' to l2, replacing leaves with
         // edges to v2. finally we'll add the final edge v1 to v2
         // to complete the outer triangle.
-        return (AvenGraphGenTriangulation2FullCtx){
+        return (AvenGraphGenTriangulationFullCtx){
             .dgraph = ctx->dgraph,
             .v = ctx->root,
             .vnb = ctx->root_leaf,
@@ -840,8 +785,8 @@
         };
     }
 
-    static bool graph_gen_triangulation2_full_step(
-        AvenGraphGenTriangulation2FullCtx *ctx
+    static bool graph_gen_triangulation_full_step(
+        AvenGraphGenTriangulationFullCtx *ctx
     ) {
         assert(!idx_valid(graph_dyn_nb_vertex(ctx->dgraph, ctx->vnb)));
         ctx->vnb = graph_dyn_delete_half_edge(&ctx->dgraph, ctx->v, ctx->vnb);
@@ -888,22 +833,96 @@
         return false;
     }
 
-    static inline Graph graph_gen_triangulation2(
+    static inline GraphGenTriangulation graph_gen_triangulation(
         uint32_t size,
         AvenRng rng,
         AvenArena *arena
     ) {
         Graph graph = graph_from_dyn_init(size, 3 * size - 6, arena);
+        GraphSubset outer_face = aven_arena_create_slice(uint32_t, arena, 3);
         AvenArena temp_arena = *arena;
-        AvenGraphGenTriangulation2PartialCtx part_ctx =
-            graph_gen_triangulation2_init(size, rng, &temp_arena);
-        while (!graph_gen_triangulation2_partial_step(&part_ctx)) {}
-        AvenGraphGenTriangulation2FullCtx full_ctx =
-            graph_gen_triangulation2_full_init(&part_ctx);
-        while (!graph_gen_triangulation2_full_step(&full_ctx)) {}
+        AvenGraphGenTriangulationPartialCtx part_ctx =
+            graph_gen_triangulation_init(size, rng, &temp_arena);
+        while (!graph_gen_triangulation_partial_step(&part_ctx)) {}
+        AvenGraphGenTriangulationFullCtx full_ctx =
+            graph_gen_triangulation_full_init(&part_ctx);
+        while (!graph_gen_triangulation_full_step(&full_ctx)) {}
         graph_from_dyn(graph, full_ctx.dgraph, temp_arena);
-        return graph;
+
+        get(outer_face, 0) = idx_unwrap(full_ctx.root);
+        get(outer_face, 1) = 2;
+        get(outer_face, 2) = 1;
+
+        return (GraphGenTriangulation){
+            .graph = graph,
+            .outer_face = outer_face,
+        };
     }
 
+    static inline GraphPropUint32 graph_gen_shuffle(
+        Graph graph,
+        AvenRng rng,
+        AvenArena *arena
+    ) {
+        GraphPropUint32 labels = aven_arena_create_slice(
+            uint32_t,
+            arena,
+            graph.adj.len
+        );
+
+        for (uint32_t v = 0; v < labels.len; v += 1) {
+            get(labels, v) = v;
+        }
+
+        AvenArena temp_arena = *arena;
+        GraphNbSlice old_nb = aven_arena_create_slice(
+            uint32_t,
+            &temp_arena,
+            graph.nb.len
+        );
+        slice_copy(old_nb, graph.nb);
+
+        for (uint32_t i = (uint32_t)labels.len - 1; i > 0; i -= 1) {
+            uint32_t j = aven_rng_rand_bounded(rng, i);
+            uint32_t l1 = get(labels, i);
+            uint32_t l2 = get(labels, j);
+            get(labels, i) = l2;
+            get(labels, j) = l1;
+            GraphAdj adj1 = get(graph.adj, l1);
+            GraphAdj adj2 = get(graph.adj, l2);
+            get(graph.adj, l1) = adj2;
+            get(graph.adj, l2) = adj1;
+        }
+        uint32_t last_nb = 0;
+        for (uint32_t v = 0; v < graph.adj.len; v += 1) {
+            uint32_t new_index = last_nb;
+            GraphAdj adj = get(graph.adj, v);
+            for (uint32_t i = 0; i < adj.len; i += 1) {
+                uint32_t old_label = get(old_nb, adj.index + i);
+                get(graph.nb, last_nb) = get(labels, old_label);
+                last_nb += 1;
+            }
+            get(graph.adj, v).index = new_index;
+        }
+        // for (uint32_t i = 0; i < graph.nb.len; i += 1) {
+        //     uint32_t old_label = get(graph.nb, i);
+        //     get(graph.nb, i) = get(labels, old_label);
+        // }
+
+        return labels;
+    }
+
+    static inline GraphPropUint32 graph_gen_triangulation_shuffle(
+        GraphGenTriangulation tri,
+        AvenRng rng,
+        AvenArena *arena
+    ) {
+        GraphPropUint32 labels = graph_gen_shuffle(tri.graph, rng, arena);
+        for (uint32_t i = 0; i < tri.outer_face.len; i += 1) {
+            uint32_t old_label = get(tri.outer_face, i);
+            get(tri.outer_face, i) = get(labels, old_label);
+        }
+        return labels;
+    }
 #endif // GRAPH_GEN_H
 

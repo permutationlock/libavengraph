@@ -13,7 +13,6 @@
 
     typedef struct {
         uint32_t size;
-        GraphSubset outer_face;
         GraphPlaneP3ChooseListProp list_assignment;
         TestGenGraphType type;
     } TestP3ChooseArgs;
@@ -26,15 +25,19 @@
         (void)emsg_arena;
         TestP3ChooseArgs *args = opaque_args;
 
-        Graph graph = test_gen_graph(args->size, args->type, &arena);
-        GraphAug aug_graph = graph_aug(graph, &arena);
+        GraphGenTriangulation tri = test_gen_triangulation(
+            args->size,
+            args->type,
+            &arena
+        );
+        GraphAug aug_graph = graph_aug(tri.graph, &arena);
 
-        assert(graph.adj.len == args->list_assignment.len);
+        assert(aug_graph.adj.len == args->list_assignment.len);
 
         GraphPropUint8 coloring = graph_plane_p3choose(
             aug_graph,
             args->list_assignment,
-            args->outer_face,
+            tri.outer_face,
             &arena
         );
 
@@ -50,7 +53,7 @@
             };
         }
 
-        if (!graph_path_color_verify(graph, coloring, arena)) {
+        if (!graph_path_color_verify(tri.graph, coloring, arena)) {
             return (AvenTestResult){
                 .error = 1,
                 .message = aven_str("invalid path coloring"),
@@ -67,7 +70,6 @@
                 .args = &(TestP3ChooseArgs){
                     .size = 3,
                     .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
-                    .outer_face = slice_array((uint32_t[]){ 0, 1, 2 }),
                     .list_assignment = slice_array(
                         (GraphPlaneP3ChooseList[]){
                             { .len = 2, .ptr = { 1, 2 } },
@@ -83,7 +85,6 @@
                 .args = &(TestP3ChooseArgs){
                     .size = 4,
                     .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
-                    .outer_face = slice_array((uint32_t[]){ 0, 1, 3 }),
                     .list_assignment = slice_array(
                         (GraphPlaneP3ChooseList[]){
                             { .len = 2, .ptr = { 1, 2 } },
@@ -100,7 +101,6 @@
                 .args = &(TestP3ChooseArgs){
                     .size = 5,
                     .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
-                    .outer_face = slice_array((uint32_t[]){ 0, 1, 2 }),
                     .list_assignment = slice_array(
                         (GraphPlaneP3ChooseList[]){
                             { .len = 2, .ptr = { 1, 2 } },
@@ -131,7 +131,36 @@
                 .args = &(TestP3ChooseArgs){
                     .size = 18,
                     .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
-                    .outer_face = slice_array((uint32_t[]){ 0, 1, 2 }),
+                    .list_assignment = slice_array(
+                        (GraphPlaneP3ChooseList[]){
+                            { .len = 2, .ptr = { 1, 2 } },
+                            { .len = 2, .ptr = { 2, 3 } },
+                            { .len = 2, .ptr = { 3, 1 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 2, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 1, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 1, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 2, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 1, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 1, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                            { .len = 3, .ptr = { 2, 4, 3 } },
+                            { .len = 3, .ptr = { 1, 2, 4 } },
+                        }
+                    ),
+                },
+                .fn = test_p3choose_graph,
+            },
+            {
+                .desc = aven_str("path choose order 18 triangulation (old)"),
+                .args = &(TestP3ChooseArgs){
+                    .size = 18,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
                     .list_assignment = slice_array(
                         (GraphPlaneP3ChooseList[]){
                             { .len = 2, .ptr = { 1, 2 } },

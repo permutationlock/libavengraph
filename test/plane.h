@@ -148,19 +148,41 @@
                 .fn = test_graph_plane,
             },
             {
-                .desc = aven_str("verify embedding order 9 triangulation2"),
+                .desc = aven_str("verify embedding order 21 triangulation"),
                 .args = &(TestGraphPlaneArgs){
-                    .size = 9,
-                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION2,
+                    .size = 113,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
                     .planar = true,
                 },
                 .fn = test_graph_plane,
             },
             {
-                .desc = aven_str("verify embedding order 21 triangulation2"),
+                .desc = aven_str("verify embedding order 9 triangulation (old)"),
+                .args = &(TestGraphPlaneArgs){
+                    .size = 9,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
+                    .planar = true,
+                },
+                .fn = test_graph_plane,
+            },
+            {
+                .desc = aven_str(
+                    "verify embedding order 21 triangulation (old)"
+                ),
                 .args = &(TestGraphPlaneArgs){
                     .size = 21,
-                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION2,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
+                    .planar = true,
+                },
+                .fn = test_graph_plane,
+            },
+            {
+                .desc = aven_str(
+                    "verify embedding order 21 triangulation (old)"
+                ),
+                .args = &(TestGraphPlaneArgs){
+                    .size = 113,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
                     .planar = true,
                 },
                 .fn = test_graph_plane,

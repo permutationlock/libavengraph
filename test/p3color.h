@@ -19,8 +19,6 @@
 
     typedef struct {
         uint32_t size;
-        GraphSubset p1;
-        GraphSubset p2;
         TestGenGraphType type;
         TestP3ColorAlg alg;
     } TestP3ColorArgs;
@@ -33,29 +31,28 @@
         (void)emsg_arena;
         TestP3ColorArgs *args = opaque_args;
 
-        Graph graph = test_gen_graph(args->size, args->type, &arena);
+        GraphGenTriangulation tri = test_gen_triangulation(
+            args->size,
+            args->type,
+            &arena
+        );
+
+        uint32_t p1_arr[] = { get(tri.outer_face, 0) };
+        uint32_t p2_arr[] = { get(tri.outer_face, 2), get(tri.outer_face, 1) };
+        GraphSubset p1 = slice_array(p1_arr);
+        GraphSubset p2 = slice_array(p2_arr);
 
         GraphPropUint8 coloring;
         switch (args->alg) {
             case TEST_P3COLOR_ALG_BFS:
-                coloring = graph_plane_p3color(
-                    graph,
-                    args->p1,
-                    args->p2,
-                    &arena
-                );
+                coloring = graph_plane_p3color(tri.graph, p1, p2, &arena);
                 break;
             case TEST_P3COLOR_ALG_TRACE:
-                coloring = graph_plane_p3color_bfs(
-                    graph,
-                    args->p1,
-                    args->p2,
-                    &arena
-                );
+                coloring = graph_plane_p3color_bfs(tri.graph, p1, p2, &arena);
                 break;
         }
 
-        if (!graph_path_color_verify(graph, coloring, arena)) {
+        if (!graph_path_color_verify(tri.graph, coloring, arena)) {
             return (AvenTestResult){
                 .error = 1,
                 .message = aven_str("invalid path coloring"),
@@ -73,8 +70,6 @@
                     .size = 3,
                     .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -84,8 +79,6 @@
                     .size = 4,
                     .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 3, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -95,8 +88,6 @@
                     .size = 5,
                     .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -106,8 +97,6 @@
                     .size = 19,
                     .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -115,10 +104,8 @@
                 .desc = aven_str("path color order 9 triangulation w/BFS"),
                 .args = &(TestP3ColorArgs){
                     .size = 9,
-                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -126,10 +113,8 @@
                 .desc = aven_str("path color order 19 triangulation w/BFS"),
                 .args = &(TestP3ColorArgs){
                     .size = 19,
-                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -137,10 +122,8 @@
                 .desc = aven_str("path color order 119 triangulation w/BFS"),
                 .args = &(TestP3ColorArgs){
                     .size = 119,
-                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -148,10 +131,8 @@
                 .desc = aven_str("path color order 1119 triangulation w/BFS"),
                 .args = &(TestP3ColorArgs){
                     .size = 1119,
-                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
                     .alg = TEST_P3COLOR_ALG_BFS,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -161,8 +142,6 @@
                     .size = 3,
                     .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -172,8 +151,6 @@
                     .size = 4,
                     .type = TEST_GEN_GRAPH_TYPE_COMPLETE,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 3, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -183,8 +160,6 @@
                     .size = 5,
                     .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -194,8 +169,6 @@
                     .size = 19,
                     .type = TEST_GEN_GRAPH_TYPE_PYRAMID,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -205,8 +178,6 @@
                     .size = 9,
                     .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -216,8 +187,6 @@
                     .size = 19,
                     .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -227,8 +196,6 @@
                     .size = 119,
                     .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
                 },
                 .fn = test_p3color_graph,
             },
@@ -238,8 +205,42 @@
                     .size = 1119,
                     .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION,
                     .alg = TEST_P3COLOR_ALG_TRACE,
-                    .p1 = slice_array((uint32_t[]){ 0 }),
-                    .p2 = slice_array((uint32_t[]){ 2, 1 }),
+                },
+                .fn = test_p3color_graph,
+            },
+            {
+                .desc = aven_str("path color order 9 triangulation (old)"),
+                .args = &(TestP3ColorArgs){
+                    .size = 9,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
+                    .alg = TEST_P3COLOR_ALG_TRACE,
+                },
+                .fn = test_p3color_graph,
+            },
+            {
+                .desc = aven_str("path color order 19 triangulation (old)"),
+                .args = &(TestP3ColorArgs){
+                    .size = 19,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
+                    .alg = TEST_P3COLOR_ALG_TRACE,
+                },
+                .fn = test_p3color_graph,
+            },
+            {
+                .desc = aven_str("path color order 119 triangulation (old)"),
+                .args = &(TestP3ColorArgs){
+                    .size = 119,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
+                    .alg = TEST_P3COLOR_ALG_TRACE,
+                },
+                .fn = test_p3color_graph,
+            },
+            {
+                .desc = aven_str("path color order 1119 triangulation (old)"),
+                .args = &(TestP3ColorArgs){
+                    .size = 1119,
+                    .type = TEST_GEN_GRAPH_TYPE_TRIANGULATION_OLD,
+                    .alg = TEST_P3COLOR_ALG_TRACE,
                 },
                 .fn = test_p3color_graph,
             },
