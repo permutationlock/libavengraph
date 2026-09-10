@@ -1,7 +1,9 @@
 # The Aven Graph Library
 
 An "adjacency slice" graph library along with implementations
-of a few [path coloring algorithms for plane graphs][2].
+of several algorithms:
+  - [linear time path 3-coloring and path 3-choosing of plane graphs][2];
+  - [linear time uniform random generation of plane triangulations][3].
 
 ## Code organization
 
@@ -12,12 +14,17 @@ the simple `libaven` header-only library, which is a submodule in the
 
 The `*/geometry.h` files define functions to construct vector geometry
 for graph visualization and depend on the headers from
-`libavengl`. The `libavengl` library draws 2D vector
-graphics using a common subset of the OpenGL 4 and GLES 3 APIs.
-The`libavengl` library is a submodule in the `deps` directory.
-The provided visualization uses GLFW for window creation.
-The `libavengl` submodule provides a vendored GLFW, and headers
-for GLES3, X11, xkbcommon, and Wayland.
+[`libavengl`][4].
+
+## Coding style
+
+The coding style is a bit odd, but it was something I was playing around with a couple
+years ago to some success. Here is a [crash course][6] on the small set of
+macros I use. I had a great experience developing this way, and the resulting
+programs are very fast and efficient (I'm generating random plane triangulations
+at a rate of several million vertices per second, around 50x the
+rate claimed in the original 2006 paper). But, if you don't like it,
+the license is permissive: take a look and translate at will!
 
 ## Building the project
 
@@ -51,7 +58,11 @@ The resulting `visualization` executable will be in the `build_out` directory.
 
 For a release build using `clang` or `gcc` run:
 ```Shell
-  ./build -ccflags "-O3 -ffast-math" -glfw-ccflags "-O3 -DNDEBUG"
+./build --ccflags "-O3 -ffast-math" --glfw-ccflags "-O3 -DNDEBUG" --ldflags ""
+```
+To see the commands being executed by the build system without running them, use:
+```Shell
+./build --dry-run
 ```
 
 ### Watch mode and hot reloading
@@ -82,7 +93,7 @@ available system RAM. To benchmark the threaded algorithms
 your C compiler must support C11 atomics. An example full benchmark
 run command for `gcc` or `clang` on Linux would be:
 ```Shell
-./build bench -ccflags "-std=c11 -O3 -march=native -DBENCHMARK_THREADED"
+./build bench --cflags "-std=c11 -DBENCHMARK_THREADED" --ccflags "-O3 -march=native " --ldflags ""
 ```
 The benchmarks may take up to a few hours to complete.
 
@@ -120,3 +131,7 @@ for examples.
 
 [1]: https://permutationlock.com/p3color/visualization.html
 [2]: https://github.com/permutationlock/implpathcol_paper
+[3]: https://www.lix.polytechnique.fr/Labo/Dominique.Poulalhon/Articles/PoSc_cod_ICALP.pdf
+[4]: https://github.com/permutationlock/libavengl
+[5]: https://ziglang.org
+[6]: https://musing.permutationlock.com/rendering_asts/#style

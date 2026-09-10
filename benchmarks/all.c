@@ -29,10 +29,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE ((size_t)4096UL * (size_t)800000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)1000000UL)
 
-#define FULL_RUNS 100
-#define NGRAPHS 1
+#define FULL_RUNS 50
+#define NGRAPHS 2
 #define MAX_VERTICES 10000001
 #define START_VERTICES 10000
 #define MAX_COLOR 6
@@ -136,7 +136,7 @@ int main(void) {
                 uint32_t root;
             } CaseData;
 
-            size_t nruns = max(1, MAX_VERTICES / n);
+            size_t nruns = max(1, MAX_VERTICES / (NGRAPHS * n));
 
             Slice(CaseData) cases = { .len = NGRAPHS };
             cases.ptr = aven_arena_create_array(
@@ -150,21 +150,29 @@ int main(void) {
                 AvenTimeInst start_inst = aven_time_now();
                 BENCHMARK_COMPILER_BARRIER;
 
-                for (uint32_t i = 0; i < cases.len; i += 1) {
-                    GraphGenTriangulation tri = graph_gen_triangulation(
-                        n,
-                        rng,
-                        &loop_arena
-                    );
-                    {
-                        AvenArena temp_arena = loop_arena;
-                        graph_gen_triangulation_shuffle(tri, rng, &temp_arena);
+                AvenArena temp_arena = loop_arena;
+                for (size_t k = 0; k < nruns; k += 1) {
+                    BENCHMARK_COMPILER_BARRIER;
+                    temp_arena = loop_arena;
+                    for (uint32_t i = 0; i < cases.len; i += 1) {
+                        GraphGenTriangulation tri = graph_gen_triangulation(
+                            n,
+                            rng,
+                            // (Vec2){ 0.33f, 0.66f },
+                            &temp_arena
+                        );
+                        {
+                            AvenArena label_arena = temp_arena;
+                            graph_gen_triangulation_shuffle(
+                                tri,
+                                rng,
+                                &label_arena
+                            );
+                        }
+                        get(cases, i).graph = tri.graph;
+                        get(cases, i).outer_face = tri.outer_face;
                     }
-                    get(cases, i).graph = tri.graph;
-                    get(cases, i).outer_face = tri.outer_face;
-                    if (tri.graph.adj.len != n) {
-                        aven_panic("graph generation failed");
-                    }
+                    BENCHMARK_COMPILER_BARRIER;
                 }
 
                 BENCHMARK_COMPILER_BARRIER;
@@ -175,12 +183,15 @@ int main(void) {
                 double ns_per_graph = (double)elapsed_ns /
                     (double)(cases.len * nruns);
 
+                loop_arena = temp_arena;
+
                 printf(
-                    "generate %lu graph(s) with %lu vertices:\n"
+                    "generate %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -295,11 +306,12 @@ int main(void) {
                 }
 
                 printf(
-                    "bfs on %lu graph(s) with %lu vertices:\n"
+                    "bfs on %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -393,11 +405,12 @@ int main(void) {
                 }
 
                 printf(
-                    "augmenting %lu graph(s) with %lu vertices:\n"
+                    "augmenting %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -408,7 +421,7 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
-                size_t bfs_nruns = max(nruns / 10, 1);
+                size_t bfs_nruns = max(nruns / 5, 1);
 
                 BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
@@ -455,11 +468,13 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-coloring (bfs) %lu graph(s) with %lu vertices:\n"
+                    "path 3-coloring (bfs) %lu graph(s) "
+                    "with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)bfs_nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -515,11 +530,13 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-coloring %lu graph(s) with %lu vertices:\n"
+                    "path 3-coloring %lu graph(s) "
+                    "with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -579,12 +596,13 @@ int main(void) {
 
                 printf(
                     "path 3-coloring (%lu threads) %lu graph(s) "
-                    "with %lu vertices:\n"
+                    "with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)nthreads,
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -669,11 +687,13 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-choosing %lu graph(s) with %lu vertices:\n"
+                    "path 3-choosing %lu graph(s) "
+                    "with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -763,12 +783,13 @@ int main(void) {
 
                 printf(
                     "path 3-choosing (%lu threads) %lu graph(s) "
-                    "with %lu vertices:\n"
+                    "with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)nthreads,
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );

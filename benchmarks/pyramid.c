@@ -30,7 +30,7 @@
 #define START_VERTICES 10000
 #define MAX_COLOR 6
 #define NTHREADS 4
-#define NBENCHES 5
+#define NBENCHES 3
 
 #ifdef __GNUC__
     #define BENCHMARK_COMPILER_BARRIER __asm__ volatile ("" ::: "memory")
@@ -46,12 +46,13 @@ int main(void) {
     }
     AvenArena arena = aven_arena_init(mem, ARENA_SIZE);
 
+    AvenRngPcg pcg_ctx = aven_rng_pcg_seed(0x3241ef25, 0xe837910f);
+    AvenRng rng = aven_rng_pcg(&pcg_ctx);
+
     const char *bench_names[] = {
         "BFS",
         "Path 3-Color w/ BFS",
         "Path 3-Color w/ N(P)",
-        "Path 3-Color w/ BFS (flipped)",
-        "Path 3-Color w/ N(P) (flipped)",
     };
 
     if (countof(bench_names) != NBENCHES) {
@@ -119,6 +120,10 @@ int main(void) {
 
             for (uint32_t i = 0; i < cases.len; i += 1) {
                 GraphGenTriangulation tri = graph_gen_pyramid(ka, &loop_arena);
+                {
+                    AvenArena temp_arena = loop_arena;
+                    graph_gen_triangulation_shuffle(tri, rng, &temp_arena);
+                }
                 get(cases, i).graph = tri.graph;
                 get(cases, i).outer_face = tri.outer_face;
                 if (tri.graph.adj.len != n) {
@@ -314,138 +319,6 @@ int main(void) {
 
                 printf(
                     "path 3-coloring %lu graph(s) with %lu vertices:\n"
-                    "\ttime per graph: %fns\n"
-                    "\ttime per half-edge: %fns\n",
-                    (unsigned long)cases.len,
-                    (unsigned long)n,
-                    ns_per_graph,
-                    ns_per_graph / (double)(6 * n - 12)
-                );
-
-                get(get(bench_times, bench_index), n_count) += ns_per_graph;
-                bench_index += 1;
-            }
-            {
-                AvenArena temp_arena = loop_arena;
-
-                BENCHMARK_COMPILER_BARRIER;
-                AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER;
-
-                size_t ncases = max(cases.len / 10, 1);
-
-                for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER;
-                    temp_arena = loop_arena;
-                    for (uint32_t i = 0; i < ncases; i += 1) {
-                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
-                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
-                        uint32_t p_flipped_arr[] = { get(q, 0) };
-                        uint32_t q_flipped_arr[] = { get(p, 1), get(p, 0) };
-                        GraphSubset p_flipped = slice_array(p_flipped_arr);
-                        GraphSubset q_flipped = slice_array(q_flipped_arr);
-                        get(cases, i).coloring = graph_plane_p3color_bfs(
-                            get(cases, i).graph,
-                            p_flipped,
-                            q_flipped,
-                            &temp_arena
-                        );
-                    }
-                    BENCHMARK_COMPILER_BARRIER;
-                }
-
-                BENCHMARK_COMPILER_BARRIER;
-                AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER;
-
-                int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns /
-                    (double)(ncases * nruns);
-
-                uint32_t nvalid = 0;
-                for (uint32_t i = 0; i < ncases; i += 1) {
-                    bool valid = graph_path_color_verify(
-                        get(cases, i).graph,
-                        get(cases, i).coloring,
-                        temp_arena
-                    );
-                    if (valid) {
-                        nvalid += 1;
-                    }
-                }
-
-                if (nvalid < ncases) {
-                    aven_panic("invalid 3-coloring (bfs)");
-                }
-
-                printf(
-                    "path 3-coloring (bfs) (flipped) %lu graph(s) "
-                    "with %lu vertices:\n"
-                    "\ttime per graph: %fns\n"
-                    "\ttime per half-edge: %fns\n",
-                    (unsigned long)ncases,
-                    (unsigned long)n,
-                    ns_per_graph,
-                    ns_per_graph / (double)(6 * n - 12)
-                );
-
-                get(get(bench_times, bench_index), n_count) += ns_per_graph;
-                bench_index += 1;
-            }
-            {
-                AvenArena temp_arena = loop_arena;
-
-                BENCHMARK_COMPILER_BARRIER;
-                AvenTimeInst start_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER;
-
-                for (size_t k = 0; k < nruns; k += 1) {
-                    BENCHMARK_COMPILER_BARRIER;
-                    temp_arena = loop_arena;
-                    for (uint32_t i = 0; i < cases.len; i += 1) {
-                        GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
-                        GraphSubset q = slice_head(get(cases, i).outer_face, 1);
-                        uint32_t p_flipped_arr[] = { get(q, 0) };
-                        uint32_t q_flipped_arr[] = { get(p, 1), get(p, 0) };
-                        GraphSubset p_flipped = slice_array(p_flipped_arr);
-                        GraphSubset q_flipped = slice_array(q_flipped_arr);
-                        get(cases, i).coloring = graph_plane_p3color(
-                            get(cases, i).graph,
-                            p_flipped,
-                            q_flipped,
-                            &temp_arena
-                        );
-                    }
-                    BENCHMARK_COMPILER_BARRIER;
-                }
-
-                BENCHMARK_COMPILER_BARRIER;
-                AvenTimeInst end_inst = aven_time_now();
-                BENCHMARK_COMPILER_BARRIER;
-
-                int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
-                double ns_per_graph = (double)elapsed_ns /
-                    (double)(cases.len * nruns);
-
-                uint32_t nvalid = 0;
-                for (uint32_t i = 0; i < cases.len; i += 1) {
-                    bool valid = graph_path_color_verify(
-                        get(cases, i).graph,
-                        get(cases, i).coloring,
-                        temp_arena
-                    );
-                    if (valid) {
-                        nvalid += 1;
-                    }
-                }
-
-                if (nvalid < cases.len) {
-                    aven_panic("invalid 3-coloring");
-                }
-
-                printf(
-                    "path 3-coloring (flipped) %lu graph(s) "
-                    "with %lu vertices:\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
