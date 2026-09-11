@@ -158,7 +158,6 @@ int main(void) {
                         GraphGenTriangulation tri = graph_gen_triangulation(
                             n,
                             rng,
-                            // (Vec2){ 0.33f, 0.66f },
                             &temp_arena
                         );
                         {
