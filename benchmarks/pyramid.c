@@ -22,12 +22,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE ((size_t)4096UL * (size_t)800000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)750000UL)
 
-#define NGRAPHS 1
-#define FULL_RUNS 1
+#define FULL_RUNS 15
+#define NGRAPHS 2
 #define MAX_VERTICES 10000001
-#define START_VERTICES 10000
+#define START_VERTICES 1000
 #define MAX_COLOR 6
 #define NTHREADS 4
 #define NBENCHES 3
@@ -107,11 +107,9 @@ int main(void) {
                 uint32_t root;
             } CaseData;
 
-            size_t nruns = 1;
+            size_t nruns = max(1, MAX_VERTICES / (NGRAPHS * n));
 
-            Slice(CaseData) cases = {
-                .len = NGRAPHS * max(MAX_VERTICES / n, 1),
-            };
+            Slice(CaseData) cases = { .len = NGRAPHS };
             cases.ptr = aven_arena_create_array(
                 CaseData,
                 &loop_arena,
@@ -196,11 +194,12 @@ int main(void) {
                 }
 
                 printf(
-                    "bfs on %lu graph(s) with %lu vertices:\n"
+                    "bfs on %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -211,13 +210,13 @@ int main(void) {
             {
                 AvenArena temp_arena = loop_arena;
 
+                size_t bfs_nruns = max(nruns / 10, 1);
+
                 BENCHMARK_COMPILER_BARRIER;
                 AvenTimeInst start_inst = aven_time_now();
                 BENCHMARK_COMPILER_BARRIER;
 
-                size_t ncases = max(cases.len / 10, 1);
-
-                for (size_t k = 0; k < nruns; k += 1) {
+                for (size_t k = 0; k < bfs_nruns; k += 1) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
                     for (uint32_t i = 0; i < ncases; i += 1) {
@@ -239,7 +238,7 @@ int main(void) {
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns /
-                    (double)(ncases * nruns);
+                    (double)(ncases * bfs_nruns);
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < ncases; i += 1) {
@@ -258,11 +257,12 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-coloring (bfs) %lu graph(s) with %lu vertices:\n"
+                    "path 3-coloring (bfs) %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)ncases,
                     (unsigned long)n,
+                    (unsigned long)bfs_nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );
@@ -318,11 +318,12 @@ int main(void) {
                 }
 
                 printf(
-                    "path 3-coloring %lu graph(s) with %lu vertices:\n"
+                    "path 3-coloring %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
                     (unsigned long)cases.len,
                     (unsigned long)n,
+                    (unsigned long)nruns,
                     ns_per_graph,
                     ns_per_graph / (double)(6 * n - 12)
                 );

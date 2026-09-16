@@ -29,12 +29,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ARENA_SIZE ((size_t)4096UL * (size_t)1000000UL)
+#define ARENA_SIZE ((size_t)4096UL * (size_t)750000UL)
 
 #define FULL_RUNS 50
 #define NGRAPHS 2
 #define MAX_VERTICES 10000001
-#define START_VERTICES 10000
+#define START_VERTICES 1000
 #define MAX_COLOR 6
 #define NTHREADS 4
 
