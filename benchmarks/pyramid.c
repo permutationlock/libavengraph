@@ -219,7 +219,7 @@ int main(void) {
                 for (size_t k = 0; k < bfs_nruns; k += 1) {
                     BENCHMARK_COMPILER_BARRIER;
                     temp_arena = loop_arena;
-                    for (uint32_t i = 0; i < ncases; i += 1) {
+                    for (uint32_t i = 0; i < cases.len; i += 1) {
                         GraphSubset p = slice_tail(get(cases, i).outer_face, 1);
                         GraphSubset q = slice_head(get(cases, i).outer_face, 1);
                         get(cases, i).coloring = graph_plane_p3color_bfs(
@@ -238,10 +238,10 @@ int main(void) {
 
                 int64_t elapsed_ns = aven_time_since(end_inst, start_inst);
                 double ns_per_graph = (double)elapsed_ns /
-                    (double)(ncases * bfs_nruns);
+                    (double)(cases.len * bfs_nruns);
 
                 uint32_t nvalid = 0;
-                for (uint32_t i = 0; i < ncases; i += 1) {
+                for (uint32_t i = 0; i < cases.len; i += 1) {
                     bool valid = graph_path_color_verify(
                         get(cases, i).graph,
                         get(cases, i).coloring,
@@ -252,7 +252,7 @@ int main(void) {
                     }
                 }
 
-                if (nvalid < ncases) {
+                if (nvalid < cases.len) {
                     aven_panic("invalid 3-coloring (bfs)");
                 }
 
@@ -260,7 +260,7 @@ int main(void) {
                     "path 3-coloring (bfs) %lu graph(s) with %lu vertices (%lu run(s)):\n"
                     "\ttime per graph: %fns\n"
                     "\ttime per half-edge: %fns\n",
-                    (unsigned long)ncases,
+                    (unsigned long)cases.len,
                     (unsigned long)n,
                     (unsigned long)bfs_nruns,
                     ns_per_graph,
