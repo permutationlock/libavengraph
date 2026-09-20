@@ -129,8 +129,11 @@
             uint32_t in_bits = chunk.bits & read_mask;
             get(bstring.words, write_word_idx) &= ~write_mask;
             get(bstring.words, write_word_idx) |= in_bits << write_bit_idx;
-            chunk.bits >> write_len;
             chunk.nbits -= (uint32_t)write_len;
+            if (chunk.nbits == 0) {
+                break;
+            }
+            chunk.bits >> write_len;
         }
     }
 
