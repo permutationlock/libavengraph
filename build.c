@@ -531,7 +531,7 @@ int main(int argc, char **argv) {
 
     AvenStrSlice bench_args = { 0 };
 
-    AvenBuildStep bench_all_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_all_build_step = aven_build_common_step_cc_ld_exe_ex(
         &opts,
         includes,
         macros,
@@ -540,13 +540,19 @@ int main(int argc, char **argv) {
         aven_path(&arena, root_path, aven_str("benchmarks"), aven_str("all.c")),
         &bench_dir_step,
         false,
+        &arena
+    );
+    aven_build_step_add_dep(&root_step, &bench_all_build_step, &arena);
+
+    AvenBuildStep bench_all_run_step = aven_build_common_step_run_exe(
+        &bench_all_build_step,
         bench_args,
         &arena
     );
     AvenBuildStep all_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&all_root_step, &bench_all_step, &arena);
+    aven_build_step_add_dep(&all_root_step, &bench_all_run_step, &arena);
 
-    AvenBuildStep bench_pyramid_step = aven_build_common_step_cc_ld_run_exe_ex(
+    AvenBuildStep bench_pyramid_build_step = aven_build_common_step_cc_ld_exe_ex(
         &opts,
         includes,
         macros,
@@ -560,11 +566,17 @@ int main(int argc, char **argv) {
         ),
         &bench_dir_step,
         false,
+        &arena
+    );
+    aven_build_step_add_dep(&root_step, &bench_pyramid_build_step, &arena);
+
+    AvenBuildStep bench_pyramid_run_step = aven_build_common_step_run_exe(
+        &bench_pyramid_build_step,
         bench_args,
         &arena
     );
     AvenBuildStep pyramid_root_step = aven_build_step_root();
-    aven_build_step_add_dep(&pyramid_root_step, &bench_pyramid_step, &arena);
+    aven_build_step_add_dep(&pyramid_root_step, &bench_pyramid_run_step, &arena);
 
     AvenBuildStep bench_root_step = aven_build_step_root();
     aven_build_step_add_dep(&bench_root_step, &pyramid_root_step, &arena);

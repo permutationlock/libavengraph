@@ -759,19 +759,19 @@
         assert(idx_valid(ctx->root_leaf));
 
         // We have a graph of the form:
-        //             l1    l2
-        //               \  /
-        //                v0
-        //             \ /  \ /
-        //              o    o
-        //             /      \ /
-        //            o        o
-        //           / \      /
-        //              o    o
-        //             / \  / \ 
-        //                v0'
-        //               /  \ 
-        //             l2'  l1'
+        //             l1    l2       |
+        //               \  /         |
+        //                v0          |
+        //             \ /  \ /       |
+        //              o    o        |
+        //             /      \ /     |
+        //            o        o      |
+        //           / \      /       |
+        //              o    o        |
+        //             / \  / \       |
+        //                v0'         |
+        //               /  \         |
+        //             l2'  l1'       |
         // We will create a new vertex v1 and walk from l1 to l2',
         // replacing leaves with edges to v1. Then we'll create a
         // vertex v2 and walk from l1' to l2, replacing leaves with

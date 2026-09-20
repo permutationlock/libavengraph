@@ -5,8 +5,6 @@
     #include <aven/arena.h>
     #include <aven/rng.h>
 
-    #include <limits.h>
-
     typedef Slice(uint32_t) GraphBitstringWords;
     typedef struct {
         GraphBitstringWords words;
@@ -31,6 +29,7 @@
             }
     #endif
         }
+        return weight;
     }
 
     static inline size_t graph_bitstring_word_len(
@@ -130,10 +129,9 @@
             get(bstring.words, write_word_idx) &= ~write_mask;
             get(bstring.words, write_word_idx) |= in_bits << write_bit_idx;
             chunk.nbits -= (uint32_t)write_len;
-            if (chunk.nbits == 0) {
-                break;
+            if (chunk.nbits > 0) {
+                chunk.bits >>= write_len;
             }
-            chunk.bits >> write_len;
         }
     }
 
@@ -279,6 +277,7 @@
         AvenRng rng,
         AvenArena *arena
     ) {
+        assert(weight > 0);
         GraphBitstring bstring = {
             .words = aven_arena_create_slice(uint32_t, arena, 1 + len / 32),
             .nbits = len,
