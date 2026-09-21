@@ -57,10 +57,10 @@
         GraphPlaneP3ChooseCtx ctx = {
             .nb = graph.nb,
             .vertex_info = { .len = graph.adj.len },
-            // Each new unique results from a different edge of the graph:
-            .marks = { .len = (3 * graph.adj.len - 6) + 1 },
+            // See paper for mark upper bound argument:
+            .marks = { .len = graph.nb.len + 2 },
             // A new frame only occurs when splitting across an edge
-            .frames = { .cap = 3 * graph.adj.len - 6 },
+            .frames = { .cap = graph.nb.len / 2 },
             .next_mark = 1,
         };
 

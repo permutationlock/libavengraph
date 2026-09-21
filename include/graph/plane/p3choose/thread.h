@@ -60,15 +60,15 @@
         GraphPlaneP3ChooseThreadCtx ctx = {
             .nb = graph.nb,
             .vertex_info = { .len = graph.adj.len },
-            // Each unique mark results from a diferent edge of the graph:
+            // See paper for mark upper bound argument:
             .marks = {
                 .len = nthreads * GRAPH_PLANE_P3CHOOSE_THREAD_MARK_SET_SIZE +
-                    (3 * graph.adj.len - 6) +
-                    1,
+                    graph.nb.len +
+                    2,
             },
             // A new frame only occurs when splitting across an edge
-            .entry_pool = { .cap = 3 * graph.adj.len - 6 },
-            .valid_entries = { .cap = 3 * graph.adj.len - 6 },
+            .entry_pool = { .cap = graph.nb.len / 2 },
+            .valid_entries = { .cap = graph.nb.len / 2 },
             .nthreads = nthreads,
             .next_mark = 1,
         };
