@@ -641,37 +641,15 @@ int main(void) {
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
-                    bool valid = true;
+                    bool valid = graph_plane_p3choose_verify_list_coloring(
+                        get(cases, i).color_lists,
+                        get(cases, i).coloring
+                    );
 
-                    Graph graph = get(cases, i).graph;
-
-                    GraphPlaneP3ChooseListProp color_lists = get(cases, i)
-                        .color_lists;
-                    GraphPropUint8 coloring = get(cases, i).coloring;
-
-                    // verify coloring is a list-coloring
-                    for (uint32_t v = 0; v < graph.adj.len; v += 1) {
-                        uint8_t v_color = get(coloring, v);
-                        GraphPlaneP3ChooseList v_colors = get(color_lists, v);
-
-                        bool found = false;
-                        for (uint32_t j = 0; j < v_colors.len; j += 1) {
-                            if (get(v_colors, j) == v_color) {
-                                found = true;
-                            }
-                        }
-
-                        if (!found) {
-                            valid = false;
-                            break;
-                        }
-                    }
-
-                    // verify coloring is a path coloring
                     if (valid) {
                         valid = graph_path_color_verify(
-                            graph,
-                            coloring,
+                            get(cases, i).graph,
+                            get(cases, i).coloring,
                             temp_arena
                         );
                     }
@@ -734,35 +712,11 @@ int main(void) {
 
                 uint32_t nvalid = 0;
                 for (uint32_t i = 0; i < cases.len; i += 1) {
-                    bool valid = true;
+                    bool valid = graph_plane_p3choose_verify_list_coloring(
+                        get(cases, i).color_lists,
+                        get(cases, i).coloring
+                    );
 
-                    GraphPlaneP3ChooseListProp color_lists = get(cases, i)
-                        .color_lists;
-                    GraphPropUint8 coloring = get(cases, i).coloring;
-
-                    // verify coloring is a list-coloring
-                    for (
-                        uint32_t v = 0;
-                        v < get(cases, i).graph.adj.len;
-                        v += 1
-                    ) {
-                        uint8_t v_color = get(coloring, v);
-                        GraphPlaneP3ChooseList v_colors = get(color_lists, v);
-
-                        bool found = false;
-                        for (uint32_t j = 0; j < v_colors.len; j += 1) {
-                            if (get(v_colors, j) == v_color) {
-                                found = true;
-                            }
-                        }
-
-                        if (!found) {
-                            valid = false;
-                            break;
-                        }
-                    }
-
-                    // verify coloring is a path coloring
                     if (valid) {
                         valid = graph_path_color_verify(
                             get(cases, i).graph,
